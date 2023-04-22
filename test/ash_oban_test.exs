@@ -9,7 +9,9 @@ defmodule AshObanTest do
 
     oban do
       triggers do
-        trigger :process, expr(processed != true)
+        trigger :process do
+          where expr(processed != true)
+        end
       end
     end
 

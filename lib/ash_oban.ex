@@ -6,23 +6,23 @@ defmodule AshOban do
   defmodule Trigger do
     @type t :: %__MODULE__{
             action: atom,
-            condition: Ash.Expr.t()
+            where: Ash.Expr.t()
           }
 
-    defstruct [:action, :condition]
+    defstruct [:action, :where]
   end
 
   @trigger %Spark.Dsl.Entity{
     name: :trigger,
     target: Trigger,
-    args: [:action, :condition],
+    args: [:action],
     imports: [Ash.Filter.TemplateHelpers],
     schema: [
       action: [
         type: :atom,
         doc: "The action to be triggered"
       ],
-      condition: [
+      where: [
         type: :any,
         doc: "The filter expression to determine if something should be triggered"
       ]
@@ -39,5 +39,10 @@ defmodule AshOban do
     sections: [@triggers]
   }
 
-  use Spark.Dsl.Extension, sections: [@oban]
+  use Spark.Dsl.Extension,
+    sections: [@oban],
+    verifiers: [
+      # This is a bit dumb, a verifier probably shouldn't have side effects
+      AshOban.Verifiers.DefineSchedulers
+    ]
 end
