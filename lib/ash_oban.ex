@@ -1,5 +1,9 @@
 defmodule AshOban do
   defmodule Trigger do
+    @moduledoc """
+    A configured trigger.
+    """
+
     @type t :: %__MODULE__{
             name: atom,
             action: atom,
@@ -11,6 +15,7 @@ defmodule AshOban do
             max_scheduler_attempts: pos_integer(),
             where: Ash.Expr.t(),
             scheduler: module,
+            state: :active | :paused | :deleted,
             worker: module,
             __identifier__: atom
           }
@@ -25,6 +30,7 @@ defmodule AshOban do
       :max_attempts,
       :max_scheduler_attempts,
       :where,
+      :state,
       :scheduler,
       :worker,
       :__identifier__
@@ -80,7 +86,6 @@ defmodule AshOban do
       ],
       read_action: [
         type: :atom,
-        required: true,
         doc: """
         The read action to use when querying records. Defaults to the primary read.
 
@@ -89,6 +94,7 @@ defmodule AshOban do
       ],
       action: [
         type: :atom,
+        required: true,
         doc:
           "The action to be triggered. Defaults to the identifier of the resource plus the name of the trigger"
       ],
@@ -193,7 +199,7 @@ defmodule AshOban do
               []
           end
 
-        if(trigger.state = cron = {trigger.scheduler_cron, trigger.scheduler, []})
+        cron = {trigger.scheduler_cron, trigger.scheduler, opts}
         Keyword.update(plugins, :crontab, [cron], &[cron | &1])
       end)
     end)

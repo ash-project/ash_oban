@@ -1,4 +1,6 @@
 defmodule AshOban.Transformers.SetDefaults do
+  @moduledoc "Set trigger default values"
+
   use Spark.Dsl.Transformer
   alias Spark.Dsl.Transformer
 
@@ -7,6 +9,7 @@ defmodule AshOban.Transformers.SetDefaults do
   def before?(AshOban.Transformers.DefineSchedulers), do: true
   def before?(_), do: false
 
+  # sobelow_skip ["DOS.BinToAtom"]
   def transform(dsl) do
     module = Transformer.get_persisted(dsl, :module)
 
@@ -56,6 +59,7 @@ defmodule AshOban.Transformers.SetDefaults do
      end)}
   end
 
+  # sobelow_skip ["DOS.BinToAtom"]
   defp default_queue_name(dsl, trigger) do
     :"#{Ash.Resource.Info.short_name(dsl)}_#{trigger.name}"
   end

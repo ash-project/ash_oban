@@ -1,4 +1,6 @@
 defmodule AshOban.Info do
+  @moduledoc "Introspection for AshOban"
+
   use Spark.InfoGenerator, extension: AshOban, sections: [:oban]
   @pro Application.compile_env(:ash_oban, :pro?) || false
 

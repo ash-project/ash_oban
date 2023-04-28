@@ -1,4 +1,8 @@
 defmodule AshOban.Transformers.DefineSchedulers do
+  @moduledoc """
+  Define scheduler and worker modules.
+  """
+
   use Spark.Dsl.Transformer
   alias Spark.Dsl.Transformer
 
@@ -90,7 +94,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
         quote do
           def insert(stream) do
             stream
-            |> Stream.each(&Oban.insert!())
+            |> Stream.each(&Oban.insert!/1)
             |> Stream.run()
           end
         end
