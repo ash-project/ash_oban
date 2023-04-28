@@ -1,11 +1,8 @@
-# AshOban
+# AshStateMachine
 
-**TODO: Add description**
+An oban extension for `Ash.Resource`
 
 ## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `ash_oban` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
@@ -15,7 +12,6 @@ def deps do
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/ash_oban>.
+## Get Started
 
+Check out the [getting started guide](/documentation/tutorials/get-started-with-ash-oban.md).

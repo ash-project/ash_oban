@@ -2,6 +2,14 @@ defmodule AshObanTest do
   use ExUnit.Case
   doctest AshOban
 
+  defmodule Api do
+    use Ash.Api
+
+    resources do
+      allow_unregistered? true
+    end
+  end
+
   defmodule Triggered do
     use Ash.Resource,
       data_layer: Ash.DataLayer.Ets,
@@ -9,14 +17,22 @@ defmodule AshObanTest do
 
     oban do
       triggers do
+        api Api
+
         trigger :process do
+          action :process
           where expr(processed != true)
         end
       end
     end
 
     actions do
-      defaults [:read, :create]
+      defaults [:create]
+
+      read :read do
+        primary? true
+        pagination keyset?: true
+      end
 
       update :process do
         change set_attribute(:processed, true)

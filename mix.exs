@@ -97,29 +97,13 @@ defmodule AshOban.MixProject do
             module: AshOban,
             name: "AshOban",
             target: "Ash.Resource",
-            type: "StateMachine Resource"
-          },
-          %{
-            module: AshGraphql.Api,
-            name: "AshGraphql Api",
-            target: "Ash.Api",
-            type: "GraphQL Api"
+            type: "AshOban Resource"
           }
         ]
       ],
       extras: extras(),
       groups_for_extras: groups_for_extras(),
       groups_for_modules: [
-        AshGraphql: [
-          AshGraphql
-        ],
-        Introspection: [
-          AshGraphql.Resource.Info,
-          AshGraphql.Api.Info
-        ],
-        Miscellaneous: [
-          AshGraphql.Resource.Helpers
-        ],
         Internals: ~r/.*/
       ]
     ]
@@ -135,8 +119,12 @@ defmodule AshOban.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, "~> 2.7"},
-      {:spark, ">= 1.0.9"}
+      {:ash, github: "ash-project/ash"},
+      {:spark, ">= 1.1.3"},
+      {:oban, "~> 2.15"},
+      {:oban_pro, "~> 0.14", repo: "oban"},
+      {:oban_web, "~> 2.9", repo: "oban"}
+      # {:oban, path: "../oban"}
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
     ]
