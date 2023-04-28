@@ -17,7 +17,8 @@ defmodule AshOban do
             scheduler: module,
             state: :active | :paused | :deleted,
             worker: module,
-            __identifier__: atom
+            __identifier__: atom,
+            on_error: atom
           }
 
     defstruct [
@@ -33,6 +34,7 @@ defmodule AshOban do
       :state,
       :scheduler,
       :worker,
+      :on_error,
       :__identifier__
     ]
   end
@@ -71,7 +73,13 @@ defmodule AshOban do
       max_attempts: [
         type: :pos_integer,
         default: 1,
-        doc: "How many times to attempt the job."
+        doc: """
+        How many times to attempt the job.
+
+        Keep in mind: after all of these attempts, the scheduler will likely just reschedule the job,
+        leading to infinite retries. To solve for this, configure an `on_error` action that will make
+        the trigger no longer apply to failed jobs.
+        """
       ],
       state: [
         type: {:one_of, [:active, :paused, :deleted]},
@@ -102,6 +110,11 @@ defmodule AshOban do
       where: [
         type: :any,
         doc: "The filter expression to determine if something should be triggered"
+      ],
+      on_error: [
+        type: :atom,
+        doc:
+          "An update action to call after the last attempt has failed. See the getting started guide for more."
       ]
     ]
   }
@@ -149,6 +162,24 @@ defmodule AshOban do
       AshOban.Transformers.DefineSchedulers
     ]
 
+  def run_trigger(%resource{} = record, trigger) do
+    trigger =
+      case trigger do
+        %AshOban.Trigger{} ->
+          trigger
+
+        name when is_atom(name) ->
+          AshOban.Info.oban_trigger(resource, name)
+      end
+
+    primary_key = Ash.Resource.Info.primary_key(changeset.resource)
+
+    %{primary_key: Map.take(record, primary_key)}
+    |> trigger.worker.new()
+    |> Oban.insert!()
+  end
+
+  @doc "Alters your oban configuration to include the required AshOban configuration."
   def config(apis, base) do
     pro? = AshOban.Info.pro?()
 
