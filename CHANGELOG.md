@@ -10,18 +10,6 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 
 
-### Bug Fixes:
-
-* properly set context/authorize? in workers
-
-* error messages/config improvements
-
-* syntax/get tests passing
-
-### Improvements:
-
-* error handling/docs
-
-* optional deps, transaction only for actions
+### Features:
 
 * initial feature set
