@@ -123,7 +123,6 @@ defmodule AshOban.MixProject do
       {:spark, ">= 1.1.3"},
       {:oban, "~> 2.15"},
       {:oban_pro, "~> 0.14", repo: "oban", optional: true},
-      {:oban_web, "~> 2.9", repo: "oban", optional: true},
       {:ex_doc, "~> 0.22", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.12.0", only: [:dev, :test]},
       {:credo, ">= 0.0.0", only: [:dev, :test], runtime: false},
