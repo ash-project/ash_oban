@@ -172,7 +172,7 @@ defmodule AshOban do
           AshOban.Info.oban_trigger(resource, name)
       end
 
-    primary_key = Ash.Resource.Info.primary_key(changeset.resource)
+    primary_key = Ash.Resource.Info.primary_key(resource)
 
     %{primary_key: Map.take(record, primary_key)}
     |> trigger.worker.new()
