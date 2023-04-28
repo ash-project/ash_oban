@@ -4,8 +4,6 @@ AshOban will likely grow to provide many more oban-related features, but for now
 
 A trigger describes an action that is run periodically.
 
-This guide will need to be expanded, this is primarily a placeholder with an example.
-
 ## Get familiar with Ash resources
 
 If you haven't already, read the [Ash Getting Started Guide](https://hexdocs.pm/ash/get-started.html), and familiarize yourself with Ash and Ash resources.
