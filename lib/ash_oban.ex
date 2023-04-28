@@ -75,6 +75,7 @@ defmodule AshOban do
       ],
       state: [
         type: {:one_of, [:active, :paused, :deleted]},
+        default: :active,
         doc: """
         Describes the state of the cron job.
 
@@ -186,21 +187,25 @@ defmodule AshOban do
 
   defp add_job(config, cron_plugin, _resource, trigger) do
     Keyword.update!(config, :plugins, fn plugins ->
-      Keyword.update!(plugins, cron_plugin, fn plugins ->
-        opts =
-          case trigger.state do
-            :paused ->
-              [paused: true]
+      Enum.map(plugins, fn
+        {^cron_plugin, config} ->
+          opts =
+            case trigger.state do
+              :paused ->
+                [paused: true]
 
-            :deleted ->
-              [delete: true]
+              :deleted ->
+                [delete: true]
 
-            _ ->
-              []
-          end
+              _ ->
+                []
+            end
 
-        cron = {trigger.scheduler_cron, trigger.scheduler, opts}
-        Keyword.update(plugins, :crontab, [cron], &[cron | &1])
+          cron = {trigger.scheduler_cron, trigger.scheduler, opts}
+          {cron_plugin, Keyword.update(config, :crontab, [cron], &[cron | &1])}
+
+        other ->
+          other
       end)
     end)
   end

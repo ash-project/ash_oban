@@ -220,31 +220,29 @@ defmodule AshOban.Transformers.DefineSchedulers do
               Ash.DataLayer.transaction(
                 unquote(resource),
                 fn ->
-                  opts = [
-                    action: unquote(trigger.read_action),
-                    context: %{private: %{ash_oban?: true}}
-                  ]
-
-                  opts =
-                    if Ash.DataLayer.data_layer_can?(unquote(resource), {:lock, :for_update}) do
-                      opts
-                    else
-                      Keyword.put(opts, :lock, :for_update)
-                    end
-
                   query()
-                  |> unquote(api).read_one(primary_key, opts)
+                  |> Ash.Query.do_filter(primary_key)
+                  |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+                  |> then(fn query ->
+                    if Ash.DataLayer.data_layer_can?(unquote(resource), {:lock, :for_update}) do
+                      Ash.Query.lock(query, :for_update)
+                    else
+                      query
+                    end
+                  end)
+                  |> Ash.Query.for_read(unquote(trigger.read_action), authorize?: false)
+                  |> unquote(api).read_one()
                   |> case do
                     {:ok, nil} ->
                       {:discard, :trigger_no_longer_applies}
 
                     {:ok, record} ->
-                      nil
+                      record
+                      |> Ash.Changeset.new()
+                      |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
+                      |> Ash.Changeset.for_update(unquote(trigger.action), %{})
+                      |> unquote(api).update!()
                   end
-                  |> Ash.Changeset.new()
-                  |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-                  |> Ash.Changeset.for_update(unquote(trigger.action), %{})
-                  |> unquote(api).update!()
                 end,
                 nil,
                 %{
@@ -266,24 +264,22 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   other
               end
             else
-              opts = [
-                action: unquote(trigger.read_action),
-                context: %{private: %{ash_oban?: true}}
-              ]
-
               query()
-              |> unquote(api).read_one(primary_key, opts)
+              |> Ash.Query.do_filter(primary_key)
+              |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+              |> Ash.Query.for_read(unquote(trigger.read_action), authorize?: false)
+              |> unquote(api).read_one()
               |> case do
                 {:ok, nil} ->
                   {:discard, :trigger_no_longer_applies}
 
                 {:ok, record} ->
-                  nil
+                  record
+                  |> Ash.Changeset.new()
+                  |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
+                  |> Ash.Changeset.for_update(unquote(trigger.action), %{})
+                  |> unquote(api).update()
               end
-              |> Ash.Changeset.new()
-              |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-              |> Ash.Changeset.for_update(unquote(trigger.action), %{})
-              |> unquote(api).update()
             end
           end
         end
