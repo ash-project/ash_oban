@@ -148,14 +148,14 @@ defmodule AshOban do
       AshOban.Transformers.DefineSchedulers
     ]
 
-  def config(apis, base \\ %{}) do
+  def config(apis, base) do
     pro? = AshOban.Info.pro?()
 
     cron_plugin =
       if pro? do
         Oban.Pro.Plugins.DynamicCron
       else
-        Oban.Pro.Plugins.Cron
+        Oban.Plugins.Cron
       end
 
     if pro? && base[:engine] != Oban.Pro.Queue.SmartEngine do
@@ -208,27 +208,31 @@ defmodule AshOban do
   defp require_queues!(config, resource, trigger) do
     unless config[:queues][trigger.queue] do
       raise """
-      Must configure the queue `:#{trigger.queue}`, requied for
+      Must configure the queue `:#{trigger.queue}`, required for
       the trigger `:#{trigger.name}` on #{inspect(resource)}
       """
     end
 
     unless config[:queues][trigger.scheduler_queue] do
       raise """
-      Must configure the queue `:#{trigger.queue}`, required for
+      Must configure the queue `:#{trigger.scheduler_queue}`, required for
       the scheduler of the trigger `:#{trigger.name}` on #{inspect(resource)}
       """
     end
   end
 
   defp require_cron!(config, name) do
-    unless config[:plugins][name] do
+    unless Enum.find(config[:plugins] || [], &match?({^name, _}, &1)) do
       raise """
       Must configure cron plugin #{name}.
 
       See oban's documentation for more. AshOban will
       add cron jobs to the configuration, but will not
       add the basic configuration for you.
+
+      Configuration received:
+
+      #{inspect(config)}
       """
     end
   end
