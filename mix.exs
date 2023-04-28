@@ -119,7 +119,7 @@ defmodule AshOban.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ash, github: "ash-project/ash"},
+      {:ash, "~> 2.8"},
       {:spark, ">= 1.1.3"},
       {:oban, "~> 2.15"},
       {:oban_pro, "~> 0.14", repo: "oban", optional: true},
