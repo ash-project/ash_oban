@@ -160,6 +160,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
     api = AshOban.Info.oban_api!(dsl)
     pro? = AshOban.Info.pro?()
 
+    transaction? = Ash.Resource.Info.action(dsl, trigger.action).transaction?
+
     worker =
       if pro? do
         Oban.Pro.Worker
@@ -213,7 +215,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
           end
         else
           def unquote(function_name)(%Oban.Job{args: %{"primary_key" => primary_key}}) do
-            if Ash.DataLayer.data_layer_can?(unquote(resource), :transact) do
+            if Ash.DataLayer.data_layer_can?(unquote(resource), :transact) &&
+                 unquote(transaction?) do
               Ash.DataLayer.transaction(
                 unquote(resource),
                 fn ->
