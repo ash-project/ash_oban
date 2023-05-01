@@ -86,7 +86,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           def insert(stream) do
             stream
             |> Stream.chunk_every(100)
-            |> Stream.each(&Oban.insert_all!/1)
+            |> Stream.each(&Oban.insert_all/1)
             |> Stream.run()
           end
         end

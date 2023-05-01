@@ -53,7 +53,7 @@ oban do
   triggers do
     api YourApi
 
-    # add a triggere called `:process`
+    # add a trigger called `:process`
     trigger :process do
       # this trigger calls the `process` action
       action :process
