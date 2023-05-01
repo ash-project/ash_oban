@@ -199,7 +199,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 %{changeset | data: record}
 
               {:error, error} ->
-                Ash.Changeset.add_error(error)
+                Ash.Changeset.add_error(changeset, error)
             end
           end)
         end
@@ -219,7 +219,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 %{changeset | data: record}
 
               {:error, error} ->
-                Ash.Changeset.add_error(error)
+                Ash.Changeset.add_error(changeset, error)
             end
           end)
         end
