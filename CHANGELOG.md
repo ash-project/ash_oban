@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.1.1](https://github.com/ash-project/ash_oban/compare/v0.1.0...v0.1.1) (2023-05-01)
+
+
+
+
+### Bug Fixes:
+
+* add_error/1 does not exist
+
+* `insert_all/1` not `insert_all!/1`
+
+### Improvements:
+
+* handle actions w/ before_transaction/after_transaction hooks better
+
 ## [v0.1.0](https://github.com/ash-project/ash_oban/compare/v0.1.0...v0.1.0) (2023-04-28)
 
 
