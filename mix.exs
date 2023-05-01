@@ -119,10 +119,11 @@ defmodule AshOban.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     oban_dep =
-      if Mix.env() == :dev && !(System.get_env("ASH_OBAN_CI_OBAN_PRO") == "false") do
-        [{:oban_pro, "~> 0.14", repo: "oban", optional: true}]
-      else
+      if System.get_env("ASH_OBAN_CI_OBAN_PRO") == "false" do
         []
+      else
+        # See the getting started guide why this is only dev/test
+        [{:oban_pro, "~> 0.14", repo: "oban", only: [:dev]}]
       end
 
     oban_dep ++
