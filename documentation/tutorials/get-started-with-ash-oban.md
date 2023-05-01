@@ -23,11 +23,19 @@ end
 
 First, follow the oban setup guide.
 
+### Oban Pro
+
 If you are using Oban Pro, set the following configuration:
 
 ```elixir
 config :ash_oban, :pro?, true
 ```
+
+Oban Pro lives in a separate hex repository, and therefore we, unfortunately, cannot have an explicit version dependency on it.
+What this means is that any version you use in hex will technically be accepted, and if you don't have the oban pro package installed
+and you use the above configuration, you will get compile time errors/warnings.
+
+### Setting up AshOban
 
 Next, allow AshOban to alter your configuration
 
