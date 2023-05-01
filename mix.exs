@@ -118,19 +118,26 @@ defmodule AshOban.MixProject do
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
-    [
-      {:ash, "~> 2.8"},
-      {:spark, ">= 1.1.3"},
-      {:oban, "~> 2.15"},
-      {:oban_pro, "~> 0.14", repo: "oban", optional: true},
-      {:ex_doc, "~> 0.22", only: [:dev, :test], runtime: false},
-      {:ex_check, "~> 0.12.0", only: [:dev, :test]},
-      {:credo, ">= 0.0.0", only: [:dev, :test], runtime: false},
-      {:dialyxir, ">= 0.0.0", only: [:dev, :test], runtime: false},
-      {:sobelow, ">= 0.0.0", only: [:dev, :test], runtime: false},
-      {:git_ops, "~> 2.5.1", only: [:dev, :test]},
-      {:excoveralls, "~> 0.13.0", only: [:dev, :test]}
-    ]
+    oban_dep =
+      if Mix.env() == :dev do
+        [{:oban_pro, "~> 0.14", repo: "oban", optional: true}]
+      else
+        []
+      end
+
+    oban_dep ++
+      [
+        {:ash, "~> 2.8"},
+        {:spark, ">= 1.1.3"},
+        {:oban, "~> 2.15"},
+        {:ex_doc, "~> 0.22", only: [:dev, :test], runtime: false},
+        {:ex_check, "~> 0.12.0", only: [:dev, :test]},
+        {:credo, ">= 0.0.0", only: [:dev, :test], runtime: false},
+        {:dialyxir, ">= 0.0.0", only: [:dev, :test], runtime: false},
+        {:sobelow, ">= 0.0.0", only: [:dev, :test], runtime: false},
+        {:git_ops, "~> 2.5.1", only: [:dev, :test]},
+        {:excoveralls, "~> 0.13.0", only: [:dev, :test]}
+      ]
   end
 
   defp aliases do
