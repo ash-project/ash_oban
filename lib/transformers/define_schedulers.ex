@@ -181,24 +181,79 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
     can_lock? = Ash.DataLayer.data_layer_can?(dsl, {:lock, :for_update})
 
-    lock =
-      if work_transaction? || on_error_transaction? do
-        if can_lock? do
-          quote location: :keep do
-            defp lock(query) do
-              Ash.Query.lock(query, :for_update)
+    get_and_lock =
+      if can_lock? do
+        quote do
+          Ash.Changeset.before_action(changeset, fn changeset ->
+            query()
+            |> Ash.Query.do_filter(primary_key)
+            |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+            |> Ash.Query.for_read(unquote(trigger.read_action), authorize?: false)
+            |> Ash.Query.lock(:for_update)
+            |> unquote(api).read_one()
+            |> case do
+              {:ok, nil} ->
+                Ash.Changeset.add_error(changeset, "trigger no longer applies")
+
+              {:ok, record} ->
+                %{changeset | data: record}
+
+              {:error, error} ->
+                Ash.Changeset.add_error(error)
             end
-          end
-        else
-          quote location: :keep do
-            defp lock(query), do: query
-          end
+          end)
+        end
+      else
+        quote do
+          Ash.Changeset.before_action(changeset, fn changeset ->
+            query()
+            |> Ash.Query.do_filter(primary_key)
+            |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+            |> Ash.Query.for_read(unquote(trigger.read_action), authorize?: false)
+            |> unquote(api).read_one()
+            |> case do
+              {:ok, nil} ->
+                Ash.Changeset.add_error(changeset, "trigger no longer applies")
+
+              {:ok, record} ->
+                %{changeset | data: record}
+
+              {:error, error} ->
+                Ash.Changeset.add_error(error)
+            end
+          end)
         end
       end
 
-    handle_error = handle_error(trigger, on_error_transaction?, resource, api)
+    prepare_error =
+      if on_error_transaction? do
+        quote location: :keep do
+          defp prepare_error(changeset, primary_key) do
+            unquote(get_and_lock)
+          end
+        end
+      else
+        quote location: :keep do
+          defp prepare_error(changeset, primary_key), do: changeset
+        end
+      end
 
-    work = work(trigger, worker, pro?, resource, api, work_transaction?)
+    prepare =
+      if work_transaction? do
+        quote location: :keep do
+          defp prepare(changeset, primary_key) do
+            unquote(get_and_lock)
+          end
+        end
+      else
+        quote location: :keep do
+          defp prepare(changeset, primary_key), do: changeset
+        end
+      end
+
+    handle_error = handle_error(trigger, resource, api)
+
+    work = work(trigger, worker, pro?, api)
 
     Module.create(
       worker_module_name,
@@ -220,108 +275,47 @@ defmodule AshOban.Transformers.DefineSchedulers do
         unquote(work)
         unquote(query)
         unquote(handle_error)
-        unquote(lock)
+        unquote(prepare)
+        unquote(prepare_error)
       end,
       Macro.Env.location(__ENV__)
     )
   end
 
-  defp handle_error(trigger, on_error_transaction?, resource, api) do
+  defp handle_error(trigger, resource, api) do
     if trigger.on_error do
       # We look up the record again since we have exited any potential transaction we were in before
-      if on_error_transaction? do
-        quote location: :keep do
-          def handle_error(error, primary_key) do
-            Ash.DataLayer.transaction(
-              unquote(resource),
-              fn ->
-                query()
-                |> Ash.Query.do_filter(primary_key)
-                |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-                |> lock()
-                |> Ash.Query.for_read(unquote(trigger.read_action), authorize?: false)
-                |> unquote(api).read_one()
-                |> case do
-                  {:ok, nil} ->
-                    {:discard, :trigger_no_longer_applies}
+      quote location: :keep do
+        def handle_error(error, primary_key) do
+          query()
+          |> Ash.Query.do_filter(primary_key)
+          |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+          |> Ash.Query.for_read(unquote(trigger.read_action), authorize?: false)
+          |> unquote(api).read_one()
+          |> case do
+            {:ok, nil} ->
+              {:discard, :trigger_no_longer_applies}
 
-                  {:ok, record} ->
-                    record
-                    |> Ash.Changeset.new()
-                    |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-                    |> Ash.Changeset.for_update(unquote(trigger.on_error), %{error: error})
-                    |> unquote(api).update(return_notifications?: true)
-                    |> case do
-                      {:ok, result, notifications} ->
-                        notifications
+            {:ok, record} ->
+              record
+              |> Ash.Changeset.new()
+              |> prepare_error(primary_key)
+              |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
+              |> Ash.Changeset.for_update(unquote(trigger.on_error), %{error: error})
+              |> unquote(api).update()
+              |> case do
+                {:ok, _result} ->
+                  :ok
 
-                      {:error, error} ->
-                        Ash.DataLayer.rollback(unquote(resource), error)
-                    end
-                end
-              end,
-              nil,
-              %{
-                type: :ash_oban_trigger_error,
-                metadata: %{
-                  resource: unquote(resource),
-                  trigger: unquote(trigger.name),
-                  primary_key: primary_key,
-                  error: error
-                }
-              }
-            )
-            |> case do
-              {:ok, {:discard, reason}} ->
-                {:discard, reason}
+                {:error, error} ->
+                  Logger.error("""
+                  Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
 
-              {:ok, notifications} ->
-                Ash.Notifier.notify(notifications)
-                :ok
+                  #{inspect(Exception.message(error))}
+                  """)
 
-              {:error, error} ->
-                Logger.error("""
-                Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
-
-                #{inspect(Exception.message(error))}
-                """)
-
-                {:error, error}
-            end
-          end
-        end
-      else
-        quote location: :keep do
-          def handle_error(error, primary_key) do
-            query()
-            |> Ash.Query.do_filter(primary_key)
-            |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-            |> Ash.Query.for_read(unquote(trigger.read_action), authorize?: false)
-            |> unquote(api).read_one()
-            |> case do
-              {:ok, nil} ->
-                {:discard, :trigger_no_longer_applies}
-
-              {:ok, record} ->
-                record
-                |> Ash.Changeset.new()
-                |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-                |> Ash.Changeset.for_update(unquote(trigger.on_error), %{error: error})
-                |> unquote(api).update()
-                |> case do
-                  {:ok, _result} ->
-                    :ok
-
-                  {:error, error} ->
-                    Logger.error("""
-                    Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
-
-                    #{inspect(Exception.message(error))}
-                    """)
-
-                    {:error, error}
-                end
-            end
+                  {:error, error}
+              end
           end
         end
       end
@@ -350,7 +344,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     end
   end
 
-  defp work(trigger, worker, pro?, resource, api, work_transaction?) do
+  defp work(trigger, worker, pro?, api) do
     function_name =
       if pro? do
         :process
@@ -358,110 +352,50 @@ defmodule AshOban.Transformers.DefineSchedulers do
         :perform
       end
 
-    cond do
-      trigger.state != :active ->
-        quote location: :keep do
-          @impl unquote(worker)
-          def unquote(function_name)(_) do
-            {:discard, unquote(trigger.state)}
-          end
+    if trigger.state != :active do
+      quote location: :keep do
+        @impl unquote(worker)
+        def unquote(function_name)(_) do
+          {:discard, unquote(trigger.state)}
         end
+      end
+    else
+      quote location: :keep do
+        @impl unquote(worker)
+        def unquote(function_name)(%Oban.Job{args: %{"primary_key" => primary_key}} = job) do
+          query()
+          |> Ash.Query.do_filter(primary_key)
+          |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+          |> Ash.Query.for_read(unquote(trigger.read_action), authorize?: false)
+          |> unquote(api).read_one()
+          |> case do
+            {:ok, nil} ->
+              {:discard, :trigger_no_longer_applies}
 
-      work_transaction? ->
-        quote location: :keep do
-          @impl unquote(worker)
-          def unquote(function_name)(%Oban.Job{args: %{"primary_key" => primary_key}} = job) do
-            Ash.DataLayer.transaction(
-              unquote(resource),
-              fn ->
-                query()
-                |> Ash.Query.do_filter(primary_key)
-                |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-                |> lock()
-                |> Ash.Query.for_read(unquote(trigger.read_action), authorize?: false)
-                |> unquote(api).read_one()
-                |> case do
-                  {:ok, nil} ->
-                    {:discard, :trigger_no_longer_applies}
+            {:ok, record} ->
+              record
+              |> Ash.Changeset.new()
+              |> prepare(primary_key)
+              |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
+              |> Ash.Changeset.for_update(unquote(trigger.action), %{})
+              |> unquote(api).update()
+              |> case do
+                {:ok, result} ->
+                  {:ok, result}
 
-                  {:ok, record} ->
-                    record
-                    |> Ash.Changeset.new()
-                    |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-                    |> Ash.Changeset.for_update(unquote(trigger.action), %{})
-                    |> unquote(api).update(return_notifications?: true)
-                    |> case do
-                      {:ok, _result, notifications} ->
-                        notifications
+                {:error, error} ->
+                  raise Ash.Error.to_error_class(error)
+              end
 
-                      {:error, error} ->
-                        Ash.DataLayer.rollback(unquote(resource), error)
-                    end
-                end
-              end,
-              nil,
-              %{
-                type: :ash_oban_trigger,
-                metadata: %{
-                  resource: unquote(resource),
-                  trigger: unquote(trigger.name),
-                  primary_key: primary_key
-                }
-              }
-            )
-            |> case do
-              {:ok, {:discard, reason}} ->
-                {:discard, reason}
-
-              {:ok, notifications} ->
-                Ash.Notifier.notify(notifications)
-                :ok
-
-              {:error, error} ->
-                raise Ash.Error.to_error_class(error)
-            end
-          rescue
-            error ->
-              handle_error(error, primary_key)
+            # we don't have the record here, so we can't do the `on_error` behavior
+            other ->
+              other
           end
+        rescue
+          error ->
+            handle_error(error, primary_key)
         end
-
-      true ->
-        quote location: :keep do
-          @impl unquote(worker)
-          def unquote(function_name)(%Oban.Job{args: %{"primary_key" => primary_key}} = job) do
-            query()
-            |> Ash.Query.do_filter(primary_key)
-            |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-            |> Ash.Query.for_read(unquote(trigger.read_action), authorize?: false)
-            |> unquote(api).read_one()
-            |> case do
-              {:ok, nil} ->
-                {:discard, :trigger_no_longer_applies}
-
-              {:ok, record} ->
-                record
-                |> Ash.Changeset.new()
-                |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-                |> Ash.Changeset.for_update(unquote(trigger.action), %{})
-                |> unquote(api).update()
-                |> case do
-                  {:ok, result} ->
-                    {:ok, result}
-
-                  {:error, error} ->
-                    raise Ash.Error.to_error_class(error)
-                end
-
-              # we don't have the record here, so we can't do the `on_error` behavior
-              other ->
-                other
-            end
-          rescue
-            error ->
-              handle_error(error, primary_key)
-          end
-        end
+      end
     end
   end
 end
