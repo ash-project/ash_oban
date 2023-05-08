@@ -53,7 +53,7 @@ defmodule AshOban.Transformers.SetDefaults do
          trigger
          | read_action: read_action.name,
            queue: queue,
-           scheduler_queue: trigger.scheduler_queue || :"#{queue}_scheduler",
+           scheduler_queue: trigger.scheduler_queue || queue,
            action: trigger.action || trigger.name
        })
      end)}

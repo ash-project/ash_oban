@@ -53,7 +53,7 @@ defmodule AshOban do
       scheduler_queue: [
         type: :atom,
         doc:
-          "The queue to place the scheduler job in. The trigger name plus \"_scheduler\" is used by default."
+          "The queue to place the scheduler job in. The same queue as job is used by default (but with a priority of 1 so schedulers run first)."
       ],
       scheduler_cron: [
         type: :string,

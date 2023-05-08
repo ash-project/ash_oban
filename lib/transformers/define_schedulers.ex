@@ -117,6 +117,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     quoted =
       quote location: :keep do
         use unquote(worker),
+          priority: 1,
           queue: unquote(trigger.scheduler_queue),
           unique: [
             period: :infinity,
@@ -259,6 +260,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
       worker_module_name,
       quote location: :keep do
         use unquote(worker),
+          priority: 0,
           max_attempts: unquote(trigger.max_attempts),
           queue: unquote(trigger.queue),
           unique: [
