@@ -189,7 +189,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             query()
             |> Ash.Query.do_filter(primary_key)
             |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-            |> Ash.Query.for_read(unquote(trigger.read_action), authorize?: false)
+            |> Ash.Query.for_read(unquote(trigger.read_action))
             |> Ash.Query.lock(:for_update)
             |> unquote(api).read_one()
             |> case do
@@ -210,7 +210,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             query()
             |> Ash.Query.do_filter(primary_key)
             |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-            |> Ash.Query.for_read(unquote(trigger.read_action), authorize?: false)
+            |> Ash.Query.for_read(unquote(trigger.read_action))
             |> unquote(api).read_one()
             |> case do
               {:ok, nil} ->
@@ -292,7 +292,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           query()
           |> Ash.Query.do_filter(primary_key)
           |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-          |> Ash.Query.for_read(unquote(trigger.read_action), authorize?: false)
+          |> Ash.Query.for_read(unquote(trigger.read_action))
           |> unquote(api).read_one()
           |> case do
             {:ok, nil} ->
@@ -368,7 +368,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           query()
           |> Ash.Query.do_filter(primary_key)
           |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-          |> Ash.Query.for_read(unquote(trigger.read_action), authorize?: false)
+          |> Ash.Query.for_read(unquote(trigger.read_action))
           |> unquote(api).read_one()
           |> case do
             {:ok, nil} ->
