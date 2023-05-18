@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.1.3](https://github.com/ash-project/ash_oban/compare/v0.1.2...v0.1.3) (2023-05-18)
+
+
+
+
+### Bug Fixes:
+
+* properly raise errors instead of swallowing them
+
+* don't use `authorize?: false` for operations.
+
 ## [v0.1.2](https://github.com/ash-project/ash_oban/compare/v0.1.1...v0.1.2) (2023-05-08)
 
 
