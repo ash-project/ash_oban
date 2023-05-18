@@ -288,7 +288,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     if trigger.on_error do
       # We look up the record again since we have exited any potential transaction we were in before
       quote location: :keep do
-        def handle_error(error, primary_key) do
+        def handle_error(error, primary_key, stacktrace) do
           query()
           |> Ash.Query.do_filter(primary_key)
           |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
@@ -316,15 +316,15 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   #{inspect(Exception.message(error))}
                   """)
 
-                  {:error, error}
+                  reraise Ash.Error.to_ash_error(error, stacktrace), stacktrace
               end
           end
         end
       end
     else
       quote location: :keep do
-        def handle_error(error, _) do
-          {:error, error}
+        def handle_error(error, _, stacktrace) do
+          reraise Ash.Error.to_ash_error(error, stacktrace), stacktrace
         end
       end
     end
@@ -395,7 +395,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           end
         rescue
           error ->
-            handle_error(error, primary_key)
+            handle_error(error, primary_key, __STACKTRACE__)
         end
       end
     end
