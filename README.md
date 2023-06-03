@@ -1,4 +1,4 @@
-# AshStateMachine
+# AshOban
 
 An oban extension for `Ash.Resource`
 
