@@ -12,6 +12,7 @@ defmodule AshOban do
             scheduler_cron: String.t(),
             scheduler_queue: atom,
             max_attempts: pos_integer(),
+            record_limit: pos_integer(),
             max_scheduler_attempts: pos_integer(),
             where: Ash.Expr.t(),
             scheduler: module,
@@ -30,6 +31,7 @@ defmodule AshOban do
       :scheduler_queue,
       :max_attempts,
       :max_scheduler_attempts,
+      :record_limit,
       :where,
       :state,
       :scheduler,
@@ -64,6 +66,11 @@ defmodule AshOban do
       queue: [
         type: :atom,
         doc: "The queue to place the worker job in. The trigger name is used by default."
+      ],
+      record_limit: [
+        type: :pos_integer,
+        doc:
+          "If set, any given run of the scheduler will only ever schedule this many items maximum"
       ],
       max_scheduler_attempts: [
         type: :pos_integer,

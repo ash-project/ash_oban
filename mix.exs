@@ -128,7 +128,7 @@ defmodule AshOban.MixProject do
 
     oban_dep ++
       [
-        {:ash, "~> 2.8"},
+        {:ash, "~> 2.9 and >= 2.9.27"},
         {:spark, ">= 1.1.3"},
         {:oban, "~> 2.15"},
         {:ex_doc, "~> 0.22", only: [:dev, :test], runtime: false},

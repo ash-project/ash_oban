@@ -56,6 +56,21 @@ defmodule AshOban.Transformers.DefineSchedulers do
         end
       end
 
+    limit_stream =
+      if trigger.record_limit do
+        quote do
+          def limit_stream(query) do
+            Ash.Query.limit(query, unquote(trigger.record_limit))
+          end
+        end
+      else
+        quote do
+          def limit_stream(query) do
+            query
+          end
+        end
+      end
+
     stream =
       if is_nil(trigger.where) do
         quote location: :keep do
@@ -63,6 +78,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             resource
             |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
             |> Ash.Query.select(unquote(primary_key))
+            |> limit_stream()
             |> Ash.Query.for_read(unquote(trigger.read_action))
             |> unquote(api).stream!()
           end
@@ -73,8 +89,9 @@ defmodule AshOban.Transformers.DefineSchedulers do
             resource
             |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
             |> Ash.Query.select(unquote(primary_key))
-            |> Ash.Query.for_read(unquote(trigger.read_action))
+            |> limit_stream()
             |> filter()
+            |> Ash.Query.for_read(unquote(trigger.read_action))
             |> unquote(api).stream!()
           end
         end
@@ -149,6 +166,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           end
         end
 
+        unquote(limit_stream)
         unquote(stream)
         unquote(filter)
         unquote(insert)
