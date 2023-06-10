@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.1.4](https://github.com/ash-project/ash_oban/compare/v0.1.3...v0.1.4) (2023-06-10)
+
+
+
+
+### Improvements:
+
+* support `record_limit` to limit max processed records
+
 ## [v0.1.3](https://github.com/ash-project/ash_oban/compare/v0.1.2...v0.1.3) (2023-05-18)
 
 
