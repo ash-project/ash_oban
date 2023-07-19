@@ -163,6 +163,11 @@ defmodule AshOban.Transformers.DefineSchedulers do
               })
             end)
             |> insert()
+          rescue
+            e ->
+              Logger.error("Error running AshOban scheduler #{__MODULE__}.\n#{Exception.format(:error, e, __STACKTRACE__)}")
+
+              reraise e, __STACKTRACE__
           end
         end
 
