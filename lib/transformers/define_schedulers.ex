@@ -165,7 +165,9 @@ defmodule AshOban.Transformers.DefineSchedulers do
             |> insert()
           rescue
             e ->
-              Logger.error("Error running AshOban scheduler #{__MODULE__}.\n#{Exception.format(:error, e, __STACKTRACE__)}")
+              Logger.error(
+                "Error running AshOban scheduler #{__MODULE__}.\n#{Exception.format(:error, e, __STACKTRACE__)}"
+              )
 
               reraise e, __STACKTRACE__
           end
@@ -277,7 +279,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
     handle_error = handle_error(trigger, resource, api)
 
-    work = work(trigger, worker, pro?, api)
+    work = work(trigger, worker, pro?, resource, api)
 
     Module.create(
       worker_module_name,
@@ -369,12 +371,21 @@ defmodule AshOban.Transformers.DefineSchedulers do
     end
   end
 
-  defp work(trigger, worker, pro?, api) do
+  defp work(trigger, worker, pro?, resource, api) do
     function_name =
       if pro? do
         :process
       else
         :perform
+      end
+
+    read_action =
+      case Ash.Resource.Info.primary_action(resource, :read) do
+        nil ->
+          trigger.read_action
+
+        %{name: name} ->
+          name
       end
 
     if trigger.state != :active do
@@ -391,7 +402,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           query()
           |> Ash.Query.do_filter(primary_key)
           |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-          |> Ash.Query.for_read(unquote(trigger.read_action))
+          |> Ash.Query.for_read(unquote(read_action))
           |> unquote(api).read_one()
           |> case do
             {:ok, nil} ->
