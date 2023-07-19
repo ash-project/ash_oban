@@ -380,13 +380,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
       end
 
     read_action =
-      case Ash.Resource.Info.primary_action(resource, :read) do
-        nil ->
-          trigger.read_action
-
-        %{name: name} ->
-          name
-      end
+      trigger.worker_read_action || trigger.read_action ||
+        Ash.Resource.Info.primary_action!(resource, :read).name
 
     if trigger.state != :active do
       quote location: :keep do

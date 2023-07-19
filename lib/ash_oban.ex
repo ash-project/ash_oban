@@ -26,6 +26,7 @@ defmodule AshOban do
       :name,
       :action,
       :read_action,
+      :worker_read_action,
       :queue,
       :scheduler_cron,
       :scheduler_queue,
@@ -39,6 +40,12 @@ defmodule AshOban do
       :on_error,
       :__identifier__
     ]
+
+    def transform(%{read_action: read_action, worker_read_action: nil} = trigger) do
+      {:ok, %{trigger | worker_read_action: read_action}}
+    end
+
+    def transform(other), do: {:ok, other}
   end
 
   @trigger %Spark.Dsl.Entity{
@@ -47,6 +54,7 @@ defmodule AshOban do
     args: [:name],
     identifier: :name,
     imports: [Ash.Filter.TemplateHelpers],
+    transform: {Trigger, :transform, []},
     schema: [
       name: [
         type: :atom,
@@ -106,6 +114,16 @@ defmodule AshOban do
         The read action to use when querying records. Defaults to the primary read.
 
         This action *must* support keyset pagination.
+        """
+      ],
+      worker_read_action: [
+        type: :atom,
+        doc: """
+        The read action to use when fetching the individual records for the trigger.
+
+        This defaults to `read_action`, allowing us to discard records that are no longer relevant.
+        You may need to change this, and if so make sure your action handles the scenario where the
+        trigger is no longer relevant.
         """
       ],
       action: [

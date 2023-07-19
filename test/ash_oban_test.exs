@@ -22,6 +22,7 @@ defmodule AshObanTest do
         trigger :process do
           action :process
           where expr(processed != true)
+          worker_read_action(:read)
         end
       end
     end

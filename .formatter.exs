@@ -6,12 +6,14 @@ spark_locals_without_parens = [
   on_error: 1,
   queue: 1,
   read_action: 1,
+  record_limit: 1,
   scheduler_cron: 1,
   scheduler_queue: 1,
   state: 1,
   trigger: 1,
   trigger: 2,
-  where: 1
+  where: 1,
+  worker_read_action: 1
 ]
 
 # Used by "mix format"
