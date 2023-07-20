@@ -207,6 +207,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
     can_lock? = Ash.DataLayer.data_layer_can?(dsl, {:lock, :for_update})
 
+    read_action =
+      trigger.worker_read_action || trigger.read_action ||
+        Ash.Resource.Info.primary_action!(resource, :read).name
+
     get_and_lock =
       if can_lock? do
         quote do
@@ -214,7 +218,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             query()
             |> Ash.Query.do_filter(primary_key)
             |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-            |> Ash.Query.for_read(unquote(trigger.read_action))
+            |> Ash.Query.for_read(unquote(read_action))
             |> Ash.Query.lock(:for_update)
             |> unquote(api).read_one()
             |> case do
@@ -235,7 +239,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             query()
             |> Ash.Query.do_filter(primary_key)
             |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-            |> Ash.Query.for_read(unquote(trigger.read_action))
+            |> Ash.Query.for_read(unquote(read_action))
             |> unquote(api).read_one()
             |> case do
               {:ok, nil} ->
@@ -279,7 +283,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
     handle_error = handle_error(trigger, resource, api)
 
-    work = work(trigger, worker, pro?, resource, api)
+    work = work(trigger, worker, pro?, read_action, api)
 
     Module.create(
       worker_module_name,
@@ -371,17 +375,13 @@ defmodule AshOban.Transformers.DefineSchedulers do
     end
   end
 
-  defp work(trigger, worker, pro?, resource, api) do
+  defp work(trigger, worker, pro?, read_action, api) do
     function_name =
       if pro? do
         :process
       else
         :perform
       end
-
-    read_action =
-      trigger.worker_read_action || trigger.read_action ||
-        Ash.Resource.Info.primary_action!(resource, :read).name
 
     if trigger.state != :active do
       quote location: :keep do
