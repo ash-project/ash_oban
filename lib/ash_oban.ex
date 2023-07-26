@@ -215,9 +215,9 @@ defmodule AshOban do
         Oban.Plugins.Cron
       end
 
-    if pro? && base[:engine] != Oban.Pro.Queue.SmartEngine do
+    if pro? && base[:engine] not in [Oban.Pro.Queue.SmartEngine, Oban.Pro.Engines.Smart] do
       raise """
-      Expected oban engine to be Oban.Pro.Queue.SmartEngine, but got #{inspect(base[:engine])}.
+      Expected oban engine to be Oban.Pro.Queue.SmartEngine or Oban.Pro.Engines.Smart, but got #{inspect(base[:engine])}.
       This expectation is because you've set `config :ash_oban, pro?: true`.
       """
     end
