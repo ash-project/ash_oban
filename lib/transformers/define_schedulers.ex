@@ -317,7 +317,22 @@ defmodule AshOban.Transformers.DefineSchedulers do
     if trigger.on_error do
       # We look up the record again since we have exited any potential transaction we were in before
       quote location: :keep do
-        def handle_error(error, primary_key, stacktrace) do
+        def handle_error(
+              %{max_attempts: max_attempts, attempt: attempt},
+              error,
+              _primary_key,
+              stacktrace
+            )
+            when max_attempts != attempt do
+          reraise Ash.Error.to_ash_error(error, stacktrace), stacktrace
+        end
+
+        def handle_error(
+              %{max_attempts: max_attempts, attempt: max_attempts} = job,
+              error,
+              primary_key,
+              stacktrace
+            ) do
           query()
           |> Ash.Query.do_filter(primary_key)
           |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
@@ -335,7 +350,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
               |> Ash.Changeset.for_update(unquote(trigger.on_error), %{error: error})
               |> unquote(api).update()
               |> case do
-                {:ok, _result} ->
+                {:ok, result} ->
                   :ok
 
                 {:error, error} ->
@@ -352,7 +367,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
       end
     else
       quote location: :keep do
-        def handle_error(error, _, stacktrace) do
+        def handle_error(_job, error, _, stacktrace) do
           reraise Ash.Error.to_ash_error(error, stacktrace), stacktrace
         end
       end
@@ -424,7 +439,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           end
         rescue
           error ->
-            handle_error(error, primary_key, __STACKTRACE__)
+            handle_error(job, error, primary_key, __STACKTRACE__)
         end
       end
     end
