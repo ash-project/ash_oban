@@ -13,8 +13,8 @@ defmodule AshOban.Test do
     |> Enum.map(& &1.queue)
     |> Enum.uniq()
     |> Enum.reduce(%{}, fn queue, acc ->
-      queue
-      |> Oban.drain_queue(queue: queue)
+      [queue: queue]
+      |> Oban.drain_queue()
       |> Map.merge(acc, fn _key, left, right ->
         left + right
       end)
