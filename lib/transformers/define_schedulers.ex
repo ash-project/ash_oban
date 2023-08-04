@@ -281,7 +281,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
         end
       end
 
-    handle_error = handle_error(trigger, resource, api)
+    handle_error = handle_error(trigger, resource, api, read_action)
 
     work = work(trigger, worker, pro?, read_action, api)
 
@@ -313,7 +313,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     )
   end
 
-  defp handle_error(trigger, resource, api) do
+  defp handle_error(trigger, resource, api, read_action) do
     if trigger.on_error do
       # We look up the record again since we have exited any potential transaction we were in before
       quote location: :keep do
@@ -321,7 +321,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           query()
           |> Ash.Query.do_filter(primary_key)
           |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-          |> Ash.Query.for_read(unquote(trigger.read_action))
+          |> Ash.Query.for_read(unquote(read_action))
           |> unquote(api).read_one()
           |> case do
             {:ok, nil} ->
