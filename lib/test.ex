@@ -14,7 +14,7 @@ defmodule AshOban.Test do
     |> Enum.uniq()
     |> Enum.reduce(%{}, fn queue, acc ->
       queue
-      |> Oban.drain_queue()
+      |> Oban.drain_queue(queue: queue)
       |> Map.merge(acc, fn _key, left, right ->
         left + right
       end)
