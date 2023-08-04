@@ -9,10 +9,13 @@ defmodule AshOban.Test do
       AshOban.schedule(resource, trigger)
     end)
 
-    triggers
-    |> Enum.map(& &1.queue)
-    |> Enum.uniq()
-    |> Enum.reduce(%{}, fn queue, acc ->
+    queues =
+      triggers
+      |> Enum.map(& &1.queue)
+      |> Enum.uniq()
+
+    # we drain each queue twice to do schedulers and then workers
+    Enum.reduce(queues ++ queues, %{}, fn queue, acc ->
       [queue: queue]
       |> Oban.drain_queue()
       |> Map.merge(acc, fn _key, left, right ->
