@@ -187,6 +187,21 @@ defmodule AshOban do
       AshOban.Transformers.DefineSchedulers
     ]
 
+  def schedule(resource, trigger) do
+    trigger =
+      case trigger do
+        %AshOban.Trigger{} ->
+          trigger
+
+        name when is_atom(name) ->
+          AshOban.Info.oban_trigger(resource, name)
+      end
+
+    %{}
+    |> trigger.scheduler.new()
+    |> Oban.insert!()
+  end
+
   def run_trigger(%resource{} = record, trigger) do
     trigger =
       case trigger do
