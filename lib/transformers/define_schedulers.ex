@@ -27,8 +27,14 @@ defmodule AshOban.Transformers.DefineSchedulers do
       |> Transformer.async_compile(fn ->
         define_worker(module, worker_module_name, trigger, dsl)
       end)
-      |> Transformer.async_compile(fn ->
-        define_scheduler(module, scheduler_module_name, worker_module_name, trigger, dsl)
+      |> then(fn dsl ->
+        if trigger.cron? do
+          Transformer.async_compile(dsl, fn ->
+            define_scheduler(module, scheduler_module_name, worker_module_name, trigger, dsl)
+          end)
+        else
+          dsl
+        end
       end)
     end)
     |> then(&{:ok, &1})

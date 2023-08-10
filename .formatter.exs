@@ -1,6 +1,7 @@
 spark_locals_without_parens = [
   action: 1,
   api: 1,
+  cron?: 1,
   max_attempts: 1,
   max_scheduler_attempts: 1,
   on_error: 1,

@@ -3,7 +3,7 @@ defmodule AshObanTest do
   doctest AshOban
 
   defmodule Api do
-    use Ash.Api
+    use Ash.Api, validate_config_inclusion?: false
 
     resources do
       allow_unregistered? true
@@ -12,6 +12,7 @@ defmodule AshObanTest do
 
   defmodule Triggered do
     use Ash.Resource,
+      validate_api_inclusion?: false,
       data_layer: Ash.DataLayer.Ets,
       extensions: [AshOban]
 

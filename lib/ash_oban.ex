@@ -19,7 +19,8 @@ defmodule AshOban do
             state: :active | :paused | :deleted,
             worker: module,
             __identifier__: atom,
-            on_error: atom
+            on_error: atom,
+            cron?: boolean
           }
 
     defstruct [
@@ -38,6 +39,7 @@ defmodule AshOban do
       :scheduler,
       :worker,
       :on_error,
+      :cron?,
       :__identifier__
     ]
 
@@ -140,6 +142,12 @@ defmodule AshOban do
         type: :atom,
         doc:
           "An update action to call after the last attempt has failed. See the getting started guide for more."
+      ],
+      cron?: [
+        type: :boolean,
+        default: true,
+        doc:
+          "Whether to configure the scheduler and the Oban cron plugin to run the trigger on a cron schedule. Defaults to true."
       ]
     ]
   }
@@ -252,7 +260,12 @@ defmodule AshOban do
     end)
     |> Enum.reduce(base, fn {resource, trigger}, config ->
       require_queues!(config, resource, trigger)
-      add_job(config, cron_plugin, resource, trigger)
+
+      if trigger.cron? do
+        add_job(config, cron_plugin, resource, trigger)
+      else
+        config
+      end
     end)
   end
 
