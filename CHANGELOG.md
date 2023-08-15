@@ -5,6 +5,35 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.1.5](https://github.com/ash-project/ash_oban/compare/v0.1.4...v0.1.5) (2023-08-15)
+
+
+
+
+### Bug Fixes:
+
+* use same read_action in handle_error and in work
+
+* another syntax issue with `drain_queue/2`
+
+* drain_queue syntax issue
+
+* Update base engine to support rename Oban.Pro.Engines.Smart
+
+### Improvements:
+
+* only invoke error handler on last attempt
+
+* drain each queue twice
+
+* add test helper for running triggers
+
+* trigger_read_action, defaulting to read action
+
+* read with primary read for trigger
+
+* log error on scheduler failure
+
 ## [v0.1.4](https://github.com/ash-project/ash_oban/compare/v0.1.3...v0.1.4) (2023-06-10)
 
 
