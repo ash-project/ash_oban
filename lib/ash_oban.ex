@@ -1,4 +1,10 @@
 defmodule AshOban do
+  defmodule Scheduler do
+    @type t :: %__MODULE__{}
+
+    defstruct []
+  end
+
   defmodule Trigger do
     @moduledoc """
     A configured trigger.
@@ -9,6 +15,7 @@ defmodule AshOban do
             action: atom,
             read_action: atom,
             queue: atom,
+            schedulers: [Scheduler.t()],
             scheduler_cron: String.t(),
             scheduler_queue: atom,
             max_attempts: pos_integer(),
@@ -48,6 +55,12 @@ defmodule AshOban do
     def transform(other), do: {:ok, other}
   end
 
+  @scheduler %Spark.Dsl.Entity{
+    name: :scheduler,
+    schema: [],
+    target: Scheduler
+  }
+
   @trigger %Spark.Dsl.Entity{
     name: :trigger,
     target: Trigger,
@@ -55,6 +68,9 @@ defmodule AshOban do
     identifier: :name,
     imports: [Ash.Filter.TemplateHelpers],
     transform: {Trigger, :transform, []},
+    entities: [
+      schedulers: @scheduler
+    ]
     schema: [
       name: [
         type: :atom,
