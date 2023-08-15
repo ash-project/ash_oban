@@ -70,7 +70,7 @@ defmodule AshOban do
     transform: {Trigger, :transform, []},
     entities: [
       schedulers: @scheduler
-    ]
+    ],
     schema: [
       name: [
         type: :atom,
