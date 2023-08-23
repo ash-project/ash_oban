@@ -80,6 +80,16 @@ defmodule AshOban do
         doc:
           "If set, any given run of the scheduler will only ever schedule this many items maximum"
       ],
+      worker_priority: [
+        type: :pos_integer,
+        doc: "A number from 0 to 3, where 0 is the highest priority and 3 is the lowest.",
+        default: 2
+      ],
+      scheduler_priority: [
+        type: :pos_integer,
+        doc: "A number from 0 to 3, where 0 is the highest priority and 3 is the lowest.",
+        default: 3
+      ],
       max_scheduler_attempts: [
         type: :pos_integer,
         default: 1,

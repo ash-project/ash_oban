@@ -45,6 +45,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
   defp define_scheduler(resource, scheduler_module_name, worker_module_name, trigger, dsl) do
     api = AshOban.Info.oban_api!(dsl)
     primary_key = Ash.Resource.Info.primary_key(dsl)
+
     pro? = AshOban.Info.pro?()
 
     filter =
@@ -134,7 +135,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     quoted =
       quote location: :keep do
         use unquote(worker),
-          priority: 1,
+          priority: unquote(trigger.worker_priority),
           queue: unquote(trigger.scheduler_queue),
           unique: [
             period: :infinity,
@@ -289,7 +290,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
       worker_module_name,
       quote location: :keep do
         use unquote(worker),
-          priority: 0,
+          priority: unquote(trigger.scheduler_priority),
           max_attempts: unquote(trigger.max_attempts),
           queue: unquote(trigger.queue),
           unique: [
