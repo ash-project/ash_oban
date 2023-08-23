@@ -14,6 +14,8 @@ defmodule AshOban do
             max_attempts: pos_integer(),
             record_limit: pos_integer(),
             max_scheduler_attempts: pos_integer(),
+            scheduler_priority: non_neg_integer(),
+            worker_priority: non_neg_integer(),
             where: Ash.Expr.t(),
             scheduler: module,
             state: :active | :paused | :deleted,
@@ -30,6 +32,8 @@ defmodule AshOban do
       :queue,
       :scheduler_cron,
       :scheduler_queue,
+      :scheduler_priority,
+      :worker_priority,
       :max_attempts,
       :max_scheduler_attempts,
       :record_limit,
@@ -81,12 +85,12 @@ defmodule AshOban do
           "If set, any given run of the scheduler will only ever schedule this many items maximum"
       ],
       worker_priority: [
-        type: :pos_integer,
+        type: :non_neg_integer,
         doc: "A number from 0 to 3, where 0 is the highest priority and 3 is the lowest.",
         default: 2
       ],
       scheduler_priority: [
-        type: :pos_integer,
+        type: :non_neg_integer,
         doc: "A number from 0 to 3, where 0 is the highest priority and 3 is the lowest.",
         default: 3
       ],
