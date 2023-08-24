@@ -14,10 +14,12 @@ defmodule AshOban do
             max_attempts: pos_integer(),
             record_limit: pos_integer(),
             max_scheduler_attempts: pos_integer(),
+            read_metadata: (Ash.Resource.record() -> map),
+            stream_batch_size: pos_integer(),
             scheduler_priority: non_neg_integer(),
             worker_priority: non_neg_integer(),
             where: Ash.Expr.t(),
-            scheduler: module,
+            scheduler: module | nil,
             state: :active | :paused | :deleted,
             worker: module,
             __identifier__: atom,
@@ -30,11 +32,13 @@ defmodule AshOban do
       :read_action,
       :worker_read_action,
       :queue,
+      :read_metadata,
       :scheduler_cron,
       :scheduler_queue,
       :scheduler_priority,
       :worker_priority,
       :max_attempts,
+      :stream_batch_size,
       :max_scheduler_attempts,
       :record_limit,
       :where,
@@ -70,10 +74,17 @@ defmodule AshOban do
           "The queue to place the scheduler job in. The same queue as job is used by default (but with a priority of 1 so schedulers run first)."
       ],
       scheduler_cron: [
-        type: :string,
+        type: {:or, [:string, {:literal, false}]},
         default: "* * * * *",
+        doc: """
+        A crontab configuration for when the job should run. Defaults to once per minute (\"* * * * *\").
+        Use `false` to disable the scheduler entirely.
+        """
+      ],
+      stream_batch_size: [
+        type: :pos_integer,
         doc:
-          "A crontab configuration for when the job should run. Defaults to once per minute (\"* * * * *\")."
+          "The batch size to pass when streaming records from using `Ash.Api.stream/2`. No batch size is passed if none is provided here, so the default is used."
       ],
       queue: [
         type: :atom,
@@ -108,6 +119,14 @@ defmodule AshOban do
         Keep in mind: after all of these attempts, the scheduler will likely just reschedule the job,
         leading to infinite retries. To solve for this, configure an `on_error` action that will make
         the trigger no longer apply to failed jobs.
+        """
+      ],
+      read_metadata: [
+        type: {:fun, 1},
+        doc: """
+        Takes a record, and returns additional data of records from the read action.
+        This metadata will be stored in the database and serialized to json before
+        being passed to the update action as an argument called `metadata`.
         """
       ],
       state: [
@@ -262,10 +281,12 @@ defmodule AshOban do
     |> Enum.flat_map(fn resource ->
       resource
       |> AshOban.Info.oban_triggers()
+      |> Enum.filter(& &1.scheduler_cron)
       |> Enum.map(&{resource, &1})
     end)
     |> Enum.reduce(base, fn {resource, trigger}, config ->
       require_queues!(config, resource, trigger)
+
       add_job(config, cron_plugin, resource, trigger)
     end)
   end

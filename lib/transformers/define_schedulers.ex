@@ -15,7 +15,11 @@ defmodule AshOban.Transformers.DefineSchedulers do
     dsl
     |> AshOban.Info.oban_triggers()
     |> Enum.reduce(dsl, fn trigger, dsl ->
-      scheduler_module_name = module_name(module, trigger, "Scheduler")
+      scheduler_module_name =
+        if trigger.scheduler_cron do
+          module_name(module, trigger, "Scheduler")
+        end
+
       worker_module_name = module_name(module, trigger, "Worker")
 
       dsl
@@ -27,8 +31,14 @@ defmodule AshOban.Transformers.DefineSchedulers do
       |> Transformer.async_compile(fn ->
         define_worker(module, worker_module_name, trigger, dsl)
       end)
-      |> Transformer.async_compile(fn ->
-        define_scheduler(module, scheduler_module_name, worker_module_name, trigger, dsl)
+      |> then(fn dsl ->
+        if trigger.scheduler_cron do
+          Transformer.async_compile(dsl, fn ->
+            define_scheduler(module, scheduler_module_name, worker_module_name, trigger, dsl)
+          end)
+        else
+          dsl
+        end
       end)
     end)
     |> then(&{:ok, &1})
@@ -72,6 +82,17 @@ defmodule AshOban.Transformers.DefineSchedulers do
         end
       end
 
+    batch_opts =
+      if trigger.stream_batch_size do
+        quote do
+          [batch_size: unquote(trigger.stream_batch_size)]
+        end
+      else
+        quote do
+          []
+        end
+      end
+
     stream =
       if is_nil(trigger.where) do
         quote location: :keep do
@@ -81,7 +102,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             |> Ash.Query.select(unquote(primary_key))
             |> limit_stream()
             |> Ash.Query.for_read(unquote(trigger.read_action))
-            |> unquote(api).stream!()
+            |> unquote(api).stream!(unquote(batch_opts))
           end
         end
       else
@@ -156,11 +177,21 @@ defmodule AshOban.Transformers.DefineSchedulers do
           end
         else
           def unquote(function_name)(%Oban.Job{}) do
+            metadata =
+              case AshOban.Info.oban_trigger(unquote(resource), unquote(trigger.name)) do
+                %{read_metadata: read_metadata} when is_function(read_metadata) ->
+                  read_metadata
+
+                _ ->
+                  fn _ -> %{} end
+              end
+
             unquote(resource)
             |> stream()
             |> Stream.map(fn record ->
               unquote(worker_module_name).new(%{
-                primary_key: Map.take(record, unquote(primary_key))
+                primary_key: Map.take(record, unquote(primary_key)),
+                metadata: metadata.(record)
               })
             end)
             |> insert()

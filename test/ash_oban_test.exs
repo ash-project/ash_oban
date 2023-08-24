@@ -24,6 +24,13 @@ defmodule AshObanTest do
           where expr(processed != true)
           worker_read_action(:read)
         end
+
+        trigger :process_2 do
+          action :process
+          where expr(processed != true)
+          worker_read_action(:read)
+          scheduler_cron false
+        end
       end
     end
 
@@ -50,6 +57,9 @@ defmodule AshObanTest do
   end
 
   test "foo" do
-    assert [%AshOban.Trigger{action: :process}] = AshOban.Info.oban_triggers(Triggered)
+    assert [
+             %AshOban.Trigger{action: :process},
+             %AshOban.Trigger{action: :process, scheduler: nil}
+           ] = AshOban.Info.oban_triggers(Triggered)
   end
 end
