@@ -247,7 +247,16 @@ defmodule AshOban do
 
     primary_key = Ash.Resource.Info.primary_key(resource)
 
-    %{primary_key: Map.take(record, primary_key)}
+    metadata =
+      case trigger do
+        %{read_metadata: read_metadata} when is_function(read_metadata) ->
+          read_metadata.(record)
+
+        _ ->
+          %{}
+      end
+
+    %{primary_key: Map.take(record, primary_key), metadata: metadata}
     |> trigger.worker.new()
     |> Oban.insert!()
   end
