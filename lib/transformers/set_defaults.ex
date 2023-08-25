@@ -37,6 +37,24 @@ defmodule AshOban.Transformers.SetDefaults do
              Ash.Resource.Info.action(dsl, read_action)
          end
 
+       action_name = trigger.action || trigger.name
+
+       unless Ash.Resource.Info.action(dsl, action_name) do
+         key_name =
+           if trigger.action do
+             :action
+           else
+             :name
+           end
+
+         raise Spark.Error.DslError,
+           path: [:oban, :triggers, trigger.name, key_name],
+           module: module,
+           message: """
+           No such action #{inspect(action_name)} on #{inspect(module)}.
+           """
+       end
+
        unless read_action.pagination && read_action.pagination.keyset? do
          raise Spark.Error.DslError,
            path: [:oban, :triggers, trigger.name, :read_action],

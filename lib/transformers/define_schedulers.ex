@@ -6,8 +6,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
   use Spark.Dsl.Transformer
   alias Spark.Dsl.Transformer
 
-  def after?(AshOban.Transformers.SetDefaults), do: true
-  def after?(_), do: false
+  def after?(_), do: true
 
   def transform(dsl) do
     module = Transformer.get_persisted(dsl, :module)
