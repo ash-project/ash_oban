@@ -5,6 +5,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.1.6](https://github.com/ash-project/ash_oban/compare/v0.1.5...v0.1.6) (2023-08-29)
+
+
+
+
+### Bug Fixes:
+
+* verify trigger action exists in transformer
+
+### Improvements:
+
+* use read_metadata when manually scheduling
+
+* allow `false` as the value for `scheduler_cron`
+
+* add worker/scheduler priorities
+
 ## [v0.1.5](https://github.com/ash-project/ash_oban/compare/v0.1.4...v0.1.5) (2023-08-15)
 
 
