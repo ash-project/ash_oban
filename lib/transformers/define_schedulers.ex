@@ -121,19 +121,36 @@ defmodule AshOban.Transformers.DefineSchedulers do
     insert =
       if pro? do
         quote location: :keep do
-          def insert(stream) do
-            stream
-            |> Stream.chunk_every(100)
-            |> Stream.each(&Oban.insert_all/1)
-            |> Stream.run()
+          defp insert(stream) do
+            count =
+              stream
+              |> Stream.chunk_every(100)
+              |> Stream.map(fn batch ->
+                Oban.insert_all(batch)
+                Enum.count(batch)
+              end)
+              |> Enum.sum()
+
+            Logger.debug(
+              "Scheduled #{count} jobs for trigger #{unquote(inspect(resource))}.#{unquote(trigger.name)}"
+            )
+
+            :ok
           end
         end
       else
         quote location: :keep do
-          def insert(stream) do
-            stream
-            |> Stream.each(&Oban.insert!/1)
-            |> Stream.run()
+          defp insert(stream) do
+            count =
+              stream
+              |> Stream.each(&Oban.insert!/1)
+              |> Enum.count()
+
+            Logger.debug(
+              "Scheduled #{count} jobs for trigger #{unquote(inspect(resource))}.#{unquote(trigger.name)}"
+            )
+
+            :ok
           end
         end
       end
@@ -370,7 +387,14 @@ defmodule AshOban.Transformers.DefineSchedulers do
           |> Ash.Query.for_read(unquote(read_action))
           |> unquote(api).read_one()
           |> case do
+            {:error, error} ->
+              {:error, error}
+
             {:ok, nil} ->
+              Logger.debug(
+                "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}"
+              )
+
               {:discard, :trigger_no_longer_applies}
 
             {:ok, record} ->
@@ -378,10 +402,21 @@ defmodule AshOban.Transformers.DefineSchedulers do
               |> Ash.Changeset.new()
               |> prepare_error(primary_key)
               |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-              |> Ash.Changeset.for_update(unquote(trigger.on_error), %{error: error})
-              |> unquote(api).update()
+              |> Ash.Changeset.for_action(unquote(trigger.on_error), %{error: error})
+              |> AshOban.update_or_destroy(unquote(api))
               |> case do
+                :ok ->
+                  Logger.debug(
+                    "Performed #{unquote(trigger.action)} on #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}"
+                  )
+
+                  :ok
+
                 {:ok, result} ->
+                  Logger.debug(
+                    "Performed #{unquote(trigger.action)} on #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}"
+                  )
+
                   :ok
 
                 {:error, error} ->
@@ -454,9 +489,12 @@ defmodule AshOban.Transformers.DefineSchedulers do
               |> Ash.Changeset.new()
               |> prepare(primary_key)
               |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-              |> Ash.Changeset.for_update(unquote(trigger.action), %{})
-              |> unquote(api).update()
+              |> Ash.Changeset.for_action(unquote(trigger.action), %{})
+              |> AshOban.update_or_destroy(unquote(api))
               |> case do
+                :ok ->
+                  :ok
+
                 {:ok, result} ->
                   {:ok, result}
 

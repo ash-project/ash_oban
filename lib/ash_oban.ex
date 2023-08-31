@@ -356,4 +356,13 @@ defmodule AshOban do
       """
     end
   end
+
+  @doc false
+  def update_or_destroy(changeset, api) do
+    if changeset.action.type == :update do
+      api.update(changeset)
+    else
+      api.destroy(changeset)
+    end
+  end
 end
