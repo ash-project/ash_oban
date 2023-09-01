@@ -235,7 +235,7 @@ defmodule AshOban do
     |> Oban.insert!()
   end
 
-  def run_trigger(%resource{} = record, trigger) do
+  def run_trigger(%resource{} = record, trigger, oban_job_opts) do
     trigger =
       case trigger do
         %AshOban.Trigger{} ->
@@ -257,7 +257,7 @@ defmodule AshOban do
       end
 
     %{primary_key: Map.take(record, primary_key), metadata: metadata}
-    |> trigger.worker.new()
+    |> trigger.worker.new(oban_job_opts)
     |> Oban.insert!()
   end
 
