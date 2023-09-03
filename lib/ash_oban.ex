@@ -235,7 +235,7 @@ defmodule AshOban do
     |> Oban.insert!()
   end
 
-  def run_trigger(%resource{} = record, trigger, oban_job_opts) do
+  def run_trigger(%resource{} = record, trigger, oban_job_opts \\ []) do
     trigger =
       case trigger do
         %AshOban.Trigger{} ->

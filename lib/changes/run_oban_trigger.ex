@@ -13,7 +13,7 @@ defmodule AshOban.Changes.RunObanTrigger do
     end
 
     Ash.Changeset.after_action(changeset, fn _changeset, result ->
-      AshOban.run_trigger(result, trigger, opts[:oban_job_opts] || [])
+      AshOban.run_trigger(result, trigger, opts[:oban_job_opts])
       {:ok, result}
     end)
   end
