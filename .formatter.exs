@@ -6,6 +6,7 @@ spark_locals_without_parens = [
   on_error: 1,
   queue: 1,
   read_action: 1,
+  read_metadata: 1,
   record_limit: 1,
   scheduler_cron: 1,
   scheduler_queue: 1,
