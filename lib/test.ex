@@ -8,7 +8,6 @@ defmodule AshOban.Test do
         |> Ash.Api.Info.resources()
         |> Enum.reduce(%{}, fn resource, acc ->
           resource
-          |> IO.inspect()
           |> schedule_and_run_triggers()
           |> Map.merge(acc, fn _key, left, right ->
             left + right
@@ -46,8 +45,6 @@ defmodule AshOban.Test do
         |> Application.get_env(:ash_apis, [])
         |> List.wrap()
         |> Enum.reduce(%{}, fn api, acc ->
-          IO.inspect(api)
-
           api
           |> schedule_and_run_triggers()
           |> Map.merge(acc, fn _key, left, right ->
