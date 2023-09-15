@@ -8,6 +8,7 @@ defmodule AshOban.Test do
         |> Ash.Api.Info.resources()
         |> Enum.reduce(%{}, fn resource, acc ->
           resource
+          |> IO.inspect()
           |> schedule_and_run_triggers()
           |> Map.merge(acc, fn _key, left, right ->
             left + right
@@ -16,7 +17,11 @@ defmodule AshOban.Test do
 
       Spark.Dsl.is?(resource_or_api_or_otp_app, Ash.Resource) ->
         triggers =
-          AshOban.Info.oban_triggers(resource_or_api_or_otp_app)
+          resource_or_api_or_otp_app
+          |> AshOban.Info.oban_triggers()
+          |> Enum.filter(fn trigger ->
+            trigger.scheduler
+          end)
 
         Enum.each(triggers, fn trigger ->
           AshOban.schedule(resource_or_api_or_otp_app, trigger)
@@ -41,6 +46,8 @@ defmodule AshOban.Test do
         |> Application.get_env(:ash_apis, [])
         |> List.wrap()
         |> Enum.reduce(%{}, fn api, acc ->
+          IO.inspect(api)
+
           api
           |> schedule_and_run_triggers()
           |> Map.merge(acc, fn _key, left, right ->
