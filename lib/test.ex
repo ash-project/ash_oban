@@ -5,6 +5,7 @@ defmodule AshOban.Test do
 
   def schedule_and_run_triggers() do
     @mix_app
+    |> IO.inspect()
     |> Application.get_env(:ash_apis, [])
     |> IO.inspect()
     |> List.wrap()
