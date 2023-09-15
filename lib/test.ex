@@ -6,6 +6,7 @@ defmodule AshOban.Test do
   def schedule_and_run_triggers() do
     @mix_app
     |> Application.get_env(:ash_apis, [])
+    |> IO.inspect()
     |> List.wrap()
     |> Enum.reduce(%{}, fn api, acc ->
       api
