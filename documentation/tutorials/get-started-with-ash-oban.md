@@ -14,7 +14,7 @@ If you haven't already, read the [Ash Getting Started Guide](https://hexdocs.pm/
 def deps()
   [
     ...
-    {:ash_oban, "~> 0.1.7"}
+    {:ash_oban, "~> 0.1.8"}
   ]
 end
 ```

@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.1.8](https://github.com/ash-project/ash_oban/compare/v0.1.7...v0.1.8) (2023-09-16)
+
+
+
+
+### Improvements:
+
+* still validate queues even when no schedulers present
+
 ## [v0.1.7](https://github.com/ash-project/ash_oban/compare/v0.1.6...v0.1.7) (2023-09-16)
 
 
