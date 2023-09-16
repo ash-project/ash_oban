@@ -1,0 +1,119 @@
+# DSL: AshOban
+
+Tools for working with AshOban triggers.
+
+
+## oban
+
+
+### Nested DSLs
+ * [triggers](#oban-triggers)
+   * trigger
+
+
+### Examples
+```
+oban do
+  api AshOban.Test.Api
+
+  triggers do
+    trigger :process do
+      action :process
+      where expr(processed != true)
+      worker_read_action(:read)
+    end
+  end
+end
+
+```
+
+
+
+
+### Options
+| Name | Type | Default | Docs |
+| ---  | ---  | ---     | ---  |
+| `api`* | `module` |  | The Api module to use when calling actions on this resource |
+
+
+## oban.triggers
+
+
+### Nested DSLs
+ * [trigger](#oban-triggers-trigger)
+
+
+### Examples
+```
+triggers do
+  trigger :process do
+    action :process
+    where expr(processed != true)
+    worker_read_action(:read)
+  end
+end
+
+```
+
+
+
+
+## oban.triggers.trigger
+```elixir
+trigger name
+```
+
+
+
+
+
+
+### Examples
+```
+trigger :process do
+  action :process
+  where expr(processed != true)
+  worker_read_action(:read)
+end
+
+```
+
+
+
+### Arguments
+| Name | Type | Default | Docs |
+| ---  | ---  | ---     | ---  |
+| `name` | `atom` |  | A unique identifier for this trigger. |
+### Options
+| Name | Type | Default | Docs |
+| ---  | ---  | ---     | ---  |
+| `action`* | `atom` |  | The action to be triggered. Defaults to the identifier of the resource plus the name of the trigger |
+| `scheduler_queue` | `atom` |  | The queue to place the scheduler job in. The same queue as job is used by default (but with a priority of 1 so schedulers run first). |
+| `scheduler_cron` | `String.t \| false` | "* * * * *" | A crontab configuration for when the job should run. Defaults to once per minute ("* * * * *"). Use `false` to disable the scheduler entirely. |
+| `stream_batch_size` | `pos_integer` |  | The batch size to pass when streaming records from using `c:Ash.Api.stream!/2`. No batch size is passed if none is provided here, so the default is used. |
+| `queue` | `atom` |  | The queue to place the worker job in. The trigger name is used by default. |
+| `record_limit` | `pos_integer` |  | If set, any given run of the scheduler will only ever schedule this many items maximum |
+| `worker_priority` | `non_neg_integer` | 2 | A number from 0 to 3, where 0 is the highest priority and 3 is the lowest. |
+| `scheduler_priority` | `non_neg_integer` | 3 | A number from 0 to 3, where 0 is the highest priority and 3 is the lowest. |
+| `max_scheduler_attempts` | `pos_integer` | 1 | How many times to attempt scheduling of the triggered action. |
+| `max_attempts` | `pos_integer` | 1 | How many times to attempt the job. After all attempts have been exhausted, the scheduler may just reschedule it. Use the `on_error` action to update the record to make the scheduler no longer apply. |
+| `read_metadata` | `(any -> any)` |  | Takes a record, and returns metadata to be given to the update action as an argument called `metadata`. |
+| `state` | `:active \| :paused \| :deleted` | :active | Describes the state of the cron job. See the getting started guide for more information. The most important thing is that you *do not remove a trigger from a resource if you are using oban pro*. |
+| `read_action` | `atom` |  | The read action to use when querying records. Defaults to the primary read. This action *must* support keyset pagination. |
+| `worker_read_action` | `atom` |  | The read action to use when fetching the individual records for the trigger. Defaults to `read_action`. If you customize this, ensure your action handles scenarios where the trigger is no longer relevant. |
+| `where` | ``any`` |  | The filter expression to determine if something should be triggered |
+| `on_error` | `atom` |  | An update action to call after the last attempt has failed. See the getting started guide for more. |
+
+
+
+
+
+### Introspection
+
+Target: `AshOban.Trigger`
+
+
+
+
+
+

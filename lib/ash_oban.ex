@@ -63,6 +63,15 @@ defmodule AshOban do
     identifier: :name,
     imports: [Ash.Filter.TemplateHelpers],
     transform: {Trigger, :transform, []},
+    examples: [
+      """
+      trigger :process do
+        action :process
+        where expr(processed != true)
+        worker_read_action(:read)
+      end
+      """
+    ],
     schema: [
       name: [
         type: :atom,
@@ -77,14 +86,13 @@ defmodule AshOban do
         type: {:or, [:string, {:literal, false}]},
         default: "* * * * *",
         doc: """
-        A crontab configuration for when the job should run. Defaults to once per minute (\"* * * * *\").
-        Use `false` to disable the scheduler entirely.
+        A crontab configuration for when the job should run. Defaults to once per minute (\"* * * * *\"). Use `false` to disable the scheduler entirely.
         """
       ],
       stream_batch_size: [
         type: :pos_integer,
         doc:
-          "The batch size to pass when streaming records from using `Ash.Api.stream/2`. No batch size is passed if none is provided here, so the default is used."
+          "The batch size to pass when streaming records from using `c:Ash.Api.stream!/2`. No batch size is passed if none is provided here, so the default is used."
       ],
       queue: [
         type: :atom,
@@ -114,49 +122,32 @@ defmodule AshOban do
         type: :pos_integer,
         default: 1,
         doc: """
-        How many times to attempt the job.
-
-        Keep in mind: after all of these attempts, the scheduler will likely just reschedule the job,
-        leading to infinite retries. To solve for this, configure an `on_error` action that will make
-        the trigger no longer apply to failed jobs.
+        How many times to attempt the job. After all attempts have been exhausted, the scheduler may just reschedule it. Use the `on_error` action to update the record to make the scheduler no longer apply.
         """
       ],
       read_metadata: [
         type: {:fun, 1},
         doc: """
-        Takes a record, and returns additional data of records from the read action.
-        This metadata will be stored in the database and serialized to json before
-        being passed to the update action as an argument called `metadata`.
+        Takes a record, and returns metadata to be given to the update action as an argument called `metadata`.
         """
       ],
       state: [
         type: {:one_of, [:active, :paused, :deleted]},
         default: :active,
         doc: """
-        Describes the state of the cron job.
-
-        See the getting started guide for an explanation on the need for this field.
-        The most important thing is that you *do not remove a trigger from a resource*.
-        Oban's cron jobs are persisted, meaning you will get repeated errors whenever the cron
-        job tries to fire.
+        Describes the state of the cron job. See the getting started guide for more information. The most important thing is that you *do not remove a trigger from a resource if you are using oban pro*.
         """
       ],
       read_action: [
         type: :atom,
         doc: """
-        The read action to use when querying records. Defaults to the primary read.
-
-        This action *must* support keyset pagination.
+        The read action to use when querying records. Defaults to the primary read. This action *must* support keyset pagination.
         """
       ],
       worker_read_action: [
         type: :atom,
         doc: """
-        The read action to use when fetching the individual records for the trigger.
-
-        This defaults to `read_action`, allowing us to discard records that are no longer relevant.
-        You may need to change this, and if so make sure your action handles the scenario where the
-        trigger is no longer relevant.
+        The read action to use when fetching the individual records for the trigger. Defaults to `read_action`. If you customize this, ensure your action handles scenarios where the trigger is no longer relevant.
         """
       ],
       action: [
@@ -179,11 +170,37 @@ defmodule AshOban do
 
   @triggers %Spark.Dsl.Section{
     name: :triggers,
-    entities: [@trigger]
+    entities: [@trigger],
+    examples: [
+      """
+      triggers do
+        trigger :process do
+          action :process
+          where expr(processed != true)
+          worker_read_action(:read)
+        end
+      end
+      """
+    ]
   }
 
   @oban %Spark.Dsl.Section{
     name: :oban,
+    examples: [
+      """
+      oban do
+        api AshOban.Test.Api
+
+        triggers do
+          trigger :process do
+            action :process
+            where expr(processed != true)
+            worker_read_action(:read)
+          end
+        end
+      end
+      """
+    ],
     schema: [
       api: [
         type: {:behaviour, Ash.Api},
@@ -197,23 +214,11 @@ defmodule AshOban do
   @sections [@oban]
 
   @moduledoc """
-  Dsl documentation for AshOban
-  <!--- ash-hq-hide-start --> <!--- -->
-
-  ## DSL Documentation
-
-  ### Index
-
-  #{Spark.Dsl.Extension.doc_index(@sections)}
-
-  ### Docs
-
-  #{Spark.Dsl.Extension.doc(@sections)}
-  <!--- ash-hq-hide-stop --> <!--- -->
+  Tools for working with AshOban triggers.
   """
 
   use Spark.Dsl.Extension,
-    sections: [@oban],
+    sections: @sections,
     imports: [AshOban.Changes.BuiltinChanges],
     transformers: [
       AshOban.Transformers.SetDefaults,

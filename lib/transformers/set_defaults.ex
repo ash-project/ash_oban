@@ -1,5 +1,6 @@
 defmodule AshOban.Transformers.SetDefaults do
-  @moduledoc "Set trigger default values"
+  # Set trigger default values
+  @moduledoc false
 
   use Spark.Dsl.Transformer
   alias Spark.Dsl.Transformer

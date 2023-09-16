@@ -1,7 +1,6 @@
 defmodule AshOban.Transformers.DefineSchedulers do
-  @moduledoc """
-  Define scheduler and worker modules.
-  """
+  # Define scheduler and worker modules.
+  @moduledoc false
 
   use Spark.Dsl.Transformer
   alias Spark.Dsl.Transformer

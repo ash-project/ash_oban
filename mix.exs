@@ -46,14 +46,16 @@ defmodule AshOban.MixProject do
   end
 
   defp extras() do
-    "documentation/**/*.md"
+    "documentation/**/*.{md,livemd,cheatmd}"
     |> Path.wildcard()
     |> Enum.map(fn path ->
       title =
         path
         |> Path.basename(".md")
+        |> Path.basename(".livemd")
+        |> Path.basename(".cheatmd")
         |> String.split(~r/[-_]/)
-        |> Enum.map(&String.capitalize/1)
+        |> Enum.map(&capitalize/1)
         |> Enum.join(" ")
         |> case do
           "F A Q" ->
@@ -71,23 +73,19 @@ defmodule AshOban.MixProject do
   end
 
   defp groups_for_extras() do
-    "documentation/*"
-    |> Path.wildcard()
-    |> Enum.map(fn folder ->
-      name =
-        folder
-        |> Path.basename()
-        |> String.split(~r/[-_]/)
-        |> Enum.map(&String.capitalize/1)
-        |> Enum.join(" ")
-
-      {name, folder |> Path.join("**") |> Path.wildcard()}
-    end)
+    [
+      Tutorials: [
+        ~r'documentation/tutorials'
+      ],
+      "How To": ~r'documentation/how_to',
+      Topics: ~r'documentation/topics',
+      DSLs: ~r'documentation/dsls'
+    ]
   end
 
   defp docs do
     [
-      main: "AshOban",
+      main: "get-started-with-ash-oban",
       source_ref: "v#{@version}",
       logo: "logos/small-logo.png",
       extra_section: "GUIDES",
@@ -104,9 +102,35 @@ defmodule AshOban.MixProject do
       extras: extras(),
       groups_for_extras: groups_for_extras(),
       groups_for_modules: [
+        AshOban: [
+          AshOban
+        ],
+        Utilities: [
+          AshOban.Changes.BuiltinChanges,
+          AshOban.Changes.RunObanTrigger
+        ],
+        Authorization: [
+          AshOban.Checks.AshObanInteraction
+        ],
+        Introspection: [
+          AshOban.Info,
+          AshOban.Trigger
+        ],
+        Testing: [
+          AshOban.Test
+        ],
         Internals: ~r/.*/
       ]
     ]
+  end
+
+  defp capitalize(string) do
+    string
+    |> String.split(" ")
+    |> Enum.map(fn string ->
+      [hd | tail] = String.graphemes(string)
+      String.capitalize(hd) <> Enum.join(tail)
+    end)
   end
 
   # Run "mix help compile.app" to learn about applications.
@@ -123,7 +147,7 @@ defmodule AshOban.MixProject do
         []
       else
         # See the getting started guide why this is only dev/test
-        [{:oban_pro, "~> 0.14", repo: "oban", only: [:dev]}]
+        [{:oban_pro, "~> 1.0", repo: "oban", only: [:dev]}]
       end
 
     oban_dep ++
@@ -132,12 +156,12 @@ defmodule AshOban.MixProject do
         {:spark, ">= 1.1.3"},
         {:oban, "~> 2.15"},
         {:ex_doc, "~> 0.22", only: [:dev, :test], runtime: false},
-        {:ex_check, "~> 0.12.0", only: [:dev, :test]},
+        {:ex_check, "~> 0.12", only: [:dev, :test]},
         {:credo, ">= 0.0.0", only: [:dev, :test], runtime: false},
         {:dialyxir, ">= 0.0.0", only: [:dev, :test], runtime: false},
         {:sobelow, ">= 0.0.0", only: [:dev, :test], runtime: false},
-        {:git_ops, "~> 2.5.1", only: [:dev, :test]},
-        {:excoveralls, "~> 0.13.0", only: [:dev, :test]}
+        {:git_ops, "~> 2.5", only: [:dev, :test]},
+        {:excoveralls, "~> 0.13", only: [:dev, :test]}
       ]
   end
 
@@ -145,8 +169,15 @@ defmodule AshOban.MixProject do
     [
       sobelow: "sobelow --skip",
       credo: "credo --strict",
-      docs: ["docs", "ash.replace_doc_links"],
-      "spark.formatter": "spark.formatter --extensions AshOban"
+      docs: [
+        "spark.cheat_sheets",
+        "docs",
+        "ash.replace_doc_links",
+        "spark.cheat_sheets_in_search"
+      ],
+      "spark.formatter": "spark.formatter --extensions AshOban",
+      "spark.cheat_sheets": "spark.cheat_sheets --extensions AshOban",
+      "spark.cheat_sheets_in_search": "spark.cheat_sheets_in_search --extensions AshOban"
     ]
   end
 end
