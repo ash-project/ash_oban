@@ -5,6 +5,29 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.1.7](https://github.com/ash-project/ash_oban/compare/v0.1.6...v0.1.7) (2023-09-16)
+
+
+
+
+### Bug Fixes:
+
+* don't schedule triggers with no scheduler
+
+* make override job options optional (#8)
+
+### Improvements:
+
+* support providing an otp app to schedule and run triggers
+
+* support apis/resources for ash_oban
+
+* support overriding job opts in run_trigger (#7)
+
+* support destroy actions in the trigger action
+
+* debug logs
+
 ## [v0.1.6](https://github.com/ash-project/ash_oban/compare/v0.1.5...v0.1.6) (2023-08-29)
 
 
