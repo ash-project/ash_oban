@@ -284,8 +284,6 @@ defmodule AshOban do
       """
     end
 
-    require_cron!(base, cron_plugin)
-
     apis
     |> Enum.flat_map(fn api ->
       api
@@ -295,14 +293,23 @@ defmodule AshOban do
     |> Enum.flat_map(fn resource ->
       resource
       |> AshOban.Info.oban_triggers()
+      |> tap(fn triggers ->
+        Enum.each(triggers, &require_queues!(base, resource, &1))
+      end)
       |> Enum.filter(& &1.scheduler_cron)
       |> Enum.map(&{resource, &1})
     end)
-    |> Enum.reduce(base, fn {resource, trigger}, config ->
-      require_queues!(config, resource, trigger)
+    |> case do
+      [] ->
+        base
 
-      add_job(config, cron_plugin, resource, trigger)
-    end)
+      resources_and_triggers ->
+        require_cron!(base, cron_plugin)
+
+        Enum.reduce(resources_and_triggers, base, fn {resource, trigger}, config ->
+          add_job(config, cron_plugin, resource, trigger)
+        end)
+    end
   end
 
   defp add_job(config, cron_plugin, _resource, trigger) do
