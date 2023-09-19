@@ -130,8 +130,9 @@ defmodule AshOban.Transformers.DefineSchedulers do
               end)
               |> Enum.sum()
 
-            Logger.debug(
-              "Scheduled #{count} jobs for trigger #{unquote(inspect(resource))}.#{unquote(trigger.name)}"
+            AshOban.debug(
+              "Scheduled #{count} jobs for trigger #{unquote(inspect(resource))}.#{unquote(trigger.name)}",
+              unquote(trigger.debug?)
             )
 
             :ok
@@ -145,8 +146,9 @@ defmodule AshOban.Transformers.DefineSchedulers do
               |> Stream.each(&Oban.insert!/1)
               |> Enum.count()
 
-            Logger.debug(
-              "Scheduled #{count} jobs for trigger #{unquote(inspect(resource))}.#{unquote(trigger.name)}"
+            AshOban.debug(
+              "Scheduled #{count} jobs for trigger #{unquote(inspect(resource))}.#{unquote(trigger.name)}",
+              unquote(trigger.debug?)
             )
 
             :ok
@@ -330,7 +332,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
     handle_error = handle_error(trigger, resource, api, read_action)
 
-    work = work(trigger, worker, pro?, read_action, api)
+    work = work(trigger, worker, pro?, read_action, resource, api)
 
     Module.create(
       worker_module_name,
@@ -371,7 +373,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
               stacktrace
             )
             when max_attempts != attempt do
-          reraise Ash.Error.to_ash_error(error, stacktrace), stacktrace
+          reraise error, stacktrace
         end
 
         def handle_error(
@@ -387,11 +389,21 @@ defmodule AshOban.Transformers.DefineSchedulers do
           |> unquote(api).read_one()
           |> case do
             {:error, error} ->
+              AshOban.debug(
+                """
+                Record with primary key #{inspect(primary_key)} encountered an error in #{unquote(inspect(resource))}#{unquote(trigger.name)}
+
+                #{Exception.format(:error, error, AshOban.stacktrace(error))}
+                """,
+                unquote(trigger.debug?)
+              )
+
               {:error, error}
 
             {:ok, nil} ->
-              Logger.debug(
-                "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}"
+              AshOban.debug(
+                "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
+                unquote(trigger.debug?)
               )
 
               {:discard, :trigger_no_longer_applies}
@@ -405,27 +417,31 @@ defmodule AshOban.Transformers.DefineSchedulers do
               |> AshOban.update_or_destroy(unquote(api))
               |> case do
                 :ok ->
-                  Logger.debug(
-                    "Performed #{unquote(trigger.action)} on #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}"
+                  AshOban.debug(
+                    "Performed #{unquote(trigger.action)} on #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
+                    unquote(trigger.debug?)
                   )
 
                   :ok
 
                 {:ok, result} ->
-                  Logger.debug(
-                    "Performed #{unquote(trigger.action)} on #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}"
+                  AshOban.debug(
+                    "Performed #{unquote(trigger.action)} on #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
+                    unquote(trigger.debug?)
                   )
 
                   :ok
 
                 {:error, error} ->
+                  error = Ash.Error.to_ash_error(error, stacktrace)
+
                   Logger.error("""
                   Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
 
-                  #{inspect(Exception.message(error))}
+                  #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
                   """)
 
-                  reraise Ash.Error.to_ash_error(error, stacktrace), stacktrace
+                  reraise error, stacktrace
               end
           end
         end
@@ -433,7 +449,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     else
       quote location: :keep do
         def handle_error(_job, error, _, stacktrace) do
-          reraise Ash.Error.to_ash_error(error, stacktrace), stacktrace
+          reraise error, stacktrace
         end
       end
     end
@@ -455,7 +471,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     end
   end
 
-  defp work(trigger, worker, pro?, read_action, api) do
+  defp work(trigger, worker, pro?, read_action, resource, api) do
     function_name =
       if pro? do
         :process
@@ -474,6 +490,11 @@ defmodule AshOban.Transformers.DefineSchedulers do
       quote location: :keep do
         @impl unquote(worker)
         def unquote(function_name)(%Oban.Job{args: %{"primary_key" => primary_key}} = job) do
+          AshOban.debug(
+            "Trigger #{unquote(inspect(resource))}.#{unquote(trigger.name)} triggered for primary key #{inspect(primary_key)}",
+            unquote(trigger.debug?)
+          )
+
           query()
           |> Ash.Query.do_filter(primary_key)
           |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
@@ -481,6 +502,11 @@ defmodule AshOban.Transformers.DefineSchedulers do
           |> unquote(api).read_one()
           |> case do
             {:ok, nil} ->
+              AshOban.debug(
+                "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
+                unquote(trigger.debug?)
+              )
+
               {:discard, :trigger_no_longer_applies}
 
             {:ok, record} ->
@@ -507,6 +533,14 @@ defmodule AshOban.Transformers.DefineSchedulers do
           end
         rescue
           error ->
+            error = Ash.Error.to_ash_error(error, __STACKTRACE__)
+
+            Logger.error("""
+            Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
+
+            #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
+            """)
+
             handle_error(job, error, primary_key, __STACKTRACE__)
         end
       end

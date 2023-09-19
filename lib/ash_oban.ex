@@ -1,4 +1,6 @@
 defmodule AshOban do
+  require Logger
+
   defmodule Trigger do
     @moduledoc """
     A configured trigger.
@@ -13,6 +15,7 @@ defmodule AshOban do
             scheduler_queue: atom,
             max_attempts: pos_integer(),
             record_limit: pos_integer(),
+            debug?: boolean(),
             max_scheduler_attempts: pos_integer(),
             read_metadata: (Ash.Resource.record() -> map),
             stream_batch_size: pos_integer(),
@@ -32,6 +35,7 @@ defmodule AshOban do
       :read_action,
       :worker_read_action,
       :queue,
+      :debug?,
       :read_metadata,
       :scheduler_cron,
       :scheduler_queue,
@@ -81,6 +85,12 @@ defmodule AshOban do
         type: :atom,
         doc:
           "The queue to place the scheduler job in. The same queue as job is used by default (but with a priority of 1 so schedulers run first)."
+      ],
+      debug?: [
+        type: :boolean,
+        default: false,
+        doc:
+          "If set to `true`, detailed debug logging will be enabled for this trigger. You can also set `config :ash_oban, debug_all_triggers?: true` to enable debug logging for all triggers."
       ],
       scheduler_cron: [
         type: {:or, [:string, {:literal, false}]},
@@ -377,4 +387,23 @@ defmodule AshOban do
       api.destroy(changeset)
     end
   end
+
+  @doc false
+  def debug(message, true) do
+    Logger.debug(message)
+  end
+
+  def debug(message, false) do
+    if Application.get_env(:ash_oban, :debug_all_triggers?) do
+      Logger.debug(message)
+    else
+      :ok
+    end
+  end
+
+  def stacktrace(%{stacktrace: %{stacktrace: stacktrace}}) when not is_nil(stacktrace) do
+    stacktrace
+  end
+
+  def stacktrace(_), do: nil
 end
