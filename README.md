@@ -7,7 +7,7 @@ An oban extension for `Ash.Resource`
 ```elixir
 def deps do
   [
-    {:ash_oban, "~> 0.1.8"}
+    {:ash_oban, "~> 0.1.9"}
   ]
 end
 ```
