@@ -489,7 +489,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     else
       quote location: :keep do
         @impl unquote(worker)
-        def unquote(function_name)(%Oban.Job{args: %{"primary_key" => primary_key}} = job) do
+        def unquote(function_name)(%Oban.Job{args: %{"primary_key" => primary_key} = args} = job) do
           AshOban.debug(
             "Trigger #{unquote(inspect(resource))}.#{unquote(trigger.name)} triggered for primary key #{inspect(primary_key)}",
             unquote(trigger.debug?)
@@ -514,7 +514,9 @@ defmodule AshOban.Transformers.DefineSchedulers do
               |> Ash.Changeset.new()
               |> prepare(primary_key)
               |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-              |> Ash.Changeset.for_action(unquote(trigger.action), %{})
+              |> Ash.Changeset.for_action(unquote(trigger.action), %{
+                metadata: args["metadata"] || %{}
+              })
               |> AshOban.update_or_destroy(unquote(api))
               |> case do
                 :ok ->
