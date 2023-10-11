@@ -326,13 +326,13 @@ defmodule AshOban do
     Keyword.update!(config, :plugins, fn plugins ->
       Enum.map(plugins, fn
         {^cron_plugin, config} ->
-          opts =
+          event =
             case trigger.state do
               :paused ->
-                [paused: true]
+                [events: [paused: true]]
 
               :deleted ->
-                [delete: true]
+                [events: [delete: true]]
 
               _ ->
                 []
