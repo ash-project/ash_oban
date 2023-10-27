@@ -13,6 +13,7 @@ defmodule AshOban do
             queue: atom,
             scheduler_cron: String.t(),
             scheduler_queue: atom,
+            action_input: map(),
             max_attempts: pos_integer(),
             record_limit: pos_integer(),
             debug?: boolean(),
@@ -33,6 +34,7 @@ defmodule AshOban do
       :name,
       :action,
       :read_action,
+      :action_input,
       :worker_read_action,
       :queue,
       :debug?,
@@ -80,6 +82,11 @@ defmodule AshOban do
       name: [
         type: :atom,
         doc: "A unique identifier for this trigger."
+      ],
+      action_input: [
+        type: :map,
+        doc:
+          "Static inputs to supply to the update/destroy action when it is called. Any metadata produced by `read_metadata` will overwrite these values."
       ],
       scheduler_queue: [
         type: :atom,
@@ -326,7 +333,7 @@ defmodule AshOban do
     Keyword.update!(config, :plugins, fn plugins ->
       Enum.map(plugins, fn
         {^cron_plugin, config} ->
-          event =
+          opts =
             case trigger.state do
               :paused ->
                 [events: [paused: true]]

@@ -1,6 +1,8 @@
 spark_locals_without_parens = [
   action: 1,
+  action_input: 1,
   api: 1,
+  debug?: 1,
   max_attempts: 1,
   max_scheduler_attempts: 1,
   on_error: 1,
@@ -9,11 +11,14 @@ spark_locals_without_parens = [
   read_metadata: 1,
   record_limit: 1,
   scheduler_cron: 1,
+  scheduler_priority: 1,
   scheduler_queue: 1,
   state: 1,
+  stream_batch_size: 1,
   trigger: 1,
   trigger: 2,
   where: 1,
+  worker_priority: 1,
   worker_read_action: 1
 ]
 

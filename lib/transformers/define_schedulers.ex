@@ -521,7 +521,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
               |> Ash.Changeset.new()
               |> prepare(primary_key)
               |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-              |> Ash.Changeset.for_action(unquote(trigger.action), args)
+              |> Ash.Changeset.for_action(
+                unquote(trigger.action),
+                Map.merge(unquote(Macro.escape(trigger.action_input || %{})), args)
+              )
               |> AshOban.update_or_destroy(unquote(api))
               |> case do
                 :ok ->
