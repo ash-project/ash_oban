@@ -283,8 +283,26 @@ defmodule AshOban do
     |> Oban.insert!()
   end
 
-  @doc "Alters your oban configuration to include the required AshOban configuration."
-  def config(apis, base) do
+  @config_schema [
+    require?: [
+      type: :boolean,
+      default: true,
+      doc: """
+      Whether to require queues and plugins to be defined in your oban config. This can be helpful to
+      allow the ability to split queues between nodes. See https://hexdocs.pm/oban/splitting-queues.html
+      """
+    ]
+  ]
+
+  @doc """
+  Alters your oban configuration to include the required AshOban configuration.
+
+  # Options
+
+  #{Spark.OptionsHelpers.docs(@config_schema)}
+  """
+  def config(apis, base, opts \\ []) do
+    opts = Spark.OptionsHelpers.validate!(opts, @config_schema)
     pro? = AshOban.Info.pro?()
 
     cron_plugin =
@@ -311,7 +329,9 @@ defmodule AshOban do
       resource
       |> AshOban.Info.oban_triggers()
       |> tap(fn triggers ->
-        Enum.each(triggers, &require_queues!(base, resource, &1))
+        if opts[:require?] do
+          Enum.each(triggers, &require_queues!(base, resource, &1))
+        end
       end)
       |> Enum.filter(& &1.scheduler_cron)
       |> Enum.map(&{resource, &1})
@@ -321,7 +341,9 @@ defmodule AshOban do
         base
 
       resources_and_triggers ->
-        require_cron!(base, cron_plugin)
+        if opts[:require?] do
+          require_cron!(base, cron_plugin)
+        end
 
         Enum.reduce(resources_and_triggers, base, fn {resource, trigger}, config ->
           add_job(config, cron_plugin, resource, trigger)
