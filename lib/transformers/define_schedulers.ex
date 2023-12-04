@@ -543,15 +543,12 @@ defmodule AshOban.Transformers.DefineSchedulers do
           end
         rescue
           error ->
-            error = Ash.Error.to_ash_error(error, __STACKTRACE__)
-
-            Logger.error("""
-            Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
-
-            #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
-            """)
-
-            handle_error(job, error, primary_key, __STACKTRACE__)
+            handle_error(
+              job,
+              Ash.Error.to_ash_error(error, __STACKTRACE__),
+              primary_key,
+              __STACKTRACE__
+            )
         end
       end
     end
