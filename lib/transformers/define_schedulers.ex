@@ -374,6 +374,11 @@ defmodule AshOban.Transformers.DefineSchedulers do
           #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
           """)
         end
+      else
+        quote do
+          _ = primary_key
+          _ = error
+        end
       end
 
     if trigger.on_error do
@@ -453,7 +458,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
       end
     else
       quote location: :keep do
-        def handle_error(_job, error, _, stacktrace) do
+        def handle_error(_job, error, primary_key, stacktrace) do
           unquote(log_final_error)
           reraise error, stacktrace
         end
