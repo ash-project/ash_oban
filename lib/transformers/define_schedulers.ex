@@ -367,7 +367,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
       if trigger.log_final_error? do
         quote do
           Logger.error("""
-          Error handled for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
+          Error occurred for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
 
           Error occurred on action: #{unquote(trigger.action)}.
 
