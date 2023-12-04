@@ -363,6 +363,19 @@ defmodule AshOban.Transformers.DefineSchedulers do
   end
 
   defp handle_error(trigger, resource, api, read_action) do
+    log_final_error =
+      if trigger.log_final_error? do
+        quote do
+          Logger.error("""
+          Error handled for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
+
+          Error occurred on action: #{unquote(trigger.action)}.
+
+          #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
+          """)
+        end
+      end
+
     if trigger.on_error do
       # We look up the record again since we have exited any potential transaction we were in before
       quote location: :keep do
@@ -409,6 +422,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
               {:discard, :trigger_no_longer_applies}
 
             {:ok, record} ->
+              unquote(log_final_error)
+
               record
               |> Ash.Changeset.new()
               |> prepare_error(primary_key)
@@ -417,19 +432,9 @@ defmodule AshOban.Transformers.DefineSchedulers do
               |> AshOban.update_or_destroy(unquote(api))
               |> case do
                 :ok ->
-                  AshOban.debug(
-                    "Performed #{unquote(trigger.action)} on #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
-                    unquote(trigger.debug?)
-                  )
-
                   :ok
 
                 {:ok, result} ->
-                  AshOban.debug(
-                    "Performed #{unquote(trigger.action)} on #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
-                    unquote(trigger.debug?)
-                  )
-
                   :ok
 
                 {:error, error} ->
@@ -449,6 +454,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     else
       quote location: :keep do
         def handle_error(_job, error, _, stacktrace) do
+          unquote(log_final_error)
           reraise error, stacktrace
         end
       end

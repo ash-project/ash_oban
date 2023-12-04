@@ -16,6 +16,7 @@ defmodule AshOban do
             action_input: map(),
             max_attempts: pos_integer(),
             record_limit: pos_integer(),
+            log_final_error?: boolean(),
             debug?: boolean(),
             max_scheduler_attempts: pos_integer(),
             read_metadata: (Ash.Resource.record() -> map),
@@ -52,6 +53,7 @@ defmodule AshOban do
       :scheduler,
       :worker,
       :on_error,
+      :log_final_error?,
       :__identifier__
     ]
 
@@ -119,6 +121,11 @@ defmodule AshOban do
         type: :pos_integer,
         doc:
           "If set, any given run of the scheduler will only ever schedule this many items maximum"
+      ],
+      log_final_error?: [
+        type: :boolean,
+        default: true,
+        doc: "If true, logs that an error occurred on the final attempt to perform an action."
       ],
       worker_priority: [
         type: :non_neg_integer,
