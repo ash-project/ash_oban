@@ -51,7 +51,8 @@ defmodule AshOban.Test do
       |> Enum.map(& &1.queue)
       |> Enum.uniq()
 
-    Enum.reduce(queues, %{}, fn queue, acc ->
+    # we drain each queue twice to do schedulers and then workers
+    Enum.reduce(queues ++ queues, %{}, fn queue, acc ->
       [queue: queue]
       |> Keyword.merge(drain_opts)
       |> Oban.drain_queue()
