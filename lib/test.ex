@@ -2,6 +2,13 @@ defmodule AshOban.Test do
   @moduledoc "Helpers for testing ash_oban triggers"
 
   @type triggerable :: Ash.Resource.t() | {Ash.Resource.t(), atom()} | Ash.Api.t() | atom()
+  @type result :: %{
+          discard: non_neg_integer(),
+          cancelled: non_neg_integer(),
+          success: non_neg_integer(),
+          failure: non_neg_integer(),
+          snoozed: non_neg_integer()
+        }
 
   @doc """
   Runs the schedulers for the given resource, api, or otp_app, or list of resources, apis, or otp_apps.
@@ -13,25 +20,21 @@ defmodule AshOban.Test do
   * a tuple of {resource, :trigger_name} - that trigger is scheduled, and the results are merged together.
   * a resource - each trigger configured in that resource is scheduled, and the results are merged together.
   """
-  @spec schedule_and_run_triggers(triggerable | list(triggerable)) :: %{
-          discard: non_neg_integer(),
-          cancelled: non_neg_integer(),
-          success: non_neg_integer(),
-          failure: non_neg_integer(),
-          snoozed: non_neg_integer()
-        }
-  def schedule_and_run_triggers(resources_or_apis_or_otp_apps)
+  @spec schedule_and_run_triggers(triggerable | list(triggerable), keyword()) :: result
+  def schedule_and_run_triggers(resources_or_apis_or_otp_apps, drain_opts \\ [])
+
+  def schedule_and_run_triggers(resources_or_apis_or_otp_apps, drain_opts)
       when is_list(resources_or_apis_or_otp_apps) do
     Enum.reduce(resources_or_apis_or_otp_apps, %{}, fn item, acc ->
       item
-      |> schedule_and_run_triggers()
+      |> schedule_and_run_triggers(drain_opts)
       |> Map.merge(acc, fn _key, left, right ->
         left + right
       end)
     end)
   end
 
-  def schedule_and_run_triggers({resource, trigger_name}) do
+  def schedule_and_run_triggers({resource, trigger_name}, drain_opts) do
     triggers =
       resource
       |> AshOban.Info.oban_triggers()
@@ -48,9 +51,9 @@ defmodule AshOban.Test do
       |> Enum.map(& &1.queue)
       |> Enum.uniq()
 
-    # we drain each queue twice to do schedulers and then workers
-    Enum.reduce(queues ++ queues, %{}, fn queue, acc ->
+    Enum.reduce(queues, %{}, fn queue, acc ->
       [queue: queue]
+      |> Keyword.merge(drain_opts)
       |> Oban.drain_queue()
       |> Map.merge(acc, fn _key, left, right ->
         left + right
@@ -58,40 +61,24 @@ defmodule AshOban.Test do
     end)
   end
 
-  def schedule_and_run_triggers(resource_or_api_or_otp_app) do
+  def schedule_and_run_triggers(resource_or_api_or_otp_app, drain_opts) do
     cond do
       Spark.Dsl.is?(resource_or_api_or_otp_app, Ash.Api) ->
         resource_or_api_or_otp_app
         |> Ash.Api.Info.resources()
         |> Enum.reduce(%{}, fn resource, acc ->
           resource
-          |> schedule_and_run_triggers()
+          |> schedule_and_run_triggers(drain_opts)
           |> Map.merge(acc, fn _key, left, right ->
             left + right
           end)
         end)
 
       Spark.Dsl.is?(resource_or_api_or_otp_app, Ash.Resource) ->
-        triggers =
-          resource_or_api_or_otp_app
-          |> AshOban.Info.oban_triggers()
-          |> Enum.filter(fn trigger ->
-            trigger.scheduler
-          end)
-
-        Enum.each(triggers, fn trigger ->
-          AshOban.schedule(resource_or_api_or_otp_app, trigger)
-        end)
-
-        queues =
-          triggers
-          |> Enum.map(& &1.queue)
-          |> Enum.uniq()
-
-        # we drain each queue twice to do schedulers and then workers
-        Enum.reduce(queues ++ queues, %{}, fn queue, acc ->
-          [queue: queue]
-          |> Oban.drain_queue()
+        resource_or_api_or_otp_app
+        |> Enum.reduce(%{}, fn resource, acc ->
+          resource
+          |> schedule_and_run_triggers(drain_opts)
           |> Map.merge(acc, fn _key, left, right ->
             left + right
           end)
@@ -103,7 +90,7 @@ defmodule AshOban.Test do
         |> List.wrap()
         |> Enum.reduce(%{}, fn api, acc ->
           api
-          |> schedule_and_run_triggers()
+          |> schedule_and_run_triggers(drain_opts)
           |> Map.merge(acc, fn _key, left, right ->
             left + right
           end)
