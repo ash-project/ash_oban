@@ -364,7 +364,25 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
   defp handle_error(trigger, resource, api, read_action) do
     log_final_error =
-      if trigger.log_final_error? do
+      if trigger.log_errors? || trigger.log_final_error? do
+        quote do
+          Logger.error("""
+          Error occurred for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
+
+          Error occurred on action: #{unquote(trigger.action)}.
+
+          #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
+          """)
+        end
+      else
+        quote do
+          _ = primary_key
+          _ = error
+        end
+      end
+
+    log_error =
+      if trigger.log_errors? do
         quote do
           Logger.error("""
           Error occurred for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
@@ -387,10 +405,11 @@ defmodule AshOban.Transformers.DefineSchedulers do
         def handle_error(
               %{max_attempts: max_attempts, attempt: attempt},
               error,
-              _primary_key,
+              primary_key,
               stacktrace
             )
             when max_attempts != attempt do
+          unquote(log_error)
           reraise error, stacktrace
         end
 
