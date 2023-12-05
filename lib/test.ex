@@ -76,10 +76,27 @@ defmodule AshOban.Test do
         end)
 
       Spark.Dsl.is?(resource_or_api_or_otp_app, Ash.Resource) ->
-        resource_or_api_or_otp_app
-        |> Enum.reduce(%{}, fn resource, acc ->
-          resource
-          |> schedule_and_run_triggers(drain_opts)
+        triggers =
+          resource_or_api_or_otp_app
+          |> AshOban.Info.oban_triggers()
+          |> Enum.filter(fn trigger ->
+            trigger.scheduler
+          end)
+
+        Enum.each(triggers, fn trigger ->
+          AshOban.schedule(resource_or_api_or_otp_app, trigger)
+        end)
+
+        queues =
+          triggers
+          |> Enum.map(& &1.queue)
+          |> Enum.uniq()
+
+        # we drain each queue twice to do schedulers and then workers
+        Enum.reduce(queues ++ queues, %{}, fn queue, acc ->
+          [queue: queue]
+          |> Keyword.merge(drain_opts)
+          |> Oban.drain_queue()
           |> Map.merge(acc, fn _key, left, right ->
             left + right
           end)
