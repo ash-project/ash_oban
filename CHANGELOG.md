@@ -5,6 +5,43 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.1.10](https://github.com/ash-project/ash_oban/compare/v0.1.9...v0.1.10) (2023-12-07)
+
+
+
+
+### Bug Fixes:
+
+* fallback clause to match valid configurations
+
+* add `cron` to opt schema
+
+* reverted part of refactor in 82cb0f90d9c0550c98ca5a8081ef8bd581c66e0d (#14)
+
+* nested pausing states under `events` option
+
+* only supply metadata if `read_metadata` is set
+
+* pass metadata argument on the udpate action
+
+### Improvements:
+
+* make `AshOban.Test` more configurable for scheduled actions
+
+* add `scheduled_action` for scheduling create/generic actions
+
+* log all errors by default, using `log_errors?` config
+
+* expose drain options to AshOban.Test.schedule_and_run_triggers (#12)
+
+* add `log_final_error?` and default it to `true`
+
+* don't log on raised exception, for consistency
+
+* support `require?: false` option on `config/3`.
+
+* support `action_input` on triggers
+
 ## [v0.1.9](https://github.com/ash-project/ash_oban/compare/v0.1.8...v0.1.9) (2023-10-04)
 
 
