@@ -240,6 +240,10 @@ defmodule AshOban do
         type: :atom,
         doc: "A unique identifier for this scheduled action."
       ],
+      cron: [
+        type: :string,
+        doc: "The schedule in crontab notation"
+      ],
       action_input: [
         type: :map,
         doc: "Inputs to supply to the action when it is called."
