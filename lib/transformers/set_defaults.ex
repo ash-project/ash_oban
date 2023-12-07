@@ -17,7 +17,36 @@ defmodule AshOban.Transformers.SetDefaults do
     {:ok,
      dsl
      |> set_trigger_defaults(module)
-     |> set_scheduled_action_defaults(module)}
+     |> set_scheduled_action_defaults(module)
+     |> validate_global_uniqueness(module)}
+  end
+
+  defp validate_global_uniqueness(dsl, module) do
+    triggers = AshOban.Info.oban_triggers(dsl)
+    schedulers = AshOban.Info.oban_scheduled_actions(dsl)
+
+    triggers
+    |> Enum.concat(schedulers)
+    |> Enum.map(& &1.name)
+    |> Enum.frequencies()
+    |> Enum.find(fn {_, value} ->
+      value > 1
+    end)
+    |> case do
+      nil ->
+        :ok
+
+      {name, _} ->
+        raise Spark.Error.DslError,
+          path: [:oban, :triggers, name],
+          module: module,
+          message: """
+          The trigger and/or scheduled_action #{inspect(name)} is defined more than once.
+          Names must be unique across scheduled_actions and triggers.
+          """
+    end
+
+    dsl
   end
 
   defp set_scheduled_action_defaults(dsl, module) do

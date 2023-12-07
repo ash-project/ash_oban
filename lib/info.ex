@@ -12,4 +12,20 @@ defmodule AshOban.Info do
     |> oban_triggers()
     |> Enum.find(&(&1.name == name))
   end
+
+  @spec oban_scheduled_action(Ash.Resource.t() | Spark.Dsl.t(), atom) ::
+          nil | AshOban.Schedule.t()
+  def oban_scheduled_action(resource, name) do
+    resource
+    |> oban_scheduled_actions()
+    |> Enum.find(&(&1.name == name))
+  end
+
+  @spec oban_triggers_and_scheduled_actions(Ash.Resource.t() | Spark.Dsl.t()) :: [
+          AshOban.Trigger.t()
+          | AshOban.Schedule.t()
+        ]
+  def oban_triggers_and_scheduled_actions(resource) do
+    oban_triggers(resource) ++ oban_scheduled_actions(resource)
+  end
 end

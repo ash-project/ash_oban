@@ -15,14 +15,19 @@ defmodule AshOban.Transformers.DefineActionWorkers do
     |> Enum.reduce(dsl, fn scheduled_action, dsl ->
       worker_module_name = module_name(module, scheduled_action)
 
+      # |> Transformer.async_compile(fn ->
+      # try do
+      define_worker(module, worker_module_name, scheduled_action, dsl)
+      # rescue
+      #   e ->
+      #     IO.inspect(e)
+      # end
+      # end)
       dsl
       |> Transformer.replace_entity([:oban, :scheduled_actions], %{
         scheduled_action
         | worker: worker_module_name
       })
-      |> Transformer.async_compile(fn ->
-        define_worker(module, worker_module_name, scheduled_action, dsl)
-      end)
     end)
     |> then(&{:ok, &1})
   end
@@ -78,10 +83,19 @@ defmodule AshOban.Transformers.DefineActionWorkers do
             unquote(scheduled_action.debug?)
           )
 
+          input = unquote(Macro.escape(scheduled_action.action_input || %{}))
+
+          input =
+            if job.max_attempts == job.attempt do
+              Map.put(input, :last_oban_attempt?, true)
+            else
+              Map.put(input, :last_oban_attempt?, false)
+            end
+
           unquote(resource)
           |> Ash.ActionInput.for_action(
             unquote(scheduled_action.action),
-            unquote(scheduled_action.action_input || %{})
+            input
           )
           |> unquote(api).run_action!()
         end

@@ -211,6 +211,7 @@ defmodule AshOban do
             cron: String.t(),
             action_input: map(),
             worker: module(),
+            max_attempts: non_neg_integer(),
             queue: atom,
             debug?: boolean,
             priority: non_neg_integer()
@@ -223,6 +224,7 @@ defmodule AshOban do
       :debug,
       :priority,
       :action_input,
+      :max_attempts,
       :queue,
       :worker,
       :debug?,
@@ -270,6 +272,11 @@ defmodule AshOban do
         doc: """
         How many times to attempt the job. The action will receive a `last_oban_attempt?` argument on the last attempt, and you should handle errors accordingly.
         """
+      ],
+      priority: [
+        type: :non_neg_integer,
+        doc: "A number from 0 to 3, where 0 is the highest priority and 3 is the lowest.",
+        default: 3
       ],
       debug?: [
         type: :boolean,
@@ -354,18 +361,28 @@ defmodule AshOban do
     ]
 
   def schedule(resource, trigger) do
-    trigger =
-      case trigger do
-        %AshOban.Trigger{} ->
-          trigger
+    case trigger do
+      %AshOban.Trigger{} ->
+        trigger
 
-        name when is_atom(name) ->
-          AshOban.Info.oban_trigger(resource, name)
-      end
+      %AshOban.Schedule{} ->
+        trigger
 
-    %{}
-    |> trigger.scheduler.new()
-    |> Oban.insert!()
+      name when is_atom(name) ->
+        AshOban.Info.oban_trigger(resource, name) ||
+          AshOban.Info.oban_scheduled_action(resource, name)
+    end
+    |> case do
+      %AshOban.Schedule{worker: worker} ->
+        %{}
+        |> worker.new()
+        |> Oban.insert!()
+
+      %AshOban.Trigger{scheduler: scheduler} ->
+        %{}
+        |> scheduler.new()
+        |> Oban.insert!()
+    end
   end
 
   def run_trigger(%resource{} = record, trigger, oban_job_opts \\ []) do
