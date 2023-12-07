@@ -16,66 +16,113 @@ defmodule AshOban.Transformers.SetDefaults do
 
     {:ok,
      dsl
-     |> Transformer.get_entities([:oban, :triggers])
-     |> Enum.reduce(dsl, fn trigger, dsl ->
-       read_action =
-         case trigger.read_action do
-           nil ->
-             Ash.Resource.Info.primary_action(dsl, :read) ||
-               raise Spark.Error.DslError,
-                 path: [
-                   :oban,
-                   :triggers,
-                   trigger.name,
-                   :read_action
-                 ],
-                 module: module,
-                 message: """
-                 No read action was configured for this trigger, and no primary read action exists
-                 """
+     |> set_trigger_defaults(module)
+     |> set_scheduled_action_defaults(module)}
+  end
 
-           read_action ->
-             Ash.Resource.Info.action(dsl, read_action)
-         end
+  defp set_scheduled_action_defaults(dsl, module) do
+    dsl
+    |> Transformer.get_entities([:oban, :scheduled_actions])
+    |> Enum.reduce(dsl, fn scheduled_action, dsl ->
+      action_name = scheduled_action.action || scheduled_action.name
 
-       action_name = trigger.action || trigger.name
+      case Ash.Resource.Info.action(dsl, action_name) do
+        nil ->
+          key_name =
+            if scheduled_action.action do
+              :action
+            else
+              :name
+            end
 
-       unless Ash.Resource.Info.action(dsl, action_name) do
-         key_name =
-           if trigger.action do
-             :action
-           else
-             :name
-           end
+          raise Spark.Error.DslError,
+            path: [:oban, :scheduled_actions, scheduled_action.name, key_name],
+            module: module,
+            message: """
+            No such action #{inspect(action_name)} on #{inspect(module)}.
+            """
 
-         raise Spark.Error.DslError,
-           path: [:oban, :triggers, trigger.name, key_name],
-           module: module,
-           message: """
-           No such action #{inspect(action_name)} on #{inspect(module)}.
-           """
-       end
+        %{type: bad_type} when bad_type in [:update, :destroy] ->
+          raise Spark.Error.DslError,
+            path: [:oban, :scheduled_actions, scheduled_action.name],
+            module: module,
+            message: """
+            Scheduled actions of type #{inspect(bad_type)} are not supported.
+            """
+      end
 
-       unless read_action.pagination && read_action.pagination.keyset? do
-         raise Spark.Error.DslError,
-           path: [:oban, :triggers, trigger.name, :read_action],
-           module: module,
-           message: """
-           The read action `:#{read_action.name}` must support keyset pagination in order to be
-           used by an AshOban trigger.
-           """
-       end
+      queue = scheduled_action.queue || default_queue_name(dsl, scheduled_action)
 
-       queue = trigger.queue || default_queue_name(dsl, trigger)
+      Transformer.replace_entity(dsl, [:oban, :scheduled_actions], %{
+        scheduled_action
+        | action: action_name,
+          queue: queue
+      })
+    end)
+  end
 
-       Transformer.replace_entity(dsl, [:oban, :triggers], %{
-         trigger
-         | read_action: read_action.name,
-           queue: queue,
-           scheduler_queue: trigger.scheduler_queue || queue,
-           action: trigger.action || trigger.name
-       })
-     end)}
+  defp set_trigger_defaults(dsl, module) do
+    dsl
+    |> Transformer.get_entities([:oban, :triggers])
+    |> Enum.reduce(dsl, fn trigger, dsl ->
+      read_action =
+        case trigger.read_action do
+          nil ->
+            Ash.Resource.Info.primary_action(dsl, :read) ||
+              raise Spark.Error.DslError,
+                path: [
+                  :oban,
+                  :triggers,
+                  trigger.name,
+                  :read_action
+                ],
+                module: module,
+                message: """
+                No read action was configured for this trigger, and no primary read action exists
+                """
+
+          read_action ->
+            Ash.Resource.Info.action(dsl, read_action)
+        end
+
+      action_name = trigger.action || trigger.name
+
+      unless Ash.Resource.Info.action(dsl, action_name) do
+        key_name =
+          if trigger.action do
+            :action
+          else
+            :name
+          end
+
+        raise Spark.Error.DslError,
+          path: [:oban, :triggers, trigger.name, key_name],
+          module: module,
+          message: """
+          No such action #{inspect(action_name)} on #{inspect(module)}.
+          """
+      end
+
+      unless read_action.pagination && read_action.pagination.keyset? do
+        raise Spark.Error.DslError,
+          path: [:oban, :triggers, trigger.name, :read_action],
+          module: module,
+          message: """
+          The read action `:#{read_action.name}` must support keyset pagination in order to be
+          used by an AshOban trigger.
+          """
+      end
+
+      queue = trigger.queue || default_queue_name(dsl, trigger)
+
+      Transformer.replace_entity(dsl, [:oban, :triggers], %{
+        trigger
+        | read_action: read_action.name,
+          queue: queue,
+          scheduler_queue: trigger.scheduler_queue || queue,
+          action: trigger.action || trigger.name
+      })
+    end)
   end
 
   # sobelow_skip ["DOS.BinToAtom"]

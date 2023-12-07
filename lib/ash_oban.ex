@@ -200,6 +200,97 @@ defmodule AshOban do
     ]
   }
 
+  defmodule Schedule do
+    @moduledoc """
+    A configured scheduled action.
+    """
+
+    @type t :: %__MODULE__{
+            name: atom,
+            action: atom,
+            cron: String.t(),
+            action_input: map(),
+            worker: module(),
+            queue: atom,
+            debug?: boolean,
+            priority: non_neg_integer()
+          }
+
+    defstruct [
+      :name,
+      :action,
+      :cron,
+      :debug,
+      :priority,
+      :action_input,
+      :queue,
+      :worker,
+      :debug?,
+      :__identifier__
+    ]
+  end
+
+  @schedule %Spark.Dsl.Entity{
+    name: :schedule,
+    target: Schedule,
+    args: [:name, :cron],
+    identifier: :name,
+    schema: [
+      name: [
+        type: :atom,
+        doc: "A unique identifier for this scheduled action."
+      ],
+      action_input: [
+        type: :map,
+        doc: "Inputs to supply to the action when it is called."
+      ],
+      action: [
+        type: :atom,
+        doc: "The generic or create action to call when the schedule is triggered."
+      ],
+      queue: [
+        type: :atom,
+        doc:
+          "The queue to place the job in. Defaults to the resources short name plus the name of the scheduled action (not the action name)."
+      ],
+      state: [
+        type: {:one_of, [:active, :paused, :deleted]},
+        default: :active,
+        doc: """
+        Describes the state of the cron job. See the getting started guide for more information. The most important thing is that you *do not remove a scheduled action from a resource if you are using oban pro*.
+        """
+      ],
+      max_attempts: [
+        type: :pos_integer,
+        default: 1,
+        doc: """
+        How many times to attempt the job. The action will receive a `last_oban_attempt?` argument on the last attempt, and you should handle errors accordingly.
+        """
+      ],
+      debug?: [
+        type: :boolean,
+        default: false,
+        doc:
+          "If set to `true`, detailed debug logging will be enabled for this trigger. You can also set `config :ash_oban, debug_all_triggers?: true` to enable debug logging for all triggers."
+      ]
+    ]
+  }
+
+  @scheduled_actions %Spark.Dsl.Section{
+    name: :scheduled_actions,
+    entities: [@schedule],
+    describe: """
+    A section for configured scheduled actions. Supports generic and create actions.
+    """,
+    examples: [
+      """
+      scheduled_actions do
+        schedule :import, "0 */6 * * *", action: :import
+      end
+      """
+    ]
+  }
+
   @triggers %Spark.Dsl.Section{
     name: :triggers,
     entities: [@trigger],
@@ -240,7 +331,7 @@ defmodule AshOban do
         required: true
       ]
     ],
-    sections: [@triggers]
+    sections: [@triggers, @scheduled_actions]
   }
 
   @sections [@oban]
@@ -254,7 +345,8 @@ defmodule AshOban do
     imports: [AshOban.Changes.BuiltinChanges],
     transformers: [
       AshOban.Transformers.SetDefaults,
-      AshOban.Transformers.DefineSchedulers
+      AshOban.Transformers.DefineSchedulers,
+      AshOban.Transformers.DefineActionWorkers
     ]
 
   def schedule(resource, trigger) do
