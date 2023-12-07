@@ -49,6 +49,9 @@ defmodule AshOban.Transformers.SetDefaults do
             message: """
             Scheduled actions of type #{inspect(bad_type)} are not supported.
             """
+
+        _ ->
+          :ok
       end
 
       queue = scheduled_action.queue || default_queue_name(dsl, scheduled_action)
