@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.1.12](https://github.com/ash-project/ash_oban/compare/v0.1.11...v0.1.12) (2023-12-12)
+
+
+
+
+### Improvements:
+
+* make draining queues optional for `AshOban.schedule_and_run_triggers`
+
 ## [v0.1.11](https://github.com/ash-project/ash_oban/compare/v0.1.10...v0.1.11) (2023-12-12)
 
 
