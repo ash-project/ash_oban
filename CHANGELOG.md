@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.1.11](https://github.com/ash-project/ash_oban/compare/v0.1.10...v0.1.11) (2023-12-12)
+
+
+
+
+### Improvements:
+
+* move schedule_and_run_triggers to `AshOban`
+
 ## [v0.1.10](https://github.com/ash-project/ash_oban/compare/v0.1.9...v0.1.10) (2023-12-07)
 
 
