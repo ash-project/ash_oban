@@ -13,17 +13,13 @@ defmodule AshOban.Transformers.DefineActionWorkers do
     dsl
     |> AshOban.Info.oban_scheduled_actions()
     |> Enum.reduce(dsl, fn scheduled_action, dsl ->
-      worker_module_name = module_name(module, scheduled_action)
+      worker_module_name =
+        module_name(module, scheduled_action)
 
-      # |> Transformer.async_compile(fn ->
-      # try do
-      define_worker(module, worker_module_name, scheduled_action, dsl)
-      # rescue
-      #   e ->
-      #     IO.inspect(e)
-      # end
-      # end)
       dsl
+      |> Transformer.async_compile(fn ->
+        define_worker(module, worker_module_name, scheduled_action, dsl)
+      end)
       |> Transformer.replace_entity([:oban, :scheduled_actions], %{
         scheduled_action
         | worker: worker_module_name

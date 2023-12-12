@@ -1,4 +1,5 @@
 defmodule AshOban.Test.Triggered do
+  @moduledoc false
   use Ash.Resource,
     data_layer: Ash.DataLayer.Ets,
     extensions: [AshOban]

@@ -1,4 +1,5 @@
 defmodule AshOban.Test.Api do
+  @moduledoc false
   use Ash.Api
 
   resources do
