@@ -366,7 +366,8 @@ defmodule AshOban do
           cancelled: non_neg_integer(),
           success: non_neg_integer(),
           failure: non_neg_integer(),
-          snoozed: non_neg_integer()
+          snoozed: non_neg_integer(),
+          queues_not_drained: list(atom)
         }
 
   def schedule(resource, trigger) do
@@ -578,7 +579,8 @@ defmodule AshOban do
 
   Options:
 
-  - `queue`, `with_limit`, `with_recursion`, `with_safety`, `with_scheduled` - passed through to `Oban.drain_queue/2`
+  - `drain_queues?` - Defaults to false, drains the queues after scheduling. This is primarily for testing
+  - `queue`, `with_limit`, `with_recursion`, `with_safety`, `with_scheduled` - passed through to `Oban.drain_queue/2`, if it is called
   - `scheduled_actions?` - Defaults to false, unless a scheduled action name was explicitly provided. Schedules all applicable scheduled actions.
   - `triggers?` - Defaults to true, schedules all applicable scheduled actions.
 
@@ -604,9 +606,7 @@ defmodule AshOban do
     Enum.reduce(resources_or_apis_or_otp_apps, %{}, fn item, acc ->
       item
       |> do_schedule_and_run_triggers(opts)
-      |> Map.merge(acc, fn _key, left, right ->
-        left + right
-      end)
+      |> merge_results(acc)
     end)
   end
 
@@ -632,16 +632,7 @@ defmodule AshOban do
       |> Enum.uniq()
 
     # we drain each queue twice to do schedulers and then workers
-    Enum.reduce(queues ++ queues, %{}, fn queue, acc ->
-      [queue: queue]
-      |> Keyword.merge(
-        Keyword.take(opts, [:queue, :with_limit, :with_recursion, :with_safety, :with_scheduled])
-      )
-      |> Oban.drain_queue()
-      |> Map.merge(acc, fn _key, left, right ->
-        left + right
-      end)
-    end)
+    drain_queues(queues ++ queues, opts)
   end
 
   def do_schedule_and_run_triggers(resource_or_api_or_otp_app, opts) do
@@ -652,9 +643,7 @@ defmodule AshOban do
         |> Enum.reduce(%{}, fn resource, acc ->
           resource
           |> do_schedule_and_run_triggers(opts)
-          |> Map.merge(acc, fn _key, left, right ->
-            left + right
-          end)
+          |> merge_results(acc)
         end)
 
       Spark.Dsl.is?(resource_or_api_or_otp_app, Ash.Resource) ->
@@ -679,14 +668,7 @@ defmodule AshOban do
           |> Enum.uniq()
 
         # we drain each queue twice to do schedulers and then workers
-        Enum.reduce(queues ++ queues, %{}, fn queue, acc ->
-          [queue: queue]
-          |> Keyword.merge(opts)
-          |> Oban.drain_queue()
-          |> Map.merge(acc, fn _key, left, right ->
-            left + right
-          end)
-        end)
+        drain_queues(queues ++ queues, opts)
 
       true ->
         resource_or_api_or_otp_app
@@ -695,10 +677,41 @@ defmodule AshOban do
         |> Enum.reduce(%{}, fn api, acc ->
           api
           |> do_schedule_and_run_triggers(opts)
-          |> Map.merge(acc, fn _key, left, right ->
-            left + right
-          end)
+          |> merge_results(acc)
         end)
     end
+  end
+
+  defp drain_queues(queues, opts) do
+    if opts[:drain_queues] do
+      Enum.reduce(queues ++ queues, %{}, fn queue, acc ->
+        [queue: queue]
+        |> Keyword.merge(
+          Keyword.take(opts, [:queue, :with_limit, :with_recursion, :with_safety, :with_scheduled])
+        )
+        |> Oban.drain_queue()
+        |> Map.put(:queues_not_drained, [])
+        |> merge_results(acc)
+      end)
+    else
+      %{
+        discard: 0,
+        cancelled: 0,
+        success: 0,
+        failure: 0,
+        snoozed: 0,
+        queues_not_drained: Enum.uniq(queues)
+      }
+    end
+  end
+
+  defp merge_results(results, acc) do
+    Map.merge(results, acc, fn
+      :queues_not_drained, left, right ->
+        Enum.uniq(left ++ right)
+
+      _key, left, right ->
+        left + right
+    end)
   end
 end

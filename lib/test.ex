@@ -1,5 +1,11 @@
 defmodule AshOban.Test do
   @moduledoc "Helpers for testing ash_oban triggers"
 
-  defdelegate schedule_and_run_triggers(resources_or_apis_or_otp_apps, opts \\ []), to: AshOban
+  @doc """
+  Calls `AshOban.schedule_and_run_triggers/2` with `drain_queues?: true`.
+  """
+  def schedule_and_run_triggers(resources_or_apis_or_otp_apps, opts \\ []) do
+    opts = Keyword.put_new(opts, :drain_queues?, true)
+    AshOban.schedule_and_run_triggers(resources_or_apis_or_otp_apps, opts)
+  end
 end
