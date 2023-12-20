@@ -597,6 +597,7 @@ defmodule AshOban do
       opts
       |> Keyword.put_new(:scheduled_actions?, false)
       |> Keyword.put_new(:triggers?, true)
+      |> Keyword.put_new(:drain_queues?, false)
 
     do_schedule_and_run_triggers(resources_or_apis_or_otp_apps, opts)
   end
@@ -683,7 +684,7 @@ defmodule AshOban do
   end
 
   defp drain_queues(queues, opts) do
-    if opts[:drain_queues] do
+    if opts[:drain_queues?] do
       Enum.reduce(queues ++ queues, %{}, fn queue, acc ->
         [queue: queue]
         |> Keyword.merge(
