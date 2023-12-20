@@ -685,7 +685,7 @@ defmodule AshOban do
 
   defp drain_queues(queues, opts) do
     if opts[:drain_queues?] do
-      Enum.reduce(queues ++ queues, %{}, fn queue, acc ->
+      Enum.reduce(queues, %{}, fn queue, acc ->
         [queue: queue]
         |> Keyword.merge(
           Keyword.take(opts, [:queue, :with_limit, :with_recursion, :with_safety, :with_scheduled])
