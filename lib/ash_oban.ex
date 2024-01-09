@@ -496,10 +496,10 @@ defmodule AshOban do
           opts =
             case trigger.state do
               :paused ->
-                [events: [paused: true]]
+                [paused: true]
 
               :deleted ->
-                [events: [delete: true]]
+                [delete: true]
 
               _ ->
                 []
