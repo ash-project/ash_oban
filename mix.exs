@@ -74,12 +74,12 @@ defmodule AshOban.MixProject do
         ],
         Introspection: [
           AshOban.Info,
-          AshOban.Trigger
+          AshOban.Trigger,
+          AshOban.Schedule
         ],
         Testing: [
           AshOban.Test
-        ],
-        Internals: ~r/.*/
+        ]
       ]
     ]
   end
