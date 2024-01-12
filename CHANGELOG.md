@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.1.13](https://github.com/ash-project/ash_oban/compare/v0.1.12...v0.1.13) (2024-01-12)
+
+
+
+
+### Bug Fixes:
+
+* Do not wrap `paused` and `delete` Cron options into `events` (#15)
+
+* properly honor the `drain_queues?` option
+
 ## [v0.1.12](https://github.com/ash-project/ash_oban/compare/v0.1.11...v0.1.12) (2023-12-12)
 
 
