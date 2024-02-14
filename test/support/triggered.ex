@@ -21,6 +21,10 @@ defmodule AshOban.Test.Triggered do
         scheduler_cron false
       end
     end
+
+    scheduled_actions do
+      schedule :say_hello, "0 0 1 1 *"
+    end
   end
 
   actions do
@@ -33,6 +37,12 @@ defmodule AshOban.Test.Triggered do
 
     update :process do
       change set_attribute(:processed, true)
+    end
+
+    action :say_hello, :string do
+      run fn input, _ ->
+        {:ok, "Hello"}
+      end
     end
   end
 
