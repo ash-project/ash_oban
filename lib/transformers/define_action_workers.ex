@@ -93,7 +93,7 @@ defmodule AshOban.Transformers.DefineActionWorkers do
             unquote(scheduled_action.action),
             input
           )
-          |> unquote(api).run_action!()
+          |> unquote(api).run_action()
         end
       end,
       Macro.Env.location(__ENV__)
