@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.1.14](https://github.com/ash-project/ash_oban/compare/v0.1.13...v0.1.14) (2024-02-16)
+
+
+
+
+### Improvements:
+
+* properly schedule scheduled actions
+
 ## [v0.1.13](https://github.com/ash-project/ash_oban/compare/v0.1.12...v0.1.13) (2024-01-12)
 
 
