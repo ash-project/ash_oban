@@ -94,24 +94,30 @@ defmodule AshOban.Transformers.DefineSchedulers do
     stream =
       if is_nil(trigger.where) do
         quote location: :keep do
-          def stream(resource) do
+          def stream(resource, actor) do
             resource
             |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
             |> Ash.Query.select(unquote(primary_key))
             |> limit_stream()
-            |> Ash.Query.for_read(unquote(trigger.read_action))
+            |> Ash.Query.for_read(unquote(trigger.read_action), %{},
+              authorize?: true,
+              actor: actor
+            )
             |> unquote(api).stream!(unquote(batch_opts))
           end
         end
       else
         quote location: :keep do
-          def stream(resource) do
+          def stream(resource, actor) do
             resource
             |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
             |> Ash.Query.select(unquote(primary_key))
             |> limit_stream()
             |> filter()
-            |> Ash.Query.for_read(unquote(trigger.read_action))
+            |> Ash.Query.for_read(unquote(trigger.read_action), %{},
+              authorize?: true,
+              actor: actor
+            )
             |> unquote(api).stream!()
           end
         end
@@ -193,7 +199,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             {:discard, unquote(trigger.state)}
           end
         else
-          def unquote(function_name)(%Oban.Job{}) do
+          def unquote(function_name)(%Oban.Job{args: args}) do
             metadata =
               case AshOban.Info.oban_trigger(unquote(resource), unquote(trigger.name)) do
                 %{read_metadata: read_metadata} when is_function(read_metadata) ->
@@ -203,15 +209,22 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   fn _ -> %{} end
               end
 
-            unquote(resource)
-            |> stream()
-            |> Stream.map(fn record ->
-              unquote(worker_module_name).new(%{
-                primary_key: Map.take(record, unquote(primary_key)),
-                metadata: metadata.(record)
-              })
-            end)
-            |> insert()
+            case AshOban.lookup_actor(args["actor"]) do
+              {:ok, actor} ->
+                unquote(resource)
+                |> stream(actor)
+                |> Stream.map(fn record ->
+                  unquote(worker_module_name).new(%{
+                    primary_key: Map.take(record, unquote(primary_key)),
+                    metadata: metadata.(record),
+                    actor: args["actor"]
+                  })
+                end)
+                |> insert()
+
+              {:error, e} ->
+                raise Ash.Error.to_ash_error(e)
+            end
           rescue
             e ->
               Logger.error(
@@ -414,63 +427,69 @@ defmodule AshOban.Transformers.DefineSchedulers do
         end
 
         def handle_error(
-              %{max_attempts: max_attempts, attempt: max_attempts} = job,
+              %{max_attempts: max_attempts, attempt: max_attempts, args: args} = job,
               error,
               primary_key,
               stacktrace
             ) do
-          query()
-          |> Ash.Query.do_filter(primary_key)
-          |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-          |> Ash.Query.for_read(unquote(read_action))
-          |> unquote(api).read_one()
-          |> case do
-            {:error, error} ->
-              AshOban.debug(
-                """
-                Record with primary key #{inspect(primary_key)} encountered an error in #{unquote(inspect(resource))}#{unquote(trigger.name)}
-
-                #{Exception.format(:error, error, AshOban.stacktrace(error))}
-                """,
-                unquote(trigger.debug?)
-              )
-
-              {:error, error}
-
-            {:ok, nil} ->
-              AshOban.debug(
-                "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
-                unquote(trigger.debug?)
-              )
-
-              {:discard, :trigger_no_longer_applies}
-
-            {:ok, record} ->
-              unquote(log_final_error)
-
-              record
-              |> Ash.Changeset.new()
-              |> prepare_error(primary_key)
-              |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-              |> Ash.Changeset.for_action(unquote(trigger.on_error), %{error: error})
-              |> AshOban.update_or_destroy(unquote(api))
+          case AshOban.lookup_actor(args["actor"]) do
+            {:ok, actor} ->
+              query()
+              |> Ash.Query.do_filter(primary_key)
+              |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+              |> Ash.Query.for_read(unquote(read_action), %{}, authorize?: true, actor: actor)
+              |> unquote(api).read_one()
               |> case do
-                :ok ->
-                  :ok
-
-                {:ok, result} ->
-                  :ok
-
                 {:error, error} ->
-                  error = Ash.Error.to_ash_error(error, stacktrace)
+                  AshOban.debug(
+                    """
+                    Record with primary key #{inspect(primary_key)} encountered an error in #{unquote(inspect(resource))}#{unquote(trigger.name)}
 
-                  Logger.error("""
-                  Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
+                    #{Exception.format(:error, error, AshOban.stacktrace(error))}
+                    """,
+                    unquote(trigger.debug?)
+                  )
 
-                  #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
-                  """)
+                  {:error, error}
 
-                  reraise error, stacktrace
+                {:ok, nil} ->
+                  AshOban.debug(
+                    "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
+                    unquote(trigger.debug?)
+                  )
+
+                  {:discard, :trigger_no_longer_applies}
+
+                {:ok, record} ->
+                  unquote(log_final_error)
+
+                  record
+                  |> Ash.Changeset.new()
+                  |> prepare_error(primary_key)
+                  |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
+                  |> Ash.Changeset.for_action(unquote(trigger.on_error), %{error: error},
+                    authorize?: true,
+                    actor: actor
+                  )
+                  |> AshOban.update_or_destroy(unquote(api))
+                  |> case do
+                    :ok ->
+                      :ok
+
+                    {:ok, result} ->
+                      :ok
+
+                    {:error, error} ->
+                      error = Ash.Error.to_ash_error(error, stacktrace)
+
+                      Logger.error("""
+                      Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
+
+                      #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
+                      """)
+
+                      reraise error, stacktrace
+                  end
               end
           end
         end
@@ -525,51 +544,59 @@ defmodule AshOban.Transformers.DefineSchedulers do
             unquote(trigger.debug?)
           )
 
-          query()
-          |> Ash.Query.do_filter(primary_key)
-          |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-          |> Ash.Query.for_read(unquote(read_action))
-          |> unquote(api).read_one()
-          |> case do
-            {:ok, nil} ->
-              AshOban.debug(
-                "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
-                unquote(trigger.debug?)
-              )
-
-              {:discard, :trigger_no_longer_applies}
-
-            {:ok, record} ->
-              args =
-                if unquote(is_nil(trigger.read_metadata)) do
-                  %{}
-                else
-                  %{metadata: args["metadata"]}
-                end
-
-              record
-              |> Ash.Changeset.new()
-              |> prepare(primary_key)
-              |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-              |> Ash.Changeset.for_action(
-                unquote(trigger.action),
-                Map.merge(unquote(Macro.escape(trigger.action_input || %{})), args)
-              )
-              |> AshOban.update_or_destroy(unquote(api))
+          case AshOban.lookup_actor(args["actor"]) do
+            {:ok, actor} ->
+              query()
+              |> Ash.Query.do_filter(primary_key)
+              |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+              |> Ash.Query.for_read(unquote(read_action), %{}, authorize?: true, actor: actor)
+              |> unquote(api).read_one()
               |> case do
-                :ok ->
-                  :ok
+                {:ok, nil} ->
+                  AshOban.debug(
+                    "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
+                    unquote(trigger.debug?)
+                  )
 
-                {:ok, result} ->
-                  {:ok, result}
+                  {:discard, :trigger_no_longer_applies}
 
-                {:error, error} ->
-                  raise Ash.Error.to_error_class(error)
+                {:ok, record} ->
+                  args =
+                    if unquote(is_nil(trigger.read_metadata)) do
+                      %{}
+                    else
+                      %{metadata: args["metadata"]}
+                    end
+
+                  record
+                  |> Ash.Changeset.new()
+                  |> prepare(primary_key)
+                  |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
+                  |> Ash.Changeset.for_action(
+                    unquote(trigger.action),
+                    Map.merge(unquote(Macro.escape(trigger.action_input || %{})), args),
+                    authorize?: true,
+                    actor: actor
+                  )
+                  |> AshOban.update_or_destroy(unquote(api))
+                  |> case do
+                    :ok ->
+                      :ok
+
+                    {:ok, result} ->
+                      {:ok, result}
+
+                    {:error, error} ->
+                      raise Ash.Error.to_error_class(error)
+                  end
+
+                # we don't have the record here, so we can't do the `on_error` behavior
+                other ->
+                  other
               end
 
-            # we don't have the record here, so we can't do the `on_error` behavior
-            other ->
-              other
+            {:error, error} ->
+              raise Ash.Error.to_error_class(error)
           end
         rescue
           error ->

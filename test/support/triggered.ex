@@ -2,6 +2,7 @@ defmodule AshOban.Test.Triggered do
   @moduledoc false
   use Ash.Resource,
     data_layer: Ash.DataLayer.Ets,
+    authorizers: [Ash.Policy.Authorizer],
     extensions: [AshOban]
 
   oban do
@@ -11,12 +12,14 @@ defmodule AshOban.Test.Triggered do
       trigger :process do
         action :process
         where expr(processed != true)
+        max_attempts 2
         worker_read_action(:read)
       end
 
       trigger :process_2 do
         action :process
         where expr(processed != true)
+        max_attempts 2
         worker_read_action(:read)
         scheduler_cron false
       end
@@ -24,6 +27,16 @@ defmodule AshOban.Test.Triggered do
 
     scheduled_actions do
       schedule :say_hello, "0 0 1 1 *"
+    end
+  end
+
+  policies do
+    policy action(:process) do
+      authorize_if actor_present()
+    end
+
+    policy always() do
+      authorize_if always()
     end
   end
 
@@ -37,6 +50,11 @@ defmodule AshOban.Test.Triggered do
 
     update :process do
       change set_attribute(:processed, true)
+
+      change fn changeset, context ->
+        send(self(), {:actor, context.actor})
+        changeset
+      end
     end
 
     action :say_hello, :string do
@@ -52,5 +70,6 @@ defmodule AshOban.Test.Triggered do
 
   attributes do
     uuid_primary_key :id
+    attribute :processed, :boolean, default: false, allow_nil?: false
   end
 end

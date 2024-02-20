@@ -5,7 +5,7 @@ defmodule AshOban.Changes.RunObanTrigger do
 
   use Ash.Resource.Change
 
-  def change(changeset, opts, _context) do
+  def change(changeset, opts, context) do
     trigger = AshOban.Info.oban_trigger(changeset.resource, opts[:trigger])
 
     if !trigger do
@@ -13,7 +13,12 @@ defmodule AshOban.Changes.RunObanTrigger do
     end
 
     Ash.Changeset.after_action(changeset, fn _changeset, result ->
-      AshOban.run_trigger(result, trigger, opts[:oban_job_opts])
+      AshOban.run_trigger(
+        result,
+        trigger,
+        Keyword.put(opts[:oban_job_opts] || [], :actor, context.actor)
+      )
+
       {:ok, result}
     end)
   end

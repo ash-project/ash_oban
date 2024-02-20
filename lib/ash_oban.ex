@@ -372,7 +372,14 @@ defmodule AshOban do
           queues_not_drained: list(atom)
         }
 
-  def schedule(resource, trigger) do
+  @doc """
+  Schedules all relevant jobs for the provided trigger or scheduled action
+
+  ## Options
+
+    `:actor` - the actor to set on the job. Requires configuring an actor persister.
+  """
+  def schedule(resource, trigger, opts \\ []) do
     case trigger do
       %AshOban.Trigger{} ->
         trigger
@@ -387,17 +394,54 @@ defmodule AshOban do
     |> case do
       %AshOban.Schedule{worker: worker} ->
         %{}
+        |> persist_actor(opts[:actor])
         |> worker.new()
         |> Oban.insert!()
 
       %AshOban.Trigger{scheduler: scheduler} ->
         %{}
+        |> persist_actor(opts[:actor])
         |> scheduler.new()
         |> Oban.insert!()
     end
   end
 
-  def run_trigger(%resource{} = record, trigger, oban_job_opts \\ []) do
+  @spec persist_actor(args :: map, actor :: any) :: any
+  def persist_actor(args, nil), do: args
+
+  def persist_actor(args, actor) do
+    case Application.get_env(:ash_oban, :actor_persister) do
+      nil ->
+        args
+
+      persister ->
+        Map.put(args, "actor", persister.store(actor))
+    end
+  end
+
+  @spec lookup_actor(actor_json :: any) :: any
+  def lookup_actor(actor_json) do
+    case Application.get_env(:ash_oban, :actor_persister) do
+      nil ->
+        {:ok, nil}
+
+      persister ->
+        persister.lookup(actor_json)
+    end
+  end
+
+  @doc """
+  Runs a specific trigger for the record provided.
+
+  ## Options
+
+  - `:actor` - the actor to set on the job. Requires configuring an actor persister.
+
+  All other options are passed through to `c:Oban.Worker.new/2`
+  """
+  def run_trigger(%resource{} = record, trigger, opts \\ []) do
+    {opts, oban_job_opts} = Keyword.split(opts, [:actor])
+
     trigger =
       case trigger do
         %AshOban.Trigger{} ->
@@ -419,6 +463,7 @@ defmodule AshOban do
       end
 
     %{primary_key: Map.take(record, primary_key), metadata: metadata}
+    |> AshOban.persist_actor(opts[:actor])
     |> trigger.worker.new(oban_job_opts)
     |> Oban.insert!()
   end
@@ -620,6 +665,7 @@ defmodule AshOban do
   - `queue`, `with_limit`, `with_recursion`, `with_safety`, `with_scheduled` - passed through to `Oban.drain_queue/2`, if it is called
   - `scheduled_actions?` - Defaults to false, unless a scheduled action name was explicitly provided. Schedules all applicable scheduled actions.
   - `triggers?` - Defaults to true, schedules all applicable scheduled actions.
+  - `actor` - The actor to schedule and run the triggers with
 
   If the input is:
   * a list - each item is passed into `schedule_and_run_triggers/1`, and the results are merged together.
@@ -641,7 +687,7 @@ defmodule AshOban do
 
   def do_schedule_and_run_triggers(resources_or_apis_or_otp_apps, opts)
       when is_list(resources_or_apis_or_otp_apps) do
-    Enum.reduce(resources_or_apis_or_otp_apps, %{}, fn item, acc ->
+    Enum.reduce(resources_or_apis_or_otp_apps, default_acc(), fn item, acc ->
       item
       |> do_schedule_and_run_triggers(opts)
       |> merge_results(acc)
@@ -661,7 +707,7 @@ defmodule AshOban do
       end)
 
     Enum.each(triggers, fn trigger ->
-      AshOban.schedule(resource, trigger)
+      AshOban.schedule(resource, trigger, actor: opts[:actor])
     end)
 
     queues =
@@ -697,7 +743,7 @@ defmodule AshOban do
           end)
 
         Enum.each(triggers, fn trigger ->
-          AshOban.schedule(resource_or_api_or_otp_app, trigger)
+          AshOban.schedule(resource_or_api_or_otp_app, trigger, actor: opts[:actor])
         end)
 
         queues =
@@ -712,7 +758,7 @@ defmodule AshOban do
         resource_or_api_or_otp_app
         |> Application.get_env(:ash_apis, [])
         |> List.wrap()
-        |> Enum.reduce(%{}, fn api, acc ->
+        |> Enum.reduce(default_acc(), fn api, acc ->
           api
           |> do_schedule_and_run_triggers(opts)
           |> merge_results(acc)
@@ -722,7 +768,7 @@ defmodule AshOban do
 
   defp drain_queues(queues, opts) do
     if opts[:drain_queues?] do
-      Enum.reduce(queues, %{}, fn queue, acc ->
+      Enum.reduce(queues, default_acc(), fn queue, acc ->
         [queue: queue]
         |> Keyword.merge(
           Keyword.take(opts, [:queue, :with_limit, :with_recursion, :with_safety, :with_scheduled])
@@ -732,15 +778,20 @@ defmodule AshOban do
         |> merge_results(acc)
       end)
     else
-      %{
-        discard: 0,
-        cancelled: 0,
-        success: 0,
-        failure: 0,
-        snoozed: 0,
-        queues_not_drained: Enum.uniq(queues)
-      }
+      default_acc()
+      |> Map.update!(:queues_not_drained, &Enum.uniq(&1 ++ queues))
     end
+  end
+
+  defp default_acc() do
+    %{
+      discard: 0,
+      cancelled: 0,
+      success: 0,
+      failure: 0,
+      snoozed: 0,
+      queues_not_drained: []
+    }
   end
 
   defp merge_results(results, acc) do

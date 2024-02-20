@@ -113,3 +113,36 @@ and
   }
 }
 ```
+
+## Persisting the actor along with a job
+
+Create a module that is responsible for translating the current user to a value that will be JSON encoded, and for turning that encoded value back into an actor.
+
+```elixir
+defmodule MyApp.AshObanActorPersister do
+  use AshOban.PersistActor
+
+  def store(%MyApp.User{id: id}), do: %{"type" => "user", "id" => id}
+
+  def lookup(%{"type" => "user", "id" => id}), do: MyApp.Accounts.get(MyApp.User, id)
+  
+  # This allows you to set a default actor
+  # in cases where no actor was present
+  # when scheduling.
+  def lookup(nil), do: {:ok, nil}
+end
+```
+
+Then, configure this in application config.
+
+```elixir
+config :ash_oban, :actor_persister, MyApp.AshObanActorPersister
+```
+
+### Considerations
+
+There are a few things that are important to keep in mind:
+
+1. The actor could be deleted or otherwise unavailable when you look it up. You very likely want your `lookup/1` to return an error in that scenario.
+
+2. The actor can have changed between when the job was scheduled and when the trigger is executing. It can even change across retries. If you are trying to authorize access for a given trigger's update action to a given actor, keep in mind that just because the trigger is running for a given action, does *not* mean that the conditions that allowed them to originally *schedule* that action are still true.

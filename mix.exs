@@ -25,6 +25,16 @@ defmodule AshOban.MixProject do
     ]
   end
 
+  def cli do
+    [
+      preferred_envs: [
+        "test.gen.migration": :test,
+        "test.migrate": :test,
+        "test.create": :test
+      ]
+    ]
+  end
+
   defp package do
     [
       name: :ash_oban,
@@ -112,7 +122,8 @@ defmodule AshOban.MixProject do
         {:dialyxir, ">= 0.0.0", only: [:dev, :test], runtime: false},
         {:sobelow, ">= 0.0.0", only: [:dev, :test], runtime: false},
         {:git_ops, "~> 2.5", only: [:dev, :test]},
-        {:excoveralls, "~> 0.13", only: [:dev, :test]}
+        {:excoveralls, "~> 0.13", only: [:dev, :test]},
+        {:postgrex, "~> 0.17.4"}
       ]
   end
 
@@ -128,7 +139,10 @@ defmodule AshOban.MixProject do
       ],
       "spark.formatter": "spark.formatter --extensions AshOban",
       "spark.cheat_sheets": "spark.cheat_sheets --extensions AshOban",
-      "spark.cheat_sheets_in_search": "spark.cheat_sheets_in_search --extensions AshOban"
+      "spark.cheat_sheets_in_search": "spark.cheat_sheets_in_search --extensions AshOban",
+      "test.gen.migration": "ecto.gen.migration --migrations-path=test_migrations",
+      "test.migrate": "ecto.migrate --migrations-path=test_migrations",
+      "test.create": "ecto.create"
     ]
   end
 end

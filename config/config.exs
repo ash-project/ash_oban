@@ -6,6 +6,30 @@ config :spark, :formatter,
   "Ash.Registry": [],
   "Ash.Resource": []
 
+if Mix.env() == :test do
+  config :ash_oban, ecto_repos: [AshOban.Test.Repo]
+
+  config :ash_oban, :oban,
+    repo: AshOban.Test.Repo,
+    prefix: "private",
+    plugins: [
+      {Oban.Plugins.Cron, []}
+    ],
+    queues: [
+      triggered_process: 10,
+      triggered_process_2: 10,
+      triggered_say_hello: 10
+    ]
+
+  config :ash_oban, :actor_persister, AshOban.Test.ActorPersister
+
+  config :ash_oban, AshOban.Test.Repo,
+    username: "postgres",
+    database: "ash_oban_test",
+    hostname: "localhost",
+    pool: Ecto.Adapters.SQL.Sandbox
+end
+
 if Mix.env() == :dev do
   config :git_ops,
     mix_project: AshOban.MixProject,
