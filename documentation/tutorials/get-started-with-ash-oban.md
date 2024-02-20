@@ -8,6 +8,10 @@ A trigger describes an action that is run periodically.
 
 If you haven't already, read the [Ash Getting Started Guide](https://hexdocs.pm/ash/get-started.html), and familiarize yourself with Ash and Ash resources.
 
+## Notice
+
+Potential breaking change from `0.1.0` to `0.2.0`. See the section on Authorization Actions below for more.
+
 ## Bring in the ash_oban dependency
 
 ```elixir
