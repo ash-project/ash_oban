@@ -1,7 +1,9 @@
 defmodule AshOban.Test.ActorPersister do
+  @moduledoc false
   use AshOban.ActorPersister
 
   defmodule FakeActor do
+    @moduledoc false
     defstruct id: nil
   end
 

@@ -10,6 +10,7 @@ if Mix.env() == :test do
   config :ash_oban, ecto_repos: [AshOban.Test.Repo]
 
   config :ash_oban, :oban,
+    testing: :manual,
     repo: AshOban.Test.Repo,
     prefix: "private",
     plugins: [

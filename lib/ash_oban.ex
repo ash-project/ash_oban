@@ -716,7 +716,7 @@ defmodule AshOban do
       |> Enum.uniq()
 
     # we drain each queue twice to do schedulers and then workers
-    drain_queues(queues ++ queues, opts)
+    drain_queues(queues, opts)
   end
 
   def do_schedule_and_run_triggers(resource_or_api_or_otp_app, opts) do
@@ -752,7 +752,7 @@ defmodule AshOban do
           |> Enum.uniq()
 
         # we drain each queue twice to do schedulers and then workers
-        drain_queues(queues ++ queues, opts)
+        drain_queues(queues, opts)
 
       true ->
         resource_or_api_or_otp_app
@@ -768,10 +768,16 @@ defmodule AshOban do
 
   defp drain_queues(queues, opts) do
     if opts[:drain_queues?] do
-      Enum.reduce(queues, default_acc(), fn queue, acc ->
+      Enum.reduce(queues ++ queues, default_acc(), fn queue, acc ->
         [queue: queue]
         |> Keyword.merge(
-          Keyword.take(opts, [:queue, :with_limit, :with_recursion, :with_safety, :with_scheduled])
+          Keyword.take(opts, [
+            :queue,
+            :with_limit,
+            :with_recursion,
+            :with_safety,
+            :with_scheduled
+          ])
         )
         |> Oban.drain_queue()
         |> Map.put(:queues_not_drained, [])
@@ -783,7 +789,7 @@ defmodule AshOban do
     end
   end
 
-  defp default_acc() do
+  defp default_acc do
     %{
       discard: 0,
       cancelled: 0,

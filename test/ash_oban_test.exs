@@ -12,6 +12,13 @@ defmodule AshObanTest do
     :ok
   end
 
+  setup do
+    Enum.each(
+      [:triggered_process, :triggered_process_2, :triggered_say_hello],
+      &Oban.drain_queue(queue: &1)
+    )
+  end
+
   test "nothing happens if no records exist" do
     assert %{success: 1} = AshOban.Test.schedule_and_run_triggers(Triggered)
   end

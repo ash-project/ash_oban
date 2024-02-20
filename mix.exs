@@ -107,8 +107,9 @@ defmodule AshOban.MixProject do
       if System.get_env("ASH_OBAN_CI_OBAN_PRO") == "false" do
         []
       else
-        # See the getting started guide why this is only dev/test
-        [{:oban_pro, "~> 1.0", repo: "oban", only: [:dev]}]
+        # We can't currently use this as we don't have a license for oban_pro that we can use
+        # [{:oban_pro, "~> 1.0", repo: "oban", only: [:dev,]}]
+        []
       end
 
     oban_dep ++
@@ -142,7 +143,8 @@ defmodule AshOban.MixProject do
       "spark.cheat_sheets_in_search": "spark.cheat_sheets_in_search --extensions AshOban",
       "test.gen.migration": "ecto.gen.migration --migrations-path=test_migrations",
       "test.migrate": "ecto.migrate --migrations-path=test_migrations",
-      "test.create": "ecto.create"
+      "test.create": "ecto.create",
+      "test.setup": ["test.create", "test/migrate"]
     ]
   end
 end

@@ -1,4 +1,7 @@
 defmodule AshOban.ActorPersister do
+  @moduledoc """
+  A behaviour for storing and retrieving an actor from oban job arguments
+  """
   @type actor_json :: any
   @type actor :: any
 
