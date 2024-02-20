@@ -16,3 +16,5 @@ jobs:
       HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
     with:
       postgres: true
+      ecto_postgres: true
+      ash_postgres: false

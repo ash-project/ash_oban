@@ -141,10 +141,9 @@ defmodule AshOban.MixProject do
       "spark.formatter": "spark.formatter --extensions AshOban",
       "spark.cheat_sheets": "spark.cheat_sheets --extensions AshOban",
       "spark.cheat_sheets_in_search": "spark.cheat_sheets_in_search --extensions AshOban",
-      "test.gen.migration": "ecto.gen.migration --migrations-path=test_migrations",
-      "test.migrate": "ecto.migrate --migrations-path=test_migrations",
-      "test.create": "ecto.create",
-      "test.setup": ["test.create", "test/migrate"]
+      "ecto.gen.migration": "ecto.gen.migration --migrations-path=test_migrations",
+      "ecto.migrate": "ecto.migrate --migrations-path=test_migrations",
+      "ecto.setup": ["ecto.create", "ecto.migrate"]
     ]
   end
 end
