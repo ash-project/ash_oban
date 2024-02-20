@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.2.0](https://github.com/ash-project/ash_oban/compare/v0.1.14...v0.2.0) (2024-02-20)
+### Breaking Changes:
+
+* authorize always by default
+
+
+
+### Improvements:
+
+* allow turning new authorization behavior off
+
+* add `actor_persister`, and use it automatically
+
+* authorize?: true always
+
 ## [v0.1.14](https://github.com/ash-project/ash_oban/compare/v0.1.13...v0.1.14) (2024-02-16)
 
 
