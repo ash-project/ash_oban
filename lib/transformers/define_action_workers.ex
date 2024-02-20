@@ -73,27 +73,39 @@ defmodule AshOban.Transformers.DefineActionWorkers do
 
         require Logger
         @impl unquote(worker)
-        def unquote(function_name)(%Oban.Job{} = job) do
-          AshOban.debug(
-            "Scheduled action #{unquote(inspect(resource))}.#{unquote(scheduled_action.name)} triggered.",
-            unquote(scheduled_action.debug?)
-          )
+        def unquote(function_name)(%Oban.Job{args: args} = job) do
+          case AshOban.lookup_actor(args["actor"]) do
+            {:ok, actor} ->
+              authorize? = AshOban.authorize?()
 
-          input = unquote(Macro.escape(scheduled_action.action_input || %{}))
+              AshOban.debug(
+                "Scheduled action #{unquote(inspect(resource))}.#{unquote(scheduled_action.name)} triggered.",
+                unquote(scheduled_action.debug?)
+              )
 
-          input =
-            if job.max_attempts == job.attempt do
-              Map.put(input, :last_oban_attempt?, true)
-            else
-              Map.put(input, :last_oban_attempt?, false)
-            end
+              input = unquote(Macro.escape(scheduled_action.action_input || %{}))
 
-          unquote(resource)
-          |> Ash.ActionInput.for_action(
-            unquote(scheduled_action.action),
-            input
-          )
-          |> unquote(api).run_action()
+              input =
+                if job.max_attempts == job.attempt do
+                  Map.put(input, :last_oban_attempt?, true)
+                else
+                  Map.put(input, :last_oban_attempt?, false)
+                end
+
+              unquote(resource)
+              |> Ash.ActionInput.for_action(
+                unquote(scheduled_action.action),
+                input,
+                authorize?: authorize?,
+                actor: actor
+              )
+              |> unquote(api).run_action!()
+
+              :ok
+
+            {:error, error} ->
+              raise Ash.Error.to_ash_error(error)
+          end
         end
       end,
       Macro.Env.location(__ENV__)

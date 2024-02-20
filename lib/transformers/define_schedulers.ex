@@ -100,7 +100,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             |> Ash.Query.select(unquote(primary_key))
             |> limit_stream()
             |> Ash.Query.for_read(unquote(trigger.read_action), %{},
-              authorize?: true,
+              authorize?: AshOban.authorize?(),
               actor: actor
             )
             |> unquote(api).stream!(unquote(batch_opts))
@@ -115,7 +115,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             |> limit_stream()
             |> filter()
             |> Ash.Query.for_read(unquote(trigger.read_action), %{},
-              authorize?: true,
+              authorize?: AshOban.authorize?(),
               actor: actor
             )
             |> unquote(api).stream!()
@@ -432,12 +432,17 @@ defmodule AshOban.Transformers.DefineSchedulers do
               primary_key,
               stacktrace
             ) do
+          authorize? = AshOban.authorize?()
+
           case AshOban.lookup_actor(args["actor"]) do
             {:ok, actor} ->
               query()
               |> Ash.Query.do_filter(primary_key)
               |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-              |> Ash.Query.for_read(unquote(read_action), %{}, authorize?: true, actor: actor)
+              |> Ash.Query.for_read(unquote(read_action), %{},
+                authorize?: authorize?,
+                actor: actor
+              )
               |> unquote(api).read_one()
               |> case do
                 {:error, error} ->
@@ -468,7 +473,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   |> prepare_error(primary_key)
                   |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
                   |> Ash.Changeset.for_action(unquote(trigger.on_error), %{error: error},
-                    authorize?: true,
+                    authorize?: authorize?,
                     actor: actor
                   )
                   |> AshOban.update_or_destroy(unquote(api))
@@ -546,10 +551,15 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
           case AshOban.lookup_actor(args["actor"]) do
             {:ok, actor} ->
+              authorize? = AshOban.authorize?()
+
               query()
               |> Ash.Query.do_filter(primary_key)
               |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-              |> Ash.Query.for_read(unquote(read_action), %{}, authorize?: true, actor: actor)
+              |> Ash.Query.for_read(unquote(read_action), %{},
+                authorize?: authorize?,
+                actor: actor
+              )
               |> unquote(api).read_one()
               |> case do
                 {:ok, nil} ->
@@ -575,7 +585,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   |> Ash.Changeset.for_action(
                     unquote(trigger.action),
                     Map.merge(unquote(Macro.escape(trigger.action_input || %{})), args),
-                    authorize?: true,
+                    authorize?: authorize?,
                     actor: actor
                   )
                   |> AshOban.update_or_destroy(unquote(api))

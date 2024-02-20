@@ -394,22 +394,27 @@ defmodule AshOban do
     |> case do
       %AshOban.Schedule{worker: worker} ->
         %{}
-        |> persist_actor(opts[:actor])
+        |> store_actor(opts[:actor])
         |> worker.new()
         |> Oban.insert!()
 
       %AshOban.Trigger{scheduler: scheduler} ->
         %{}
-        |> persist_actor(opts[:actor])
+        |> store_actor(opts[:actor])
         |> scheduler.new()
         |> Oban.insert!()
     end
   end
 
-  @spec persist_actor(args :: map, actor :: any) :: any
-  def persist_actor(args, nil), do: args
+  @spec authorize? :: boolean
+  def authorize? do
+    Application.get_env(:ash_oban, :authorize?, true)
+  end
 
-  def persist_actor(args, actor) do
+  @spec store_actor(args :: map, actor :: any) :: any
+  def store_actor(args, nil), do: args
+
+  def store_actor(args, actor) do
     case Application.get_env(:ash_oban, :actor_persister) do
       nil ->
         args
@@ -463,7 +468,7 @@ defmodule AshOban do
       end
 
     %{primary_key: Map.take(record, primary_key), metadata: metadata}
-    |> AshOban.persist_actor(opts[:actor])
+    |> AshOban.store_actor(opts[:actor])
     |> trigger.worker.new(oban_job_opts)
     |> Oban.insert!()
   end

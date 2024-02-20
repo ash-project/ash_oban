@@ -114,6 +114,23 @@ and
 }
 ```
 
+## Authorizing actions
+
+As of v0.2, `authorize?: true` is passed into every action that is called. This may be a breaking change for some users that are using policies. There are two ways to get around this:
+
+1. you can set `config :ash_oban, authorize?: false` (easiest, reverts to old behavior, but not recommended)
+2. you can install the bypass at the top of your policies in any resource that you have triggers on that has policies:
+
+```elixir
+policies do
+  bypass AshOban.Checks.AshObanInteraction do
+    authorize_if always()
+  end
+
+  ...the rest of your policies
+end
+```
+
 ## Persisting the actor along with a job
 
 Create a module that is responsible for translating the current user to a value that will be JSON encoded, and for turning that encoded value back into an actor.

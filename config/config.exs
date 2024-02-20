@@ -22,7 +22,7 @@ if Mix.env() == :test do
       triggered_say_hello: 10
     ]
 
-  config :ash_oban, :actor_persister, AshOban.Test.ActorPersister
+  config :ash_oban, actor_persister: AshOban.Test.ActorPersister
 
   config :ash_oban, AshOban.Test.Repo,
     username: "postgres",
