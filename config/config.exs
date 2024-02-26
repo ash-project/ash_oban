@@ -6,6 +6,8 @@ config :spark, :formatter,
   "Ash.Registry": [],
   "Ash.Resource": []
 
+config :ash_oban, test: true
+
 if Mix.env() == :test do
   config :ash_oban, ecto_repos: [AshOban.Test.Repo]
 

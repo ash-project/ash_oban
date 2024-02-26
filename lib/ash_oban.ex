@@ -1,6 +1,8 @@
 defmodule AshOban do
   require Logger
 
+  @pro Application.compile_env(:ash_oban, :pro?) || false
+
   defmodule Trigger do
     @moduledoc """
     A configured trigger.
@@ -784,13 +786,33 @@ defmodule AshOban do
             :with_scheduled
           ])
         )
-        |> Oban.drain_queue()
+        |> drain_queue()
         |> Map.put(:queues_not_drained, [])
         |> merge_results(acc)
       end)
     else
       default_acc()
       |> Map.update!(:queues_not_drained, &Enum.uniq(&1 ++ queues))
+    end
+  end
+
+  if @pro do
+    defp drain_queue(opts) do
+      Oban.Pro.Testing.drain_jobs(opts)
+    end
+  else
+    if Application.compile_env(:ash_oban, :test) || Mix.env() == :test do
+      defp drain_queue(opts) do
+        Oban.drain_queue(opts)
+      end
+    else
+      defp drain_queue(_opts) do
+        raise ArgumentError, """
+        Cannot use the `drain_queues?: true` option outside of the test environment, unless you are also using oban pro.
+
+        For more information, see this github issue: https://github.com/sorentwo/oban/issues/1037#issuecomment-1962928460
+        """
+      end
     end
   end
 
