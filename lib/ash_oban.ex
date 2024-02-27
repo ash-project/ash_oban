@@ -673,6 +673,7 @@ defmodule AshOban do
   - `scheduled_actions?` - Defaults to false, unless a scheduled action name was explicitly provided. Schedules all applicable scheduled actions.
   - `triggers?` - Defaults to true, schedules all applicable scheduled actions.
   - `actor` - The actor to schedule and run the triggers with
+  - `oban` - The oban module to use. Defaults to `Oban`
 
   If the input is:
   * a list - each item is passed into `schedule_and_run_triggers/1`, and the results are merged together.
@@ -688,6 +689,7 @@ defmodule AshOban do
       |> Keyword.put_new(:scheduled_actions?, false)
       |> Keyword.put_new(:triggers?, true)
       |> Keyword.put_new(:drain_queues?, false)
+      |> Keyword.put_new(:oban, Oban)
 
     do_schedule_and_run_triggers(resources_or_apis_or_otp_apps, opts)
   end
@@ -798,7 +800,11 @@ defmodule AshOban do
 
   if @pro do
     defp drain_queue(opts) do
-      Oban.Pro.Testing.drain_jobs(opts)
+      conf = Oban.config(opts[:oban])
+
+      opts = Keyword.put_new(opts, :repo, conf.repo)
+
+      apply(Oban.Pro.Testing, :drain_jobs, [opts])
     end
   else
     if Application.compile_env(:ash_oban, :test) || Mix.env() == :test do
