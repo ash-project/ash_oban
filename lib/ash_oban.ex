@@ -1,8 +1,6 @@
 defmodule AshOban do
   require Logger
 
-  @pro Application.compile_env(:ash_oban, :pro?) || false
-
   defmodule Trigger do
     @moduledoc """
     A configured trigger.
@@ -673,7 +671,6 @@ defmodule AshOban do
   - `scheduled_actions?` - Defaults to false, unless a scheduled action name was explicitly provided. Schedules all applicable scheduled actions.
   - `triggers?` - Defaults to true, schedules all applicable scheduled actions.
   - `actor` - The actor to schedule and run the triggers with
-  - `oban` - The oban module to use. Defaults to `Oban`
 
   If the input is:
   * a list - each item is passed into `schedule_and_run_triggers/1`, and the results are merged together.
@@ -798,27 +795,17 @@ defmodule AshOban do
     end
   end
 
-  if @pro do
+  if Application.compile_env(:ash_oban, :test) || Mix.env() == :test do
     defp drain_queue(opts) do
-      conf = Oban.config(opts[:oban] || Oban)
-
-      opts = Keyword.put_new(opts, :repo, conf.repo)
-
-      apply(Oban.Pro.Testing, :drain_jobs, [opts])
+      Oban.drain_queue(opts)
     end
   else
-    if Application.compile_env(:ash_oban, :test) || Mix.env() == :test do
-      defp drain_queue(opts) do
-        Oban.drain_queue(opts)
-      end
-    else
-      defp drain_queue(_opts) do
-        raise ArgumentError, """
-        Cannot use the `drain_queues?: true` option outside of the test environment, unless you are also using oban pro.
+    defp drain_queue(_opts) do
+      raise ArgumentError, """
+      Cannot use the `drain_queues?: true` option outside of the test environment, unless you are also using oban pro.
 
-        For more information, see this github issue: https://github.com/sorentwo/oban/issues/1037#issuecomment-1962928460
-        """
-      end
+      For more information, see this github issue: https://github.com/sorentwo/oban/issues/1037#issuecomment-1962928460
+      """
     end
   end
 
