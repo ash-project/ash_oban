@@ -280,7 +280,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
             query()
             |> Ash.Query.do_filter(primary_key)
             |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-            |> Ash.Query.for_read(unquote(read_action))
+            |> Ash.Query.for_read(unquote(read_action), %{},
+              authorize?: authorize?,
+              actor: actor
+            )
             |> Ash.Query.lock(:for_update)
             |> unquote(api).read_one()
             |> case do
@@ -301,7 +304,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
             query()
             |> Ash.Query.do_filter(primary_key)
             |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-            |> Ash.Query.for_read(unquote(read_action))
+            |> Ash.Query.for_read(unquote(read_action), %{},
+              authorize?: authorize?,
+              actor: actor
+            )
             |> unquote(api).read_one()
             |> case do
               {:ok, nil} ->
@@ -320,26 +326,26 @@ defmodule AshOban.Transformers.DefineSchedulers do
     prepare_error =
       if on_error_transaction? do
         quote location: :keep do
-          defp prepare_error(changeset, primary_key) do
+          defp prepare_error(changeset, primary_key, authorize?, actor) do
             unquote(get_and_lock)
           end
         end
       else
         quote location: :keep do
-          defp prepare_error(changeset, primary_key), do: changeset
+          defp prepare_error(changeset, _, _, _), do: changeset
         end
       end
 
     prepare =
       if work_transaction? do
         quote location: :keep do
-          defp prepare(changeset, primary_key) do
+          defp prepare(changeset, primary_key, authorize?, actor) do
             unquote(get_and_lock)
           end
         end
       else
         quote location: :keep do
-          defp prepare(changeset, primary_key), do: changeset
+          defp prepare(changeset, _, _, _), do: changeset
         end
       end
 
@@ -470,7 +476,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
                   record
                   |> Ash.Changeset.new()
-                  |> prepare_error(primary_key)
+                  |> prepare_error(primary_key, authorize?, actor)
                   |> case do
                     :trigger_no_longer_applies ->
                       AshOban.debug(
@@ -592,7 +598,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
                   record
                   |> Ash.Changeset.new()
-                  |> prepare(primary_key)
+                  |> prepare(primary_key, authorize?, actor)
                   |> case do
                     :trigger_no_longer_applies ->
                       AshOban.debug(
