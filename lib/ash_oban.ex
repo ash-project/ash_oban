@@ -800,7 +800,7 @@ defmodule AshOban do
 
   if @pro do
     defp drain_queue(opts) do
-      conf = Oban.config(opts[:oban])
+      conf = Oban.config(opts[:oban] || Oban)
 
       opts = Keyword.put_new(opts, :repo, conf.repo)
 
