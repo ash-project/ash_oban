@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.2.1](https://github.com/ash-project/ash_oban/compare/v0.2.0...v0.2.1) (2024-02-28)
+
+
+
+
+### Bug Fixes:
+
+* only drain queues when oban is in testing mode
+
+* properly discard all non applicable jobs
+
+### Improvements:
+
+* support `Oban.Pro.Testing.drain_jobs`
+
 ## [v0.2.0](https://github.com/ash-project/ash_oban/compare/v0.1.14...v0.2.0) (2024-02-20)
 ### Breaking Changes:
 

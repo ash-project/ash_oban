@@ -18,7 +18,7 @@ Potential breaking change from `0.1.0` to `0.2.0`. See the section on Authorizat
 def deps()
   [
     ...
-    {:ash_oban, "~> 0.2.0"}
+    {:ash_oban, "~> 0.2.1"}
   ]
 end
 ```
