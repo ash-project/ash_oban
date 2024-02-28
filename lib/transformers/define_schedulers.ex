@@ -285,7 +285,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             |> unquote(api).read_one()
             |> case do
               {:ok, nil} ->
-                Ash.Changeset.add_error(changeset, "trigger no longer applies")
+                :trigger_no_longer_applies
 
               {:ok, record} ->
                 %{changeset | data: record}
@@ -305,7 +305,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             |> unquote(api).read_one()
             |> case do
               {:ok, nil} ->
-                Ash.Changeset.add_error(changeset, "trigger no longer applies")
+                :trigger_no_longer_applies
 
               {:ok, record} ->
                 %{changeset | data: record}
@@ -471,29 +471,41 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   record
                   |> Ash.Changeset.new()
                   |> prepare_error(primary_key)
-                  |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-                  |> Ash.Changeset.for_action(unquote(trigger.on_error), %{error: error},
-                    authorize?: authorize?,
-                    actor: actor
-                  )
-                  |> AshOban.update_or_destroy(unquote(api))
                   |> case do
-                    :ok ->
-                      :ok
+                    :trigger_no_longer_applies ->
+                      AshOban.debug(
+                        "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
+                        unquote(trigger.debug?)
+                      )
 
-                    {:ok, result} ->
-                      :ok
+                      {:discard, :trigger_no_longer_applies}
 
-                    {:error, error} ->
-                      error = Ash.Error.to_ash_error(error, stacktrace)
+                    changeset ->
+                      changeset
+                      |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
+                      |> Ash.Changeset.for_action(unquote(trigger.on_error), %{error: error},
+                        authorize?: authorize?,
+                        actor: actor
+                      )
+                      |> AshOban.update_or_destroy(unquote(api))
+                      |> case do
+                        :ok ->
+                          :ok
 
-                      Logger.error("""
-                      Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
+                        {:ok, result} ->
+                          :ok
 
-                      #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
-                      """)
+                        {:error, error} ->
+                          error = Ash.Error.to_ash_error(error, stacktrace)
 
-                      reraise error, stacktrace
+                          Logger.error("""
+                          Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
+
+                          #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
+                          """)
+
+                          reraise error, stacktrace
+                      end
                   end
               end
           end
@@ -581,28 +593,40 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   record
                   |> Ash.Changeset.new()
                   |> prepare(primary_key)
-                  |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-                  |> Ash.Changeset.for_action(
-                    unquote(trigger.action),
-                    Map.merge(unquote(Macro.escape(trigger.action_input || %{})), args),
-                    authorize?: authorize?,
-                    actor: actor
-                  )
-                  |> AshOban.update_or_destroy(unquote(api))
                   |> case do
-                    :ok ->
-                      :ok
+                    :trigger_no_longer_applies ->
+                      AshOban.debug(
+                        "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
+                        unquote(trigger.debug?)
+                      )
 
-                    {:ok, result} ->
-                      {:ok, result}
+                      {:discard, :trigger_no_longer_applies}
 
-                    {:error, error} ->
-                      raise Ash.Error.to_error_class(error)
+                    changeset ->
+                      changeset
+                      |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
+                      |> Ash.Changeset.for_action(
+                        unquote(trigger.action),
+                        Map.merge(unquote(Macro.escape(trigger.action_input || %{})), args),
+                        authorize?: authorize?,
+                        actor: actor
+                      )
+                      |> AshOban.update_or_destroy(unquote(api))
+                      |> case do
+                        :ok ->
+                          :ok
+
+                        {:ok, result} ->
+                          {:ok, result}
+
+                        {:error, error} ->
+                          raise Ash.Error.to_error_class(error)
+                      end
+
+                    # we don't have the record here, so we can't do the `on_error` behavior
+                    other ->
+                      other
                   end
-
-                # we don't have the record here, so we can't do the `on_error` behavior
-                other ->
-                  other
               end
 
             {:error, error} ->
