@@ -444,7 +444,22 @@ defmodule AshOban do
 
   All other options are passed through to `c:Oban.Worker.new/2`
   """
-  def run_trigger(%resource{} = record, trigger, opts \\ []) do
+  def run_trigger(record, trigger, opts \\ []) do
+    record
+    |> build_trigger(trigger, opts)
+    |> Oban.insert!()
+  end
+
+  @doc """
+  Builds a specific trigger for the record provided, but does not insert it into the database.
+
+  ## Options
+
+  - `:actor` - the actor to set on the job. Requires configuring an actor persister.
+
+  All other options are passed through to `c:Oban.Worker.new/2`
+  """
+  def build_trigger(%resource{} = record, trigger, opts \\ []) do
     {opts, oban_job_opts} = Keyword.split(opts, [:actor])
 
     trigger =
@@ -470,7 +485,6 @@ defmodule AshOban do
     %{primary_key: Map.take(record, primary_key), metadata: metadata}
     |> AshOban.store_actor(opts[:actor])
     |> trigger.worker.new(oban_job_opts)
-    |> Oban.insert!()
   end
 
   @config_schema [
