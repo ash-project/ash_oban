@@ -12,7 +12,7 @@ If you haven't already, read the [Ash Getting Started Guide](https://hexdocs.pm/
 
 Potential breaking change from `0.1.0` to `0.2.0`. See the section on Authorization Actions below for more.
 
-## Bring in the ash_oban dependency
+## Bring in the `ash_oban` dependency
 
 ```elixir
 def deps()
@@ -25,7 +25,7 @@ end
 
 ## Setup
 
-First, follow the oban setup guide.
+First, follow the [Oban setup guide](https://hexdocs.pm/oban/installation.html).
 
 ### Oban Pro
 
@@ -41,10 +41,15 @@ and you use the above configuration, you will get compile time errors/warnings.
 
 ### Setting up AshOban
 
-Next, allow AshOban to alter your configuration
+Next, allow AshOban to alter your configuration in your Application module:
 
 ```elixir
-# in your application
+# Replace this
+{Oban, your_oban_config}
+
+# With this
+{Oban, AshOban.config(Application.fetch_env!(:my_app, :ash_apis), your_oban_config)}
+# OR this, to selectively enable AshOban only for specific APIs
 {Oban, AshOban.config([YourApi, YourOtherApi], your_oban_config)}
 ```
 
@@ -79,7 +84,7 @@ oban do
 end
 ```
 
-See the DSL documentation for more: `AshOban`
+See the DSL documentation for more: [`AshOban`](/documentation/dsl/DSL:-AshOban.md)
 
 ## Handling Errors
 
