@@ -482,9 +482,29 @@ defmodule AshOban do
           %{}
       end
 
-    %{primary_key: Map.take(record, primary_key), metadata: metadata}
+    %{
+      primary_key: validate_primary_key(Map.take(record, primary_key), resource),
+      metadata: metadata
+    }
     |> AshOban.store_actor(opts[:actor])
     |> trigger.worker.new(oban_job_opts)
+  end
+
+  defp validate_primary_key(map, resource) do
+    Enum.each(map, fn {key, value} ->
+      case value do
+        %Ash.NotLoaded{} = value ->
+          raise "Invalid value provided for #{inspect(resource)} primary key #{key}: #{value}"
+
+        %Ash.ForbiddenField{} = value ->
+          raise "Invalid value provided for #{inspect(resource)} primary key #{key}: #{value}"
+
+        _ ->
+          :ok
+      end
+    end)
+
+    map
   end
 
   @config_schema [
