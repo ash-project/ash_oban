@@ -5,6 +5,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.2.2](https://github.com/ash-project/ash_oban/compare/v0.2.1...v0.2.2) (2024-03-05)
+
+
+
+
+### Bug Fixes:
+
+* properly catch when trigger no longer applies
+
+### Improvements:
+
+* validate primary keys provided for job scheduling
+
+* builds_trigger/3 to enable job composition without execution (#18)
+
 ## [v0.2.1](https://github.com/ash-project/ash_oban/compare/v0.2.0...v0.2.1) (2024-02-28)
 
 
