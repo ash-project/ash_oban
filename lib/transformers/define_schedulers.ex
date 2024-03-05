@@ -288,7 +288,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
             |> unquote(api).read_one()
             |> case do
               {:ok, nil} ->
-                :trigger_no_longer_applies
+                Ash.Changeset.add_error(
+                  changeset,
+                  AshOban.Errors.TriggerNoLongerApplies.exception([])
+                )
 
               {:ok, record} ->
                 %{changeset | data: record}
@@ -311,7 +314,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
             |> unquote(api).read_one()
             |> case do
               {:ok, nil} ->
-                :trigger_no_longer_applies
+                Ash.Changeset.add_error(
+                  changeset,
+                  AshOban.Errors.TriggerNoLongerApplies.exception([])
+                )
 
               {:ok, record} ->
                 %{changeset | data: record}
@@ -478,14 +484,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   |> Ash.Changeset.new()
                   |> prepare_error(primary_key, authorize?, actor)
                   |> case do
-                    :trigger_no_longer_applies ->
-                      AshOban.debug(
-                        "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
-                        unquote(trigger.debug?)
-                      )
-
-                      {:discard, :trigger_no_longer_applies}
-
                     changeset ->
                       changeset
                       |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
@@ -514,6 +512,20 @@ defmodule AshOban.Transformers.DefineSchedulers do
                       end
                   end
               end
+
+            {:error, error} ->
+              AshOban.debug(
+                """
+                Record with primary key #{inspect(primary_key)} encountered an error in #{unquote(inspect(resource))}#{unquote(trigger.name)}
+
+                Could not lookup actor with #{inspect(args["actor"])}
+
+                #{Exception.format(:error, error, AshOban.stacktrace(error))}
+                """,
+                unquote(trigger.debug?)
+              )
+
+              {:error, error}
           end
         end
       end
@@ -599,8 +611,23 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   record
                   |> Ash.Changeset.new()
                   |> prepare(primary_key, authorize?, actor)
+                  |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
+                  |> Ash.Changeset.for_action(
+                    unquote(trigger.action),
+                    Map.merge(unquote(Macro.escape(trigger.action_input || %{})), args),
+                    authorize?: authorize?,
+                    actor: actor
+                  )
+                  |> AshOban.update_or_destroy(unquote(api))
                   |> case do
-                    :trigger_no_longer_applies ->
+                    :ok ->
+                      :ok
+
+                    {:ok, result} ->
+                      {:ok, result}
+
+                    {:error,
+                     %Ash.Error.Invalid{errors: [%AshOban.Errors.TriggerNoLongerApplies{}]}} ->
                       AshOban.debug(
                         "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
                         unquote(trigger.debug?)
@@ -608,34 +635,23 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
                       {:discard, :trigger_no_longer_applies}
 
-                    changeset ->
-                      changeset
-                      |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-                      |> Ash.Changeset.for_action(
-                        unquote(trigger.action),
-                        Map.merge(unquote(Macro.escape(trigger.action_input || %{})), args),
-                        authorize?: authorize?,
-                        actor: actor
-                      )
-                      |> AshOban.update_or_destroy(unquote(api))
-                      |> case do
-                        :ok ->
-                          :ok
-
-                        {:ok, result} ->
-                          {:ok, result}
-
-                        {:error, error} ->
-                          raise Ash.Error.to_error_class(error)
-                      end
-
-                    # we don't have the record here, so we can't do the `on_error` behavior
-                    other ->
-                      other
+                    {:error, error} ->
+                      raise Ash.Error.to_error_class(error)
                   end
               end
 
             {:error, error} ->
+              AshOban.debug(
+                """
+                Record with primary key #{inspect(primary_key)} encountered an error in #{unquote(inspect(resource))}#{unquote(trigger.name)}
+
+                Could not lookup actor with #{inspect(args["actor"])}
+
+                #{Exception.format(:error, error, AshOban.stacktrace(error))}
+                """,
+                unquote(trigger.debug?)
+              )
+
               raise Ash.Error.to_error_class(error)
           end
         rescue
