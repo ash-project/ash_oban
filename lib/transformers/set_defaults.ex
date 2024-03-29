@@ -16,9 +16,27 @@ defmodule AshOban.Transformers.SetDefaults do
 
     {:ok,
      dsl
+     |> set_domain(module)
      |> set_trigger_defaults(module)
      |> set_scheduled_action_defaults(module)
      |> validate_global_uniqueness(module)}
+  end
+
+  defp set_domain(dsl, module) do
+    case AshOban.Info.oban_domain(dsl) do
+      {:ok, domain} when not is_nil(domain) ->
+        dsl
+
+      :error ->
+        if domain = Ash.Resource.Info.domain(dsl) do
+          Transformer.set_option(dsl, [:oban], :domain, domain)
+        else
+          raise Spark.Error.DslError,
+            module: module,
+            message:
+              "Resources without a statically configured domain require the `domain` option in the `oban` section."
+        end
+    end
   end
 
   defp validate_global_uniqueness(dsl, module) do

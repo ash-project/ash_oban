@@ -2,7 +2,7 @@ import Config
 
 config :spark, :formatter,
   remove_parens?: true,
-  "Ash.Api": [],
+  "Ash.Domain": [],
   "Ash.Registry": [],
   "Ash.Resource": []
 
@@ -31,6 +31,8 @@ if Mix.env() == :test do
     database: "ash_oban_test",
     hostname: "localhost",
     pool: Ecto.Adapters.SQL.Sandbox
+
+  config :ash, :validate_domain_resource_inclusion?, false
 end
 
 if Mix.env() == :dev do

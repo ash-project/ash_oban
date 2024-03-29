@@ -48,9 +48,9 @@ Next, allow AshOban to alter your configuration in your Application module:
 {Oban, your_oban_config}
 
 # With this
-{Oban, AshOban.config(Application.fetch_env!(:my_app, :ash_apis), your_oban_config)}
-# OR this, to selectively enable AshOban only for specific APIs
-{Oban, AshOban.config([YourApi, YourOtherApi], your_oban_config)}
+{Oban, AshOban.config(Application.fetch_env!(:my_app, :ash_domains), your_oban_config)}
+# OR this, to selectively enable AshOban only for specific domains
+{Oban, AshOban.config([YourDomain, YourOtherDomain], your_oban_config)}
 ```
 
 ## Usage
@@ -60,15 +60,13 @@ Finally, configure your triggers in your resources.
 Add the `AshOban` extension:
 
 ```elixir
-use Ash.Resource, extensions: [AshOban]
+use Ash.Resource, domain: MyDomain, extensions: [AshOban]
 ```
 
 For example:
 
 ```elixir
 oban do
-  api YourApi
-
   triggers do
     # add a trigger called `:process`
     trigger :process do
@@ -88,13 +86,13 @@ See the DSL documentation for more: [`AshOban`](/documentation/dsl/DSL:-AshOban.
 
 ## Handling Errors
 
-Error handling is done by adding an `on_error` to your trigger. This is an update action that will get the error as an argument called `:error`. The error will be an Ash error class.  These error classes can contain many kinds of errors, so you will need to figure out handling specific errors on your own.  Be sure to add the `:error` argument to the action if you want to receive the error.
+Error handling is done by adding an `on_error` to your trigger. This is an update action that will get the error as an argument called `:error`. The error will be an Ash error class. These error classes can contain many kinds of errors, so you will need to figure out handling specific errors on your own. Be sure to add the `:error` argument to the action if you want to receive the error.
 
-This is *not* foolproof. You want to be sure that your `on_error` action is as simple as possible, because if an exception is raised during the `on_error` action, the oban job will fail. If you are relying on your `on_error` logic to alter the resource to make it no longer apply to a trigger, consider making your action do *only that*. Then you can add another trigger watching for things in an errored state to do more rich error handling behavior.
+This is _not_ foolproof. You want to be sure that your `on_error` action is as simple as possible, because if an exception is raised during the `on_error` action, the oban job will fail. If you are relying on your `on_error` logic to alter the resource to make it no longer apply to a trigger, consider making your action do _only that_. Then you can add another trigger watching for things in an errored state to do more rich error handling behavior.
 
 ## Changing Triggers
 
-To remove or disable triggers, *do not just remove them from your resource*. Due to the way that oban implements cron jobs, if you just remove them from your resource, the cron will attempt to continue scheduling jobs. Instead, set `paused true` or `delete true` on the trigger. See the oban docs for more: https://getoban.pro/docs/pro/0.14.1/Oban.Pro.Plugins.DynamicCron.html#module-using-and-configuring
+To remove or disable triggers, _do not just remove them from your resource_. Due to the way that oban implements cron jobs, if you just remove them from your resource, the cron will attempt to continue scheduling jobs. Instead, set `paused true` or `delete true` on the trigger. See the oban docs for more: https://getoban.pro/docs/pro/0.14.1/Oban.Pro.Plugins.DynamicCron.html#module-using-and-configuring
 
 ## Transactions
 
@@ -110,7 +108,9 @@ AshOban adds two new transaction reasons, as it uses explicit transactions to en
   }
 }
 ```
+
 and
+
 ```elixir
 %{
   type: :ash_oban_trigger_error,
@@ -151,7 +151,7 @@ defmodule MyApp.AshObanActorPersister do
   def store(%MyApp.User{id: id}), do: %{"type" => "user", "id" => id}
 
   def lookup(%{"type" => "user", "id" => id}), do: MyApp.Accounts.get(MyApp.User, id)
-  
+
   # This allows you to set a default actor
   # in cases where no actor was present
   # when scheduling.
@@ -171,4 +171,4 @@ There are a few things that are important to keep in mind:
 
 1. The actor could be deleted or otherwise unavailable when you look it up. You very likely want your `lookup/1` to return an error in that scenario.
 
-2. The actor can have changed between when the job was scheduled and when the trigger is executing. It can even change across retries. If you are trying to authorize access for a given trigger's update action to a given actor, keep in mind that just because the trigger is running for a given action, does *not* mean that the conditions that allowed them to originally *schedule* that action are still true.
+2. The actor can have changed between when the job was scheduled and when the trigger is executing. It can even change across retries. If you are trying to authorize access for a given trigger's update action to a given actor, keep in mind that just because the trigger is running for a given action, does _not_ mean that the conditions that allowed them to originally _schedule_ that action are still true.

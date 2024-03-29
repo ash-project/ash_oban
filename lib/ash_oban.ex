@@ -71,7 +71,7 @@ defmodule AshOban do
     target: Trigger,
     args: [:name],
     identifier: :name,
-    imports: [Ash.Filter.TemplateHelpers],
+    imports: [Ash.Expr],
     transform: {Trigger, :transform, []},
     examples: [
       """
@@ -113,7 +113,7 @@ defmodule AshOban do
       stream_batch_size: [
         type: :pos_integer,
         doc:
-          "The batch size to pass when streaming records from using `c:Ash.Api.stream!/2`. No batch size is passed if none is provided here, so the default is used."
+          "The batch size to pass when streaming records from using `c:Ash.stream!/2`. No batch size is passed if none is provided here, so the default is used."
       ],
       queue: [
         type: :atom,
@@ -325,8 +325,6 @@ defmodule AshOban do
     examples: [
       """
       oban do
-        api AshOban.Test.Api
-
         triggers do
           trigger :process do
             action :process
@@ -338,10 +336,10 @@ defmodule AshOban do
       """
     ],
     schema: [
-      api: [
-        type: {:behaviour, Ash.Api},
-        doc: "The Api module to use when calling actions on this resource",
-        required: true
+      domain: [
+        type: {:behaviour, Ash.Domain},
+        doc:
+          "The Domain to use when calling actions on this resource. Defaults to the resource's domain."
       ]
     ],
     sections: [@triggers, @scheduled_actions]
@@ -362,7 +360,7 @@ defmodule AshOban do
       AshOban.Transformers.DefineActionWorkers
     ]
 
-  @type triggerable :: Ash.Resource.t() | {Ash.Resource.t(), atom()} | Ash.Api.t() | atom()
+  @type triggerable :: Ash.Resource.t() | {Ash.Resource.t(), atom()} | Ash.Domain.t() | atom()
   @type result :: %{
           discard: non_neg_integer(),
           cancelled: non_neg_integer(),
@@ -523,11 +521,11 @@ defmodule AshOban do
 
   # Options
 
-  #{Spark.OptionsHelpers.docs(@config_schema)}
+  #{Spark.Options.docs(@config_schema)}
   """
-  def config(apis, base, opts \\ []) do
-    apis = List.wrap(apis)
-    opts = Spark.OptionsHelpers.validate!(opts, @config_schema)
+  def config(domains, base, opts \\ []) do
+    domains = List.wrap(domains)
+    opts = Spark.Options.validate!(opts, @config_schema)
     pro? = AshOban.Info.pro?()
 
     cron_plugin =
@@ -544,10 +542,10 @@ defmodule AshOban do
       """
     end
 
-    apis
-    |> Enum.flat_map(fn api ->
-      api
-      |> Ash.Api.Info.resources()
+    domains
+    |> Enum.flat_map(fn domain ->
+      domain
+      |> Ash.Domain.Info.resources()
     end)
     |> Enum.uniq()
     |> Enum.flat_map(fn resource ->
@@ -668,11 +666,11 @@ defmodule AshOban do
   end
 
   @doc false
-  def update_or_destroy(changeset, api) do
+  def update_or_destroy(changeset) do
     if changeset.action.type == :update do
-      api.update(changeset)
+      Ash.update(changeset)
     else
-      api.destroy(changeset)
+      Ash.destroy(changeset)
     end
   end
 
@@ -696,7 +694,7 @@ defmodule AshOban do
   def stacktrace(_), do: nil
 
   @doc """
-  Runs the schedulers for the given resource, api, or otp_app, or list of resources, apis, or otp_apps.
+  Runs the schedulers for the given resource, domain, or otp_app, or list of resources, domains, or otp_apps.
 
   Options:
 
@@ -709,13 +707,13 @@ defmodule AshOban do
 
   If the input is:
   * a list - each item is passed into `schedule_and_run_triggers/1`, and the results are merged together.
-  * an otp_app - each api configured in the `ash_apis` of that otp_app is passed into `schedule_and_run_triggers/1`, and the results are merged together.
-  * an api - each reosurce configured in that api is passed into `schedule_and_run_triggers/1`, and the results are merged together.
+  * an otp_app - each domain configured in the `ash_domains` of that otp_app is passed into `schedule_and_run_triggers/1`, and the results are merged together.
+  * a domain - each reosurce configured in that domain is passed into `schedule_and_run_triggers/1`, and the results are merged together.
   * a tuple of {resource, :trigger_name} - that trigger is scheduled, and the results are merged together.
   * a resource - each trigger configured in that resource is scheduled, and the results are merged together.
   """
   @spec schedule_and_run_triggers(triggerable | list(triggerable), keyword()) :: result
-  def schedule_and_run_triggers(resources_or_apis_or_otp_apps, opts \\ []) do
+  def schedule_and_run_triggers(resources_or_domains_or_otp_apps, opts \\ []) do
     opts =
       opts
       |> Keyword.put_new(:scheduled_actions?, false)
@@ -723,12 +721,12 @@ defmodule AshOban do
       |> Keyword.put_new(:drain_queues?, false)
       |> Keyword.put_new(:oban, Oban)
 
-    do_schedule_and_run_triggers(resources_or_apis_or_otp_apps, opts)
+    do_schedule_and_run_triggers(resources_or_domains_or_otp_apps, opts)
   end
 
-  def do_schedule_and_run_triggers(resources_or_apis_or_otp_apps, opts)
-      when is_list(resources_or_apis_or_otp_apps) do
-    Enum.reduce(resources_or_apis_or_otp_apps, default_acc(), fn item, acc ->
+  def do_schedule_and_run_triggers(resources_or_domains_or_otp_apps, opts)
+      when is_list(resources_or_domains_or_otp_apps) do
+    Enum.reduce(resources_or_domains_or_otp_apps, default_acc(), fn item, acc ->
       item
       |> do_schedule_and_run_triggers(opts)
       |> merge_results(acc)
@@ -760,20 +758,20 @@ defmodule AshOban do
     drain_queues(queues, opts)
   end
 
-  def do_schedule_and_run_triggers(resource_or_api_or_otp_app, opts) do
+  def do_schedule_and_run_triggers(resource_or_domain_or_otp_app, opts) do
     cond do
-      Spark.Dsl.is?(resource_or_api_or_otp_app, Ash.Api) ->
-        resource_or_api_or_otp_app
-        |> Ash.Api.Info.resources()
+      Spark.Dsl.is?(resource_or_domain_or_otp_app, Ash.Domain) ->
+        resource_or_domain_or_otp_app
+        |> Ash.Domain.Info.resources()
         |> Enum.reduce(%{}, fn resource, acc ->
           resource
           |> do_schedule_and_run_triggers(opts)
           |> merge_results(acc)
         end)
 
-      Spark.Dsl.is?(resource_or_api_or_otp_app, Ash.Resource) ->
+      Spark.Dsl.is?(resource_or_domain_or_otp_app, Ash.Resource) ->
         triggers =
-          resource_or_api_or_otp_app
+          resource_or_domain_or_otp_app
           |> AshOban.Info.oban_triggers_and_scheduled_actions()
           |> Enum.filter(fn
             %AshOban.Schedule{} ->
@@ -784,7 +782,7 @@ defmodule AshOban do
           end)
 
         Enum.each(triggers, fn trigger ->
-          AshOban.schedule(resource_or_api_or_otp_app, trigger, actor: opts[:actor])
+          AshOban.schedule(resource_or_domain_or_otp_app, trigger, actor: opts[:actor])
         end)
 
         queues =
@@ -796,11 +794,11 @@ defmodule AshOban do
         drain_queues(queues, opts)
 
       true ->
-        resource_or_api_or_otp_app
-        |> Application.get_env(:ash_apis, [])
+        resource_or_domain_or_otp_app
+        |> Application.get_env(:ash_domains, [])
         |> List.wrap()
-        |> Enum.reduce(default_acc(), fn api, acc ->
-          api
+        |> Enum.reduce(default_acc(), fn domain, acc ->
+          domain
           |> do_schedule_and_run_triggers(opts)
           |> merge_results(acc)
         end)

@@ -1,14 +1,12 @@
 defmodule AshOban.Test.Triggered do
   @moduledoc false
   use Ash.Resource,
-    validate_api_inclusion?: false,
+    domain: AshOban.Test.Domain,
     data_layer: Ash.DataLayer.Ets,
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshOban]
 
   oban do
-    api AshOban.Test.Api
-
     triggers do
       trigger :process do
         action :process

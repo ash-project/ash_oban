@@ -38,7 +38,7 @@ defmodule AshOban.Transformers.DefineActionWorkers do
 
   # sobelow_skip ["SQL.Query"]
   defp define_worker(resource, worker_module_name, scheduled_action, dsl) do
-    api = AshOban.Info.oban_api!(dsl)
+    domain = AshOban.Info.oban_domain!(dsl)
     pro? = AshOban.Info.pro?()
 
     function_name =
@@ -97,9 +97,10 @@ defmodule AshOban.Transformers.DefineActionWorkers do
                 unquote(scheduled_action.action),
                 input,
                 authorize?: authorize?,
-                actor: actor
+                actor: actor,
+                domain: unquote(domain)
               )
-              |> unquote(api).run_action!()
+              |> Ash.run_action!()
 
               :ok
 

@@ -51,7 +51,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
   end
 
   defp define_scheduler(resource, scheduler_module_name, worker_module_name, trigger, dsl) do
-    api = AshOban.Info.oban_api!(dsl)
+    domain = AshOban.Info.oban_domain!(dsl)
     primary_key = Ash.Resource.Info.primary_key(dsl)
 
     pro? = AshOban.Info.pro?()
@@ -101,9 +101,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
             |> limit_stream()
             |> Ash.Query.for_read(unquote(trigger.read_action), %{},
               authorize?: AshOban.authorize?(),
-              actor: actor
+              actor: actor,
+              domain: unquote(domain)
             )
-            |> unquote(api).stream!(unquote(batch_opts))
+            |> Ash.stream!(unquote(batch_opts))
           end
         end
       else
@@ -116,9 +117,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
             |> filter()
             |> Ash.Query.for_read(unquote(trigger.read_action), %{},
               authorize?: AshOban.authorize?(),
-              actor: actor
+              actor: actor,
+              domain: unquote(domain)
             )
-            |> unquote(api).stream!()
+            |> Ash.stream!()
           end
         end
       end
@@ -246,7 +248,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
   # sobelow_skip ["SQL.Query"]
   defp define_worker(resource, worker_module_name, trigger, dsl) do
-    api = AshOban.Info.oban_api!(dsl)
+    domain = AshOban.Info.oban_domain!(dsl)
     pro? = AshOban.Info.pro?()
 
     worker =
@@ -282,10 +284,11 @@ defmodule AshOban.Transformers.DefineSchedulers do
             |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
             |> Ash.Query.for_read(unquote(read_action), %{},
               authorize?: authorize?,
-              actor: actor
+              actor: actor,
+              domain: unquote(domain)
             )
             |> Ash.Query.lock(:for_update)
-            |> unquote(api).read_one()
+            |> Ash.read_one()
             |> case do
               {:ok, nil} ->
                 Ash.Changeset.add_error(
@@ -309,9 +312,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
             |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
             |> Ash.Query.for_read(unquote(read_action), %{},
               authorize?: authorize?,
-              actor: actor
+              actor: actor,
+              domain: unquote(domain)
             )
-            |> unquote(api).read_one()
+            |> Ash.read_one()
             |> case do
               {:ok, nil} ->
                 Ash.Changeset.add_error(
@@ -355,9 +359,9 @@ defmodule AshOban.Transformers.DefineSchedulers do
         end
       end
 
-    handle_error = handle_error(trigger, resource, api, read_action)
+    handle_error = handle_error(trigger, resource, domain, read_action)
 
-    work = work(trigger, worker, pro?, read_action, resource, api)
+    work = work(trigger, worker, pro?, read_action, resource, domain)
 
     Module.create(
       worker_module_name,
@@ -387,7 +391,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     )
   end
 
-  defp handle_error(trigger, resource, api, read_action) do
+  defp handle_error(trigger, resource, domain, read_action) do
     log_final_error =
       if trigger.log_errors? || trigger.log_final_error? do
         quote do
@@ -453,9 +457,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
               |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
               |> Ash.Query.for_read(unquote(read_action), %{},
                 authorize?: authorize?,
-                actor: actor
+                actor: actor,
+                domain: unquote(domain)
               )
-              |> unquote(api).read_one()
+              |> Ash.read_one()
               |> case do
                 {:error, error} ->
                   AshOban.debug(
@@ -489,9 +494,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
                       |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
                       |> Ash.Changeset.for_action(unquote(trigger.on_error), %{error: error},
                         authorize?: authorize?,
-                        actor: actor
+                        actor: actor,
+                        domain: unquote(domain)
                       )
-                      |> AshOban.update_or_destroy(unquote(api))
+                      |> AshOban.update_or_destroy()
                       |> case do
                         :ok ->
                           :ok
@@ -555,7 +561,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     end
   end
 
-  defp work(trigger, worker, pro?, read_action, resource, api) do
+  defp work(trigger, worker, pro?, read_action, resource, domain) do
     function_name =
       if pro? do
         :process
@@ -588,9 +594,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
               |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
               |> Ash.Query.for_read(unquote(read_action), %{},
                 authorize?: authorize?,
-                actor: actor
+                actor: actor,
+                domain: unquote(domain)
               )
-              |> unquote(api).read_one()
+              |> Ash.read_one()
               |> case do
                 {:ok, nil} ->
                   AshOban.debug(
@@ -616,9 +623,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     unquote(trigger.action),
                     Map.merge(unquote(Macro.escape(trigger.action_input || %{})), args),
                     authorize?: authorize?,
-                    actor: actor
+                    actor: actor,
+                    domain: unquote(domain)
                   )
-                  |> AshOban.update_or_destroy(unquote(api))
+                  |> AshOban.update_or_destroy()
                   |> case do
                     :ok ->
                       :ok

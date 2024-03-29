@@ -114,17 +114,18 @@ defmodule AshOban.MixProject do
 
     oban_dep ++
       [
-        {:ash, "~> 2.9 and >= 2.9.27"},
-        {:spark, ">= 1.1.3"},
+        {:ash, "~> 3.0.0-rc.0"},
         {:oban, "~> 2.15"},
+        {:postgrex, "~> 0.17.4"},
+        # dev/test dependencies
+        {:simple_sat, "~> 0.1"},
         {:ex_doc, "~> 0.22", only: [:dev, :test], runtime: false},
         {:ex_check, "~> 0.12", only: [:dev, :test]},
         {:credo, ">= 0.0.0", only: [:dev, :test], runtime: false},
         {:dialyxir, ">= 0.0.0", only: [:dev, :test], runtime: false},
         {:sobelow, ">= 0.0.0", only: [:dev, :test], runtime: false},
         {:git_ops, "~> 2.5", only: [:dev, :test]},
-        {:excoveralls, "~> 0.13", only: [:dev, :test]},
-        {:postgrex, "~> 0.17.4"}
+        {:excoveralls, "~> 0.13", only: [:dev, :test]}
       ]
   end
 

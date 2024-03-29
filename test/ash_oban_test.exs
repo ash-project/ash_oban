@@ -2,12 +2,12 @@ defmodule AshObanTest do
   use ExUnit.Case, async: false
   doctest AshOban
 
-  alias AshOban.Test.Api
+  alias AshOban.Test.Domain
   alias AshOban.Test.Triggered
 
   setup_all do
     AshOban.Test.Repo.start_link()
-    Oban.start_link(AshOban.config([Api], Application.get_env(:ash_oban, :oban)))
+    Oban.start_link(AshOban.config([Domain], Application.get_env(:ash_oban, :oban)))
 
     :ok
   end
@@ -26,7 +26,7 @@ defmodule AshObanTest do
   test "if a record exists, it is processed" do
     Triggered
     |> Ash.Changeset.for_create(:create, %{})
-    |> Api.create!()
+    |> Ash.create!()
 
     assert %{success: 2} =
              AshOban.Test.schedule_and_run_triggers(Triggered,
@@ -37,7 +37,7 @@ defmodule AshObanTest do
   test "if an actor is not set, it is nil when executing the job" do
     Triggered
     |> Ash.Changeset.for_create(:create)
-    |> Api.create!()
+    |> Ash.create!()
 
     assert %{success: 1, failure: 1} =
              AshOban.Test.schedule_and_run_triggers(Triggered)
@@ -52,7 +52,7 @@ defmodule AshObanTest do
 
   test "cron configuration" do
     config =
-      AshOban.config([Api],
+      AshOban.config([Domain],
         plugins: [
           {Oban.Plugins.Cron, []}
         ],

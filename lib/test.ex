@@ -4,8 +4,8 @@ defmodule AshOban.Test do
   @doc """
   Calls `AshOban.schedule_and_run_triggers/2` with `drain_queues?: true`.
   """
-  def schedule_and_run_triggers(resources_or_apis_or_otp_apps, opts \\ []) do
+  def schedule_and_run_triggers(resources_or_domains_or_otp_apps, opts \\ []) do
     opts = Keyword.put_new(opts, :drain_queues?, true)
-    AshOban.schedule_and_run_triggers(resources_or_apis_or_otp_apps, opts)
+    AshOban.schedule_and_run_triggers(resources_or_domains_or_otp_apps, opts)
   end
 end

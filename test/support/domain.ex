@@ -1,6 +1,6 @@
-defmodule AshOban.Test.Api do
+defmodule AshOban.Test.Domain do
   @moduledoc false
-  use Ash.Api,
+  use Ash.Domain,
     validate_config_inclusion?: false
 
   resources do
