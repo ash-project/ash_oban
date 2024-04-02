@@ -528,19 +528,28 @@ defmodule AshOban do
   def config(apis, base, opts \\ []) do
     apis = List.wrap(apis)
     opts = Spark.OptionsHelpers.validate!(opts, @config_schema)
-    pro? = AshOban.Info.pro?()
+
+    pro_dynamic_cron_plugin? =
+      base
+      |> Keyword.get(:plugins, [])
+      |> Enum.any?(fn {plugin, _opts} -> plugin == Oban.Pro.Plugins.DynamicCron end)
+
+    pro_dynamic_queues_plugin? =
+      base
+      |> Keyword.get(:plugins, [])
+      |> Enum.any?(fn {plugin, _opts} -> plugin == Oban.Pro.Plugins.DynamicQueues end)
 
     cron_plugin =
-      if pro? do
+      if pro_dynamic_cron_plugin? do
         Oban.Pro.Plugins.DynamicCron
       else
         Oban.Plugins.Cron
       end
 
-    if pro? && base[:engine] not in [Oban.Pro.Queue.SmartEngine, Oban.Pro.Engines.Smart] do
+    if (pro_dynamic_cron_plugin? || pro_dynamic_queues_plugin?) && base[:engine] not in [Oban.Pro.Queue.SmartEngine, Oban.Pro.Engines.Smart] do
       raise """
       Expected oban engine to be Oban.Pro.Queue.SmartEngine or Oban.Pro.Engines.Smart, but got #{inspect(base[:engine])}.
-      This expectation is because you've set `config :ash_oban, pro?: true`.
+      This expectation is because you're using at least one Oban.Pro plugin`.
       """
     end
 
@@ -555,7 +564,7 @@ defmodule AshOban do
       |> AshOban.Info.oban_triggers_and_scheduled_actions()
       |> tap(fn triggers ->
         if opts[:require?] do
-          Enum.each(triggers, &require_queues!(base, resource, &1))
+          Enum.each(triggers, &require_queues!(base, resource, pro_dynamic_queues_plugin?, &1))
         end
       end)
       |> Enum.filter(fn
@@ -615,7 +624,7 @@ defmodule AshOban do
     end)
   end
 
-  defp require_queues!(config, resource, trigger) do
+  defp require_queues!(config, resource, false, trigger) do
     unless config[:queues][trigger.queue] do
       raise """
       Must configure the queue `:#{trigger.queue}`, required for
@@ -625,6 +634,35 @@ defmodule AshOban do
 
     if Map.has_key?(trigger, :scheduler_queue) do
       unless config[:queues][trigger.scheduler_queue] do
+        raise """
+        Must configure the queue `:#{trigger.scheduler_queue}`, required for
+        the scheduler of the trigger `:#{trigger.name}` on #{inspect(resource)}
+        """
+      end
+    end
+  end
+
+  defp require_queues!(config, resource, true, trigger) do
+    {_plugin_name, plugin_config} =
+      config[:plugins]
+      |> Enum.find({nil, nil}, fn {plugin, _opts} -> plugin == Oban.Pro.Plugins.DynamicQueues end)
+
+    if !is_list(plugin_config) || !Keyword.has_key?(plugin_config, :queues) || !is_list(plugin_config[:queues]) || !Keyword.has_key?(plugin_config[:queues], trigger.queue) do
+      raise """
+      Must configure the queue `:#{trigger.queue}`, required for
+      the trigger `:#{trigger.name}` on #{inspect(resource)}
+      """
+    end
+
+    if !is_nil(config[:queues]) && config[:queues] != false do
+      raise """
+      Must configure the queue through Oban.Pro.Plugins.DynamicQueues plugin
+      when Oban Pro is used
+      """
+    end
+
+    if Map.has_key?(trigger, :scheduler_queue) do
+      unless plugin_config[:queues][trigger.scheduler_queue] do
         raise """
         Must configure the queue `:#{trigger.scheduler_queue}`, required for
         the scheduler of the trigger `:#{trigger.name}` on #{inspect(resource)}
