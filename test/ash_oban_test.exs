@@ -108,8 +108,8 @@ defmodule AshObanTest do
                   timezone: "Europe/Rome",
                   sync_mode: :automatic,
                   crontab: [
-                    {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello, []},
-                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process, []}
+                    {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello, [paused: false]},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process, [paused: false]}
                   ]
                 ]},
                 {Oban.Pro.Plugins.DynamicQueues,
