@@ -596,12 +596,15 @@ defmodule AshOban do
       Enum.map(plugins, fn
         {^cron_plugin, config} ->
           opts =
-            case trigger.state do
-              :paused ->
+            case {cron_plugin, trigger.state} do
+              {_cron_plugin, :paused} ->
                 [paused: true]
 
-              :deleted ->
+              {_cron_plugin, :deleted} ->
                 [delete: true]
+
+              {Oban.Pro.Plugins.DynamicCron, :active} ->
+                [paused: false]
 
               _ ->
                 []
