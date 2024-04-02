@@ -83,43 +83,47 @@ defmodule AshObanTest do
 
   test "oban pro configuration" do
     config =
-      AshOban.config([Api], [
+      AshOban.config([Api],
         engine: Oban.Pro.Engines.Smart,
         plugins: [
-          {Oban.Pro.Plugins.DynamicCron, [
-            timezone: "Europe/Rome",
-            sync_mode: :automatic,
-            crontab: []
-          ]},
+          {Oban.Pro.Plugins.DynamicCron,
+           [
+             timezone: "Europe/Rome",
+             sync_mode: :automatic,
+             crontab: []
+           ]},
           {Oban.Pro.Plugins.DynamicQueues,
-            queues: [
-              triggered_process: 10,
-              triggered_process_2: 10,
-              triggered_say_hello: 10
-            ]}
+           queues: [
+             triggered_process: 10,
+             triggered_process_2: 10,
+             triggered_say_hello: 10
+           ]}
         ],
         queues: false
-      ])
+      )
 
     assert [
-              engine: Oban.Pro.Engines.Smart,
-              plugins: [
-                {Oban.Pro.Plugins.DynamicCron, [
+             engine: Oban.Pro.Engines.Smart,
+             plugins: [
+               {Oban.Pro.Plugins.DynamicCron,
+                [
                   timezone: "Europe/Rome",
                   sync_mode: :automatic,
                   crontab: [
-                    {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello, []},
-                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process, []}
+                    {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello,
+                     [paused: false]},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process,
+                     [paused: false]}
                   ]
                 ]},
-                {Oban.Pro.Plugins.DynamicQueues,
+               {Oban.Pro.Plugins.DynamicQueues,
                 queues: [
                   triggered_process: 10,
                   triggered_process_2: 10,
                   triggered_say_hello: 10
                 ]}
-              ],
-              queues: false
-            ] = config
-    end
+             ],
+             queues: false
+           ] = config
+  end
 end

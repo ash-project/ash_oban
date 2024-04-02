@@ -546,7 +546,8 @@ defmodule AshOban do
         Oban.Plugins.Cron
       end
 
-    if (pro_dynamic_cron_plugin? || pro_dynamic_queues_plugin?) && base[:engine] not in [Oban.Pro.Queue.SmartEngine, Oban.Pro.Engines.Smart] do
+    if (pro_dynamic_cron_plugin? || pro_dynamic_queues_plugin?) &&
+         base[:engine] not in [Oban.Pro.Queue.SmartEngine, Oban.Pro.Engines.Smart] do
       raise """
       Expected oban engine to be Oban.Pro.Queue.SmartEngine or Oban.Pro.Engines.Smart, but got #{inspect(base[:engine])}.
       This expectation is because you're using at least one Oban.Pro plugin`.
@@ -596,12 +597,15 @@ defmodule AshOban do
       Enum.map(plugins, fn
         {^cron_plugin, config} ->
           opts =
-            case trigger.state do
-              :paused ->
+            case {cron_plugin, trigger.state} do
+              {_cron_plugin, :paused} ->
                 [paused: true]
 
-              :deleted ->
+              {_cron_plugin, :deleted} ->
                 [delete: true]
+
+              {Oban.Pro.Plugins.DynamicCron, :active} ->
+                [paused: false]
 
               _ ->
                 []
@@ -647,7 +651,9 @@ defmodule AshOban do
       config[:plugins]
       |> Enum.find({nil, nil}, fn {plugin, _opts} -> plugin == Oban.Pro.Plugins.DynamicQueues end)
 
-    if !is_list(plugin_config) || !Keyword.has_key?(plugin_config, :queues) || !is_list(plugin_config[:queues]) || !Keyword.has_key?(plugin_config[:queues], trigger.queue) do
+    if !is_list(plugin_config) || !Keyword.has_key?(plugin_config, :queues) ||
+         !is_list(plugin_config[:queues]) ||
+         !Keyword.has_key?(plugin_config[:queues], trigger.queue) do
       raise """
       Must configure the queue `:#{trigger.queue}`, required for
       the trigger `:#{trigger.name}` on #{inspect(resource)}
