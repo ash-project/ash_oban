@@ -548,7 +548,7 @@ defmodule AshOban do
     if (pro_dynamic_cron_plugin? || pro_dynamic_queues_plugin?) && base[:engine] not in [Oban.Pro.Queue.SmartEngine, Oban.Pro.Engines.Smart] do
       raise """
       Expected oban engine to be Oban.Pro.Queue.SmartEngine or Oban.Pro.Engines.Smart, but got #{inspect(base[:engine])}.
-      This expectation is because you're using almost one Oban.Pro's plugin`.
+      This expectation is because you're using at least one Oban.Pro plugin`.
       """
     end
 
