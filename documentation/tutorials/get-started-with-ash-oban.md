@@ -49,8 +49,6 @@ Next, allow AshOban to alter your configuration in your Application module:
 
 # With this
 {Oban, AshOban.config(Application.fetch_env!(:my_app, :ash_domains), your_oban_config)}
-# OR this, if you are using Oban Pro
-{Oban, AshOban.config(Application.fetch_env!(:my_app, :ash_domains), your_oban_config, pro?: true)}
 # OR this, to selectively enable AshOban only for specific domains
 {Oban, AshOban.config([YourDomain, YourOtherDomain], your_oban_config)}
 ```

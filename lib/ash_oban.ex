@@ -513,13 +513,6 @@ defmodule AshOban do
       Whether to require queues and plugins to be defined in your oban config. This can be helpful to
       allow the ability to split queues between nodes. See https://hexdocs.pm/oban/splitting-queues.html
       """
-    ],
-    pro?: [
-      type: :boolean,
-      default: false,
-      doc: """
-      If you are using Oban Pro, set this to true
-      """
     ]
   ]
 
@@ -533,19 +526,29 @@ defmodule AshOban do
   def config(domains, base, opts \\ []) do
     domains = List.wrap(domains)
     opts = Spark.Options.validate!(opts, @config_schema)
-    pro? = AshOban.Info.pro?()
+
+    pro_dynamic_cron_plugin? =
+      base
+      |> Keyword.get(:plugins, [])
+      |> Enum.any?(fn {plugin, _opts} -> plugin == Oban.Pro.Plugins.DynamicCron end)
+
+    pro_dynamic_queues_plugin? =
+      base
+      |> Keyword.get(:plugins, [])
+      |> Enum.any?(fn {plugin, _opts} -> plugin == Oban.Pro.Plugins.DynamicQueues end)
+
 
     cron_plugin =
-      if opts[:pro?] do
+      if pro_dynamic_cron_plugin? do
         Oban.Pro.Plugins.DynamicCron
       else
         Oban.Plugins.Cron
       end
 
-    if opts[:pro?] && base[:engine] not in [Oban.Pro.Queue.SmartEngine, Oban.Pro.Engines.Smart] do
+    if (pro_dynamic_cron_plugin? || pro_dynamic_queues_plugin?) && base[:engine] not in [Oban.Pro.Queue.SmartEngine, Oban.Pro.Engines.Smart] do
       raise """
       Expected oban engine to be Oban.Pro.Queue.SmartEngine or Oban.Pro.Engines.Smart, but got #{inspect(base[:engine])}.
-      This expectation is because you've called AshOban.config\3 with `pro?: true`.
+      This expectation is because you're using almost one Oban.Pro's plugin`.
       """
     end
 
@@ -560,7 +563,7 @@ defmodule AshOban do
       |> AshOban.Info.oban_triggers_and_scheduled_actions()
       |> tap(fn triggers ->
         if opts[:require?] do
-          Enum.each(triggers, &require_queues!(base, resource, opts[:pro?], &1))
+          Enum.each(triggers, &require_queues!(base, resource, pro_dynamic_queues_plugin?, &1))
         end
       end)
       |> Enum.filter(fn
