@@ -99,7 +99,7 @@ defmodule AshObanTest do
             ]}
         ],
         queues: false
-      ], pro?: true)
+      ])
 
     assert [
               engine: Oban.Pro.Engines.Smart,
