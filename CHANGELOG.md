@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.2.3-rc.1](https://github.com/ash-project/ash_oban/compare/v0.2.3-rc.0...v0.2.3-rc.1) (2024-04-03)
+
+
+
+
+### Bug Fixes:
+
+* use `skip_unknown_inputs` to avoid unnecessary errors
+
+* oban pro state active (#22)
+
+* detect oban pro plugin usage and support dynamic queues (#20)
+
 ## [v0.2.3-rc.0](https://github.com/ash-project/ash_oban/compare/v0.2.2...v0.2.3-rc.0) (2024-03-29)
 
 
