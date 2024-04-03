@@ -98,7 +98,8 @@ defmodule AshOban.Transformers.DefineActionWorkers do
                 input,
                 authorize?: authorize?,
                 actor: actor,
-                domain: unquote(domain)
+                domain: unquote(domain),
+                skip_unknown_inputs: Map.keys(input)
               )
               |> Ash.run_action!()
 

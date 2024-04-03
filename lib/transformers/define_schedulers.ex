@@ -495,7 +495,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
                       |> Ash.Changeset.for_action(unquote(trigger.on_error), %{error: error},
                         authorize?: authorize?,
                         actor: actor,
-                        domain: unquote(domain)
+                        domain: unquote(domain),
+                        skip_unknown_inputs: [:error]
                       )
                       |> AshOban.update_or_destroy()
                       |> case do
@@ -624,7 +625,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     Map.merge(unquote(Macro.escape(trigger.action_input || %{})), args),
                     authorize?: authorize?,
                     actor: actor,
-                    domain: unquote(domain)
+                    domain: unquote(domain),
+                    skip_unknown_input: [:metadata]
                   )
                   |> AshOban.update_or_destroy()
                   |> case do
