@@ -139,6 +139,8 @@ defmodule AshOban.MixProject do
         "spark.replace_doc_links",
         "spark.cheat_sheets_in_search"
       ],
+      "test.migrate": ["ecto.migrate"],
+      "test.create": ["ecto.create"],
       "spark.formatter": "spark.formatter --extensions AshOban",
       "spark.cheat_sheets": "spark.cheat_sheets --extensions AshOban",
       "spark.cheat_sheets_in_search": "spark.cheat_sheets_in_search --extensions AshOban",
