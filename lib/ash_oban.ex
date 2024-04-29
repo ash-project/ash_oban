@@ -527,15 +527,30 @@ defmodule AshOban do
     domains = List.wrap(domains)
     opts = Spark.Options.validate!(opts, @config_schema)
 
+    base =
+      Keyword.update(base, :plugins, [], fn plugins ->
+        Enum.map(plugins, fn item ->
+          if is_atom(item) do
+            {item, []}
+          else
+            item
+          end
+        end)
+      end)
+
     pro_dynamic_cron_plugin? =
       base
       |> Keyword.get(:plugins, [])
-      |> Enum.any?(fn {plugin, _opts} -> plugin == Oban.Pro.Plugins.DynamicCron end)
+      |> Enum.any?(fn
+        {plugin, _opts} -> plugin == Oban.Pro.Plugins.DynamicCron
+      end)
 
     pro_dynamic_queues_plugin? =
       base
       |> Keyword.get(:plugins, [])
-      |> Enum.any?(fn {plugin, _opts} -> plugin == Oban.Pro.Plugins.DynamicQueues end)
+      |> Enum.any?(fn
+        {plugin, _opts} -> plugin == Oban.Pro.Plugins.DynamicQueues
+      end)
 
     cron_plugin =
       if pro_dynamic_cron_plugin? do
