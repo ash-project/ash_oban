@@ -6,7 +6,7 @@
 [![Hex version badge](https://img.shields.io/hexpm/v/ash_oban.svg)](https://hex.pm/packages/ash_oban)
 [![Hexdocs badge](https://img.shields.io/badge/docs-hexdocs-purple)](https://hexdocs.pm/ash_oban)
 
-# AshGraphql
+# AshOban
 
 Welcome! This is the extension for integrating [Ash](https://hexdocs.pm/ash) resources with [Oban](https://hexdocs.pm/oban). This extension allows you to easily execute resource actions in the background, and trigger actions based on data conditions.
 
