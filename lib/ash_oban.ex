@@ -113,7 +113,7 @@ defmodule AshOban do
       stream_batch_size: [
         type: :pos_integer,
         doc:
-          "The batch size to pass when streaming records from using `c:Ash.stream!/2`. No batch size is passed if none is provided here, so the default is used."
+          "The batch size to pass when streaming records from using `Ash.stream!/2`. No batch size is passed if none is provided here, so the default is used."
       ],
       queue: [
         type: :atom,

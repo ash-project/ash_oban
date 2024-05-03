@@ -4,7 +4,7 @@ defmodule AshOban.MixProject do
   @version "0.2.3-rc.1"
 
   @description """
-  An Ash.Resource extension for integrating with Oban.
+  The extension for integrating Ash resources with Oban.
   """
 
   def project do
@@ -57,12 +57,13 @@ defmodule AshOban.MixProject do
 
   defp docs do
     [
-      main: "get-started-with-ash-oban",
+      main: "readme",
       source_ref: "v#{@version}",
       logo: "logos/small-logo.png",
       extra_section: "GUIDES",
       extras: [
-        "documentation/tutorials/get-started-with-ash-oban.md",
+        {"README.md", title: "Home"},
+        "documentation/tutorials/getting-started-with-ash-oban.md",
         "documentation/dsls/DSL:-AshOban.md"
       ],
       groups_for_extras: [
