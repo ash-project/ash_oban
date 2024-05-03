@@ -9,6 +9,7 @@ config :spark, :formatter,
 config :ash_oban, test: true
 
 config :ash_oban, ecto_repos: [AshOban.Test.Repo]
+config :logger, level: :warning
 
 if Mix.env() == :test do
   config :ash_oban, :oban,

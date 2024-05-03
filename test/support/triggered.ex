@@ -48,6 +48,7 @@ defmodule AshOban.Test.Triggered do
     end
 
     update :process do
+      require_atomic? false
       change set_attribute(:processed, true)
 
       change fn changeset, context ->
