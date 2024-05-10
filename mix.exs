@@ -1,7 +1,7 @@
 defmodule AshOban.MixProject do
   use Mix.Project
 
-  @version "0.2.3-rc.1"
+  @version "0.2.3"
 
   @description """
   The extension for integrating Ash resources with Oban.
@@ -119,7 +119,7 @@ defmodule AshOban.MixProject do
 
     oban_dep ++
       [
-        {:ash, "~> 3.0.0-rc.0"},
+        {:ash, "~> 3.0"},
         {:oban, "~> 2.15"},
         {:postgrex, "~> 0.17.4"},
         # dev/test dependencies

@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.2.3](https://github.com/ash-project/ash_oban/compare/v0.2.3-rc.1...v0.2.3) (2024-05-10)
+
+
+
+
+### Bug Fixes:
+
+* plugins can just be modules
+
 ## [v0.2.3-rc.1](https://github.com/ash-project/ash_oban/compare/v0.2.3-rc.0...v0.2.3-rc.1) (2024-04-03)
 
 
