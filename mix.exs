@@ -121,7 +121,7 @@ defmodule AshOban.MixProject do
       [
         {:ash, "~> 3.0"},
         {:oban, "~> 2.15"},
-        {:postgrex, "~> 0.17.4"},
+        {:postgrex, "~> 0.18.0"},
         # dev/test dependencies
         {:simple_sat, "~> 0.1"},
         {:ex_doc, "~> 0.22", only: [:dev, :test], runtime: false},
