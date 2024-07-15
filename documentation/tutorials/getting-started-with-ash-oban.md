@@ -81,9 +81,13 @@ Error handling is done by adding an `on_error` to your trigger. This is an updat
 
 This is _not_ foolproof. You want to be sure that your `on_error` action is as simple as possible, because if an exception is raised during the `on_error` action, the oban job will fail. If you are relying on your `on_error` logic to alter the resource to make it no longer apply to a trigger, consider making your action do _only that_. Then you can add another trigger watching for things in an errored state to do more rich error handling behavior.
 
-## Changing Triggers
+## Changing Triggers when using Oban Pro
 
-To remove or disable triggers, _do not just remove them from your resource_. Due to the way that oban implements cron jobs, if you just remove them from your resource, the cron will attempt to continue scheduling jobs. Instead, set `paused true` or `delete true` on the trigger. See the oban docs for more: https://getoban.pro/docs/pro/0.14.1/Oban.Pro.Plugins.DynamicCron.html#module-using-and-configuring
+To remove or disable triggers, _do not just remove them from your resource_. Due to the way that Oban Pro implements cron jobs, if you just remove them from your resource, the cron will attempt to continue scheduling jobs. Instead, set `paused true` or `delete true` on the trigger. See the oban docs for more: https://getoban.pro/docs/pro/0.14.1/Oban.Pro.Plugins.DynamicCron.html#module-using-and-configuring
+
+PS: `delete true` is also indempotent, so there is no issue with deploying with that flag set to true multiple times. After you have deployed once with `delete true` you can safely delete the trigger.
+
+When not using Oban Pro, all crons are simply loaded on boot time and there is no side effects to simply deleting an unused trigger.
 
 ## Transactions
 
