@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.2.4](https://github.com/ash-project/ash_oban/compare/v0.2.3...v0.2.4) (2024-07-19)
+
+
+
+
+### Improvements:
+
+* loosen postgrex version requirement
+
 ## [v0.2.3](https://github.com/ash-project/ash_oban/compare/v0.2.3-rc.1...v0.2.3) (2024-05-10)
 
 
