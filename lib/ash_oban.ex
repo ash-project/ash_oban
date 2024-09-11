@@ -439,6 +439,7 @@ defmodule AshOban do
   ## Options
 
   - `:actor` - the actor to set on the job. Requires configuring an actor persister.
+  - `:args` - additional arguments to merge into the job's arguments map.
 
   All other options are passed through to `c:Oban.Worker.new/2`
   """
@@ -454,6 +455,7 @@ defmodule AshOban do
   ## Options
 
   - `:actor` - the actor to set on the job. Requires configuring an actor persister.
+  - `:args` - additional arguments to merge into the job's arguments map.
 
   All other options are passed through to `c:Oban.Worker.new/2`
   """
@@ -485,6 +487,7 @@ defmodule AshOban do
       metadata: metadata
     }
     |> AshOban.store_actor(opts[:actor])
+    |> then(&Map.merge(opts[:args] || %{}, &1))
     |> trigger.worker.new(oban_job_opts)
   end
 
