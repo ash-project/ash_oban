@@ -16,10 +16,9 @@ defmodule AshOban.Transformers.DefineActionWorkers do
       worker_module_name =
         module_name(module, scheduled_action)
 
+      define_worker(module, worker_module_name, scheduled_action, dsl)
+
       dsl
-      |> Transformer.async_compile(fn ->
-        define_worker(module, worker_module_name, scheduled_action, dsl)
-      end)
       |> Transformer.replace_entity([:oban, :scheduled_actions], %{
         scheduled_action
         | worker: worker_module_name

@@ -15,6 +15,14 @@ defmodule AshOban.Test.Triggered do
         worker_read_action(:read)
       end
 
+      trigger :process_atomically do
+        action :process_atomically
+        queue :triggered_process
+        where expr(processed != true)
+        max_attempts 2
+        worker_read_action(:read)
+      end
+
       trigger :process_2 do
         action :process
         where expr(processed != true)
@@ -45,6 +53,10 @@ defmodule AshOban.Test.Triggered do
     read :read do
       primary? true
       pagination keyset?: true
+    end
+
+    update :process_atomically do
+      change set_attribute(:processed, true)
     end
 
     update :process do

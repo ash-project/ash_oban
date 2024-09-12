@@ -20,7 +20,7 @@ defmodule AshObanTest do
   end
 
   test "nothing happens if no records exist" do
-    assert %{success: 1} = AshOban.Test.schedule_and_run_triggers(Triggered)
+    assert %{success: 2} = AshOban.Test.schedule_and_run_triggers(Triggered)
   end
 
   test "if a record exists, it is processed" do
@@ -29,9 +29,20 @@ defmodule AshObanTest do
     |> Ash.create!()
 
     assert %{success: 2} =
-             AshOban.Test.schedule_and_run_triggers(Triggered,
+             AshOban.Test.schedule_and_run_triggers({Triggered, :process},
                actor: %AshOban.Test.ActorPersister.FakeActor{id: 1}
              )
+  end
+
+  test "actions done atomically will be done atomically" do
+    Triggered
+    |> Ash.Changeset.for_create(:create, %{})
+    |> Ash.create!()
+
+    assert %{success: 2} =
+             AshOban.Test.schedule_and_run_triggers({Triggered, :process_atomically})
+
+    assert Ash.read_first!(Triggered).processed
   end
 
   test "if an actor is not set, it is nil when executing the job" do
@@ -39,13 +50,14 @@ defmodule AshObanTest do
     |> Ash.Changeset.for_create(:create)
     |> Ash.create!()
 
-    assert %{success: 1, failure: 1} =
+    assert %{success: 3, failure: 1} =
              AshOban.Test.schedule_and_run_triggers(Triggered)
   end
 
   test "dsl introspection" do
     assert [
              %AshOban.Trigger{action: :process},
+             %AshOban.Trigger{action: :process_atomically},
              %AshOban.Trigger{action: :process, scheduler: nil}
            ] = AshOban.Info.oban_triggers(Triggered)
   end
@@ -69,6 +81,7 @@ defmodule AshObanTest do
                 [
                   crontab: [
                     {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello, []},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessAtomically, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process, []}
                   ]
                 ]}
@@ -111,6 +124,8 @@ defmodule AshObanTest do
                   sync_mode: :automatic,
                   crontab: [
                     {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello,
+                     [paused: false]},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessAtomically,
                      [paused: false]},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process,
                      [paused: false]}

@@ -27,9 +27,9 @@ if Mix.env() == :test do
 
   config :ash_oban, actor_persister: AshOban.Test.ActorPersister
 
-  # sobelow_skip ["Config.Secrets"]
   config :ash_oban, AshOban.Test.Repo,
     username: "postgres",
+    # sobelow_skip ["Config.Secrets"]
     password: "postgres",
     database: "ash_oban_test",
     hostname: "localhost",
