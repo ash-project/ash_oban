@@ -630,6 +630,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     authorize?: authorize?,
                     actor: actor,
                     domain: unquote(domain),
+                    context: %{private: %{ash_oban?: true}},
                     skip_unknown_inputs: [:metadata],
                     return_errors?: true,
                     notify?: true,
@@ -643,6 +644,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     authorize?: authorize?,
                     actor: actor,
                     domain: unquote(domain),
+                    context: %{private: %{ash_oban?: true}},
                     skip_unknown_inputs: [:metadata],
                     return_errors?: true,
                     notify?: true
