@@ -455,12 +455,16 @@ defmodule AshOban do
   ## Options
 
   - `:actor` - the actor to set on the job. Requires configuring an actor persister.
+  - `:action_arguments` - additional arguments to merge into the action invocation's arguments map.
+     affects the uniqueness checks for the job.
   - `:args` - additional arguments to merge into the job's arguments map.
+     the action will not use these arguments, it can only be used to affect the job uniqueness checks.
+     you likely are looking for the `:action_arguments` job.
 
   All other options are passed through to `c:Oban.Worker.new/2`
   """
   def build_trigger(%resource{} = record, trigger, opts \\ []) do
-    {opts, oban_job_opts} = Keyword.split(opts, [:actor])
+    {opts, oban_job_opts} = Keyword.split(opts, [:actor, :args, :action_arguments])
 
     trigger =
       case trigger do
@@ -484,7 +488,8 @@ defmodule AshOban do
 
     %{
       primary_key: validate_primary_key(Map.take(record, primary_key), resource),
-      metadata: metadata
+      metadata: metadata,
+      action_arguments: opts[:action_arguments] || %{}
     }
     |> AshOban.store_actor(opts[:actor])
     |> then(&Map.merge(opts[:args] || %{}, &1))

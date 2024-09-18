@@ -34,6 +34,22 @@ defmodule AshObanTest do
              )
   end
 
+  test "a record can be processed manually with additional arguments" do
+    record =
+      Triggered
+      |> Ash.Changeset.for_create(:create, %{})
+      |> Ash.create!()
+
+    AshOban.run_trigger(record, :process,
+      action_arguments: %{special_arg: "special_value"},
+      actor: %AshOban.Test.ActorPersister.FakeActor{id: 1}
+    )
+
+    AshOban.Test.schedule_and_run_triggers(Triggered)
+
+    assert_receive {:special_arg, "special_value"}
+  end
+
   test "actions done atomically will be done atomically" do
     Triggered
     |> Ash.Changeset.for_create(:create, %{})

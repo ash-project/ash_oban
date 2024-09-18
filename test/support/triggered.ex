@@ -62,8 +62,13 @@ defmodule AshOban.Test.Triggered do
     update :process do
       require_atomic? false
       change set_attribute(:processed, true)
+      argument :special_arg, :string
 
       change fn changeset, context ->
+        if changeset.arguments[:special_arg] do
+          send(self(), {:special_arg, changeset.arguments[:special_arg]})
+        end
+
         send(self(), {:actor, context.actor})
         changeset
       end

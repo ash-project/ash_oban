@@ -611,6 +611,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   else
                     %{metadata: args["metadata"]}
                   end
+                  |> Map.merge(args["action_arguments"] || %{})
 
                 query =
                   query()
@@ -717,6 +718,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                       else
                         %{metadata: args["metadata"]}
                       end
+                      |> Map.merge(args["action_arguments"] || %{})
 
                     record
                     |> Ash.Changeset.new()

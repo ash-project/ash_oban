@@ -119,7 +119,7 @@ defmodule AshOban.MixProject do
 
     oban_dep ++
       [
-        {:ash, "~> 3.0"},
+        {:ash, ash_version("~> 3.0")},
         {:oban, "~> 2.15"},
         {:postgrex, "~> 0.18"},
         # dev/test dependencies
@@ -133,6 +133,15 @@ defmodule AshOban.MixProject do
         {:excoveralls, "~> 0.13", only: [:dev, :test]},
         {:mix_audit, ">= 0.0.0", only: [:dev, :test], runtime: false}
       ]
+  end
+
+  defp ash_version(default_version) do
+    case System.get_env("ASH_VERSION") do
+      nil -> default_version
+      "local" -> [path: "../ash"]
+      "main" -> [git: "https://github.com/ash-project/ash.git"]
+      version -> "~> #{version}"
+    end
   end
 
   defp aliases do

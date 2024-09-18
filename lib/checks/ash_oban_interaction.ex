@@ -22,7 +22,6 @@ defmodule AshOban.Checks.AshObanInteraction do
   end
 
   @impl Ash.Policy.SimpleCheck
-  def match?(_, %{query: %{context: %{private: %{ash_oban?: true}}}}, _), do: true
-  def match?(_, %{changeset: %{context: %{private: %{ash_oban?: true}}}}, _), do: true
+  def match?(_, %{subject: %{context: %{private: %{ash_oban?: true}}}}, _), do: true
   def match?(_, _, _), do: false
 end
