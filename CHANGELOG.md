@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.2.5](https://github.com/ash-project/ash_oban/compare/v0.2.4...v0.2.5) (2024-09-20)
+
+
+
+
+### Improvements:
+
+* support `action_arguments` option to `run_trigger`
+
+* support fully atomic actions
+
+* add `args` option for setting custom job arguments
+
 ## [v0.2.4](https://github.com/ash-project/ash_oban/compare/v0.2.3...v0.2.4) (2024-07-19)
 
 

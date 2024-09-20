@@ -11,7 +11,7 @@ If you haven't already, read the [Ash Getting Started Guide](https://hexdocs.pm/
 ## Bring in the `ash_oban` dependency
 
 ```elixir
-{:ash_oban, "~> 0.2.4"}
+{:ash_oban, "~> 0.2.5"}
 ```
 
 ## Setup
