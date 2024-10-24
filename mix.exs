@@ -64,7 +64,7 @@ defmodule AshOban.MixProject do
       extras: [
         {"README.md", title: "Home"},
         "documentation/tutorials/getting-started-with-ash-oban.md",
-        "documentation/dsls/DSL:-AshOban.md",
+        "documentation/dsls/DSL-AshOban.md",
         "CHANGELOG.md"
       ],
       groups_for_extras: [

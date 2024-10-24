@@ -16,4 +16,4 @@ Welcome! This is the extension for integrating [Ash](https://hexdocs.pm/ash) res
 
 ## Reference
 
-- [AshOban DSL](documentation/dsls/DSL:-AshOban.md)
+- [AshOban DSL](documentation/dsls/DSL-AshOban.md)

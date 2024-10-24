@@ -73,7 +73,7 @@ oban do
 end
 ```
 
-See the DSL documentation for more: [`AshOban`](/documentation/dsl/DSL:-AshOban.md)
+See the DSL documentation for more: [`AshOban`](/documentation/dsl/DSL-AshOban.md)
 
 ## Handling Errors
 
