@@ -3,6 +3,7 @@ spark_locals_without_parens = [
   action_input: 1,
   debug?: 1,
   domain: 1,
+  lock_for_update?: 1,
   log_errors?: 1,
   log_final_error?: 1,
   max_attempts: 1,

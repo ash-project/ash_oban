@@ -263,12 +263,12 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
     on_error_transaction? =
       can_transact? && trigger.on_error &&
-        Ash.Resource.Info.action(dsl, trigger.on_error).transaction?
+        Ash.Resource.Info.action(dsl, trigger.on_error).transaction? && trigger.lock_for_update?
 
     trigger_action = Ash.Resource.Info.action(dsl, trigger.action)
 
     work_transaction? =
-      can_transact? && trigger_action.transaction?
+      can_transact? && trigger_action.transaction? && trigger.lock_for_update?
 
     atomic? = Map.get(trigger_action, :require_atomic?, false)
 

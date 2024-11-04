@@ -13,6 +13,7 @@ defmodule AshOban do
             queue: atom,
             scheduler_cron: String.t(),
             scheduler_queue: atom,
+            lock_for_update?: boolean(),
             action_input: map(),
             max_attempts: pos_integer(),
             record_limit: pos_integer(),
@@ -38,6 +39,7 @@ defmodule AshOban do
       :read_action,
       :action_input,
       :worker_read_action,
+      :lock_for_update?,
       :queue,
       :debug?,
       :read_metadata,
@@ -101,7 +103,13 @@ defmodule AshOban do
         type: :boolean,
         default: false,
         doc:
-          "If set to `true`, detailed debug logging will be enabled for this trigger. You can also set `config :ash_oban, debug_all_triggers?: true` to enable debug logging for all triggers."
+          "If set to `true`, detailed debug logging will be enabled for this trigger. You can also set `config :ash_oban, debug_all_triggers?: true` to enable debug logging for all triggers. If the action has `transaction?: false` this is automatically false."
+      ],
+      lock_for_update?: [
+        type: :boolean,
+        default: true,
+        doc:
+          "If `true`, a transaction will be started before looking up the record, and it will be locked for update. Typically you should leave this on unless you have before/after/around transaction hooks."
       ],
       scheduler_cron: [
         type: {:or, [:string, {:literal, false}]},
