@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.2.6](https://github.com/ash-project/ash_oban/compare/v0.2.5...v0.2.6) (2024-11-04)
+
+
+
+
+### Improvements:
+
+* add `lock_for_update?` to the oban trigger DSL
+
+* upgrade
+
 ## [v0.2.5](https://github.com/ash-project/ash_oban/compare/v0.2.4...v0.2.5) (2024-09-20)
 
 
