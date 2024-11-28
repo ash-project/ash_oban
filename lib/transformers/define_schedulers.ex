@@ -574,6 +574,73 @@ defmodule AshOban.Transformers.DefineSchedulers do
     end
   end
 
+  defp work(trigger, worker, _atomic?, :action, pro?, _read_action, resource, domain) do
+    function_name =
+      if pro? do
+        :process
+      else
+        :perform
+      end
+
+    if trigger.state != :active do
+      quote location: :keep do
+        @impl unquote(worker)
+        def unquote(function_name)(_) do
+          {:discard, unquote(trigger.state)}
+        end
+      end
+    else
+      quote location: :keep, generated: true do
+        @impl unquote(worker)
+        def unquote(function_name)(%Oban.Job{args: %{"primary_key" => primary_key} = args} = job) do
+          case AshOban.lookup_actor(args["actor"]) do
+            {:ok, actor} ->
+              authorize? = AshOban.authorize?()
+
+              AshOban.debug(
+                "Trigger #{unquote(inspect(resource))}.#{unquote(trigger.name)} triggered for primary key #{inspect(primary_key)}",
+                unquote(trigger.debug?)
+              )
+
+              input =
+                build_input(
+                  args,
+                  unquote(Macro.escape(trigger.action_input || %{})),
+                  unquote(Macro.escape(trigger.read_metadata))
+                )
+
+              unquote(resource)
+              |> Ash.ActionInput.for_action(
+                unquote(trigger.action),
+                input,
+                authorize?: authorize?,
+                actor: actor,
+                domain: unquote(domain),
+                skip_unknown_inputs: Map.keys(input)
+              )
+              |> Ash.run_action!()
+
+              :ok
+
+            {:error, error} ->
+              raise Ash.Error.to_ash_error(error)
+          end
+        end
+
+        defp build_input(args, action_input, read_metadata) do
+          primary_key = Map.take(args, ["primary_key"])
+
+          metadata = if is_nil(read_metadata), do: %{}, else: %{metadata: args["metadata"]}
+
+          metadata
+          |> Map.merge(args["action_arguments"] || %{})
+          |> Map.merge(action_input)
+          |> Map.merge(primary_key)
+        end
+      end
+    end
+  end
+
   defp work(trigger, worker, atomic?, trigger_action_type, pro?, read_action, resource, domain) do
     function_name =
       if pro? do

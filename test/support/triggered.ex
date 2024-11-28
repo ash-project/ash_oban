@@ -30,6 +30,12 @@ defmodule AshOban.Test.Triggered do
         worker_read_action(:read)
         scheduler_cron false
       end
+
+      trigger :process_generic do
+        action :say_hello
+        max_attempts 2
+        scheduler_cron "* * * * *"
+      end
     end
 
     scheduled_actions do
