@@ -22,7 +22,8 @@ if Mix.env() == :test do
     queues: [
       triggered_process: 10,
       triggered_process_2: 10,
-      triggered_say_hello: 10
+      triggered_say_hello: 10,
+      triggered_process_generic: 10
     ]
 
   config :ash_oban, actor_persister: AshOban.Test.ActorPersister

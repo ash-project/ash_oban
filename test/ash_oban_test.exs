@@ -14,13 +14,18 @@ defmodule AshObanTest do
 
   setup do
     Enum.each(
-      [:triggered_process, :triggered_process_2, :triggered_say_hello],
+      [
+        :triggered_process,
+        :triggered_process_2,
+        :triggered_say_hello,
+        :triggered_process_generic
+      ],
       &Oban.drain_queue(queue: &1)
     )
   end
 
   test "nothing happens if no records exist" do
-    assert %{success: 2} = AshOban.Test.schedule_and_run_triggers(Triggered)
+    assert %{success: 3} = AshOban.Test.schedule_and_run_triggers(Triggered)
   end
 
   test "if a record exists, it is processed" do
@@ -66,7 +71,7 @@ defmodule AshObanTest do
     |> Ash.Changeset.for_create(:create)
     |> Ash.create!()
 
-    assert %{success: 3, failure: 1} =
+    assert %{success: 5, failure: 1} =
              AshOban.Test.schedule_and_run_triggers(Triggered)
   end
 
@@ -74,7 +79,8 @@ defmodule AshObanTest do
     assert [
              %AshOban.Trigger{action: :process},
              %AshOban.Trigger{action: :process_atomically},
-             %AshOban.Trigger{action: :process, scheduler: nil}
+             %AshOban.Trigger{action: :process, scheduler: nil},
+             %AshOban.Trigger{name: :process_generic}
            ] = AshOban.Info.oban_triggers(Triggered)
   end
 
@@ -87,7 +93,8 @@ defmodule AshObanTest do
         queues: [
           triggered_process: 10,
           triggered_process_2: 10,
-          triggered_say_hello: 10
+          triggered_say_hello: 10,
+          triggered_process_generic: 10
         ]
       )
 
@@ -97,6 +104,7 @@ defmodule AshObanTest do
                 [
                   crontab: [
                     {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello, []},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessGeneric, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessAtomically, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process, []}
                   ]
@@ -105,7 +113,8 @@ defmodule AshObanTest do
              queues: [
                triggered_process: 10,
                triggered_process_2: 10,
-               triggered_say_hello: 10
+               triggered_say_hello: 10,
+               triggered_process_generic: 10
              ]
            ] = config
   end
@@ -125,7 +134,8 @@ defmodule AshObanTest do
            queues: [
              triggered_process: 10,
              triggered_process_2: 10,
-             triggered_say_hello: 10
+             triggered_say_hello: 10,
+             triggered_process_generic: 10
            ]}
         ],
         queues: false
@@ -141,6 +151,8 @@ defmodule AshObanTest do
                   crontab: [
                     {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello,
                      [paused: false]},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessGeneric,
+                     [paused: false]},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessAtomically,
                      [paused: false]},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process,
@@ -151,7 +163,8 @@ defmodule AshObanTest do
                 queues: [
                   triggered_process: 10,
                   triggered_process_2: 10,
-                  triggered_say_hello: 10
+                  triggered_say_hello: 10,
+                  triggered_process_generic: 10
                 ]}
              ],
              queues: false
