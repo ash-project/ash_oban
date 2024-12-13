@@ -92,6 +92,8 @@ defmodule AshOban.Transformers.DefineActionWorkers do
                 end
 
               unquote(resource)
+              |> Ash.ActionInput.new()
+              |> Ash.ActionInput.set_context(%{private: %{ash_oban?: true}})
               |> Ash.ActionInput.for_action(
                 unquote(scheduled_action.action),
                 input,

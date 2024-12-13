@@ -610,6 +610,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 )
 
               unquote(resource)
+              |> Ash.ActionInput.new()
+              |> Ash.ActionInput.set_context(%{private: %{ash_oban?: true}})
               |> Ash.ActionInput.for_action(
                 unquote(trigger.action),
                 input,
