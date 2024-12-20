@@ -414,6 +414,9 @@ defmodule AshOban do
         |> store_actor(opts[:actor])
         |> scheduler.new()
         |> Oban.insert!()
+
+      _ ->
+        raise ArgumentError, "Invalid trigger or scheduled action: #{inspect(trigger)}"
     end
   end
 
