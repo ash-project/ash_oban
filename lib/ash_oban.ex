@@ -52,6 +52,7 @@ defmodule AshOban do
       :max_scheduler_attempts,
       :record_limit,
       :where,
+      :sort,
       :state,
       :scheduler,
       :worker,
@@ -199,6 +200,10 @@ defmodule AshOban do
       where: [
         type: :any,
         doc: "The filter expression to determine if something should be triggered"
+      ],
+      sort: [
+        type: :any,
+        doc: "The sort applied to the query that determines if something should be triggered"
       ],
       on_error: [
         type: :atom,
