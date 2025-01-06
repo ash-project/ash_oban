@@ -11,6 +11,7 @@ defmodule AshOban.Test.Triggered do
       trigger :process do
         action :process
         where expr(processed != true)
+        sort inserted_at: :asc
         max_attempts 2
         worker_read_action(:read)
       end
@@ -94,5 +95,6 @@ defmodule AshOban.Test.Triggered do
   attributes do
     uuid_primary_key :id
     attribute :processed, :boolean, default: false, allow_nil?: false
+    timestamps()
   end
 end
