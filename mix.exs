@@ -123,6 +123,7 @@ defmodule AshOban.MixProject do
         {:oban, "~> 2.15"},
         {:postgrex, "~> 0.18"},
         # dev/test dependencies
+        {:igniter, "~> 0.5.0", only: [:dev, :test]},
         {:simple_sat, "~> 0.1", only: [:dev, :test]},
         {:ex_doc, "~> 0.22", only: [:dev, :test], runtime: false},
         {:ex_check, "~> 0.12", only: [:dev, :test]},

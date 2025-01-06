@@ -19,6 +19,7 @@ spark_locals_without_parens = [
   scheduler_cron: 1,
   scheduler_priority: 1,
   scheduler_queue: 1,
+  sort: 1,
   state: 1,
   stream_batch_size: 1,
   trigger: 1,
