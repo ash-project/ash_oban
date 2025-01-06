@@ -108,21 +108,21 @@ defmodule AshOban.Transformers.DefineSchedulers do
       end
 
     pipeline =
-      if not is_nil(trigger.where) do
+      if is_nil(trigger.where) do
+        pipeline
+      else
         quote do
           unquote(pipeline) |> filter()
         end
-      else
-        pipeline
       end
 
     pipeline =
-      if not is_nil(trigger.sort) do
+      if is_nil(trigger.sort) do
+        pipeline
+      else
         quote do
           unquote(pipeline) |> sort()
         end
-      else
-        pipeline
       end
 
     pipeline =
