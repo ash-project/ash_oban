@@ -39,6 +39,31 @@ defmodule AshObanTest do
              )
   end
 
+  test "sort is applied when scheduling" do
+    triggered1 =
+      Triggered
+      |> Ash.Changeset.for_create(:create, %{})
+      |> Ash.create!()
+
+    triggered2 =
+      Triggered
+      |> Ash.Changeset.for_create(:create, %{})
+      |> Ash.create!()
+
+    assert %{success: 3} =
+             AshOban.Test.schedule_and_run_triggers({Triggered, :process},
+               actor: %AshOban.Test.ActorPersister.FakeActor{id: 1}
+             )
+
+    triggered1 =
+      Ash.reload!(triggered1)
+
+    triggered2 =
+      Ash.reload!(triggered2)
+
+    assert DateTime.before?(triggered1.updated_at, triggered2.updated_at)
+  end
+
   test "a record can be processed manually with additional arguments" do
     record =
       Triggered

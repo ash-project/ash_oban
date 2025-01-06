@@ -113,6 +113,7 @@ end
 | [`read_action`](#oban-triggers-trigger-read_action){: #oban-triggers-trigger-read_action } | `atom` |  | The read action to use when querying records. Defaults to the primary read. This action *must* support keyset pagination. |
 | [`worker_read_action`](#oban-triggers-trigger-worker_read_action){: #oban-triggers-trigger-worker_read_action } | `atom` |  | The read action to use when fetching the individual records for the trigger. Defaults to `read_action`. If you customize this, ensure your action handles scenarios where the trigger is no longer relevant. |
 | [`where`](#oban-triggers-trigger-where){: #oban-triggers-trigger-where } | `any` |  | The filter expression to determine if something should be triggered |
+| [`sort`](#oban-triggers-trigger-sort){: #oban-triggers-trigger-sort } | `any` |  | The sort applied to the query that determines if something should be triggered |
 | [`on_error`](#oban-triggers-trigger-on_error){: #oban-triggers-trigger-on_error } | `atom` |  | An update action to call after the last attempt has failed. See the getting started guide for more. |
 
 

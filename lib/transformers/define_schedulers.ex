@@ -64,6 +64,15 @@ defmodule AshOban.Transformers.DefineSchedulers do
         end
       end
 
+    sort =
+      if not is_nil(trigger.sort) do
+        quote location: :keep do
+          def sort(query) do
+            Ash.Query.sort(query, unquote(trigger.sort))
+          end
+        end
+      end
+
     limit_stream =
       if trigger.record_limit do
         quote do
@@ -90,37 +99,47 @@ defmodule AshOban.Transformers.DefineSchedulers do
         end
       end
 
-    stream =
+    pipeline =
+      quote do
+        resource
+        |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+        |> Ash.Query.select(unquote(primary_key))
+        |> limit_stream()
+      end
+
+    pipeline =
       if is_nil(trigger.where) do
-        quote location: :keep do
-          def stream(resource, actor) do
-            resource
-            |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-            |> Ash.Query.select(unquote(primary_key))
-            |> limit_stream()
-            |> Ash.Query.for_read(unquote(trigger.read_action), %{},
-              authorize?: AshOban.authorize?(),
-              actor: actor,
-              domain: unquote(domain)
-            )
-            |> Ash.stream!(unquote(batch_opts))
-          end
-        end
+        pipeline
       else
-        quote location: :keep do
-          def stream(resource, actor) do
-            resource
-            |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-            |> Ash.Query.select(unquote(primary_key))
-            |> limit_stream()
-            |> filter()
-            |> Ash.Query.for_read(unquote(trigger.read_action), %{},
-              authorize?: AshOban.authorize?(),
-              actor: actor,
-              domain: unquote(domain)
-            )
-            |> Ash.stream!()
-          end
+        quote do
+          unquote(pipeline) |> filter()
+        end
+      end
+
+    pipeline =
+      if is_nil(trigger.sort) do
+        pipeline
+      else
+        quote do
+          unquote(pipeline) |> sort()
+        end
+      end
+
+    pipeline =
+      quote do
+        unquote(pipeline)
+        |> Ash.Query.for_read(unquote(trigger.read_action), %{},
+          authorize?: AshOban.authorize?(),
+          actor: actor,
+          domain: unquote(domain)
+        )
+        |> Ash.stream!(unquote(batch_opts))
+      end
+
+    stream =
+      quote location: :keep do
+        def stream(resource, actor) do
+          unquote(pipeline)
         end
       end
 
@@ -239,6 +258,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
         unquote(limit_stream)
         unquote(stream)
         unquote(filter)
+        unquote(sort)
         unquote(insert)
       end
 
