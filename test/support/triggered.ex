@@ -13,7 +13,12 @@ defmodule AshOban.Test.Triggered do
         where expr(processed != true)
         sort inserted_at: :asc
         max_attempts 2
-        worker_read_action(:read)
+
+        extra_args(fn _record ->
+          %{extra_arg: 1}
+        end)
+
+        worker_read_action :read
       end
 
       trigger :process_atomically do
