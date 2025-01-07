@@ -38,6 +38,7 @@ defmodule AshOban do
       :action,
       :read_action,
       :action_input,
+      :extra_args,
       :worker_read_action,
       :lock_for_update?,
       :queue,
@@ -94,6 +95,12 @@ defmodule AshOban do
         type: :map,
         doc:
           "Static inputs to supply to the update/destroy action when it is called. Any metadata produced by `read_metadata` will overwrite these values."
+      ],
+      extra_args: [
+        type: {:or, [:map, {:fun, 1}]},
+        doc: """
+        Additional arguments to merge into the job's arguments map. Can either be a map or a function that takes the record and returns a map.
+        """
       ],
       scheduler_queue: [
         type: :atom,
@@ -502,12 +509,25 @@ defmodule AshOban do
           %{}
       end
 
+    extra_args =
+      case trigger.extra_args do
+        nil ->
+          %{}
+
+        fun when is_function(fun) ->
+          fun.(record)
+
+        args ->
+          args
+      end
+
     %{
       primary_key: validate_primary_key(Map.take(record, primary_key), resource),
       metadata: metadata,
       action_arguments: opts[:action_arguments] || %{}
     }
     |> AshOban.store_actor(opts[:actor])
+    |> then(&Map.merge(extra_args, &1))
     |> then(&Map.merge(opts[:args] || %{}, &1))
     |> trigger.worker.new(oban_job_opts)
   end

@@ -31,7 +31,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
       |> then(fn dsl ->
         if trigger.scheduler_cron do
           Transformer.async_compile(dsl, fn ->
-            define_scheduler(module, scheduler_module_name, worker_module_name, trigger, dsl)
+            define_scheduler(module, scheduler_module_name, trigger, dsl)
           end)
         else
           dsl
@@ -49,7 +49,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     |> Module.concat()
   end
 
-  defp define_scheduler(resource, scheduler_module_name, worker_module_name, trigger, dsl) do
+  defp define_scheduler(resource, scheduler_module_name, trigger, dsl) do
     domain = AshOban.Info.oban_domain!(dsl)
     primary_key = Ash.Resource.Info.primary_key(dsl)
 
@@ -220,8 +220,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
           end
         else
           def unquote(function_name)(%Oban.Job{args: args}) do
+            trigger = AshOban.Info.oban_trigger(unquote(resource), unquote(trigger.name))
+
             metadata =
-              case AshOban.Info.oban_trigger(unquote(resource), unquote(trigger.name)) do
+              case trigger do
                 %{read_metadata: read_metadata} when is_function(read_metadata) ->
                   read_metadata
 
@@ -233,13 +235,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
               {:ok, actor} ->
                 unquote(resource)
                 |> stream(actor)
-                |> Stream.map(fn record ->
-                  unquote(worker_module_name).new(%{
-                    primary_key: Map.take(record, unquote(primary_key)),
-                    metadata: metadata.(record),
-                    actor: args["actor"]
-                  })
-                end)
+                |> Stream.map(&AshOban.build_trigger(&1, trigger, actor: actor))
                 |> insert()
 
               {:error, e} ->

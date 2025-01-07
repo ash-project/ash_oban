@@ -5,6 +5,8 @@ defmodule AshObanTest do
   alias AshOban.Test.Domain
   alias AshOban.Test.Triggered
 
+  use Oban.Testing, repo: AshOban.Test.Repo, prefix: "private"
+
   setup_all do
     AshOban.Test.Repo.start_link()
     Oban.start_link(AshOban.config([Domain], Application.get_env(:ash_oban, :oban)))
@@ -37,6 +39,26 @@ defmodule AshObanTest do
              AshOban.Test.schedule_and_run_triggers({Triggered, :process},
                actor: %AshOban.Test.ActorPersister.FakeActor{id: 1}
              )
+  end
+
+  @tag :focus
+  test "extra args are set on a job" do
+    Triggered
+    |> Ash.Changeset.for_create(:create, %{})
+    |> Ash.create!()
+
+    AshOban.schedule(Triggered, :process)
+
+    assert [_scheduler] =
+             all_enqueued(worker: Triggered.AshOban.Scheduler.Process)
+
+    # run scheduler
+    Oban.drain_queue(queue: :triggered_process)
+
+    assert [job] =
+             all_enqueued(worker: Triggered.AshOban.Worker.Process)
+
+    assert job.args["extra_arg"] == 1
   end
 
   test "sort is applied when scheduling" do
