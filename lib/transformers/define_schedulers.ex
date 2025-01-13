@@ -235,8 +235,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
             (AshOban.Info.oban_trigger(unquote(resource), unquote(trigger.name)).list_tenants ||
                AshOban.Info.oban_list_tenants!(unquote(resource)))
             |> then(fn
-              list_tenants when is_function(list_tenants) ->
-                list_tenants.()
+              {module, o} ->
+                module.list_tenants(o)
 
               list_tenants ->
                 list_tenants
