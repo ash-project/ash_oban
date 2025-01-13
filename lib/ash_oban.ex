@@ -382,8 +382,7 @@ defmodule AshOban do
            ]},
         default: [nil],
         doc: """
-        A list of tenants or a function behaviour that returns a list of tenants a trigger should be run for.
-        Can be overwritten on the trigger level.
+        A list of tenants or a function behaviour that returns a list of tenants a trigger should be run for. Can be overwritten on the trigger level.
         """
       ]
     ],
