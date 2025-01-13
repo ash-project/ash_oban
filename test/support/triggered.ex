@@ -6,6 +6,12 @@ defmodule AshOban.Test.Triggered do
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshOban]
 
+  multitenancy do
+    strategy :attribute
+    attribute :tenant_id
+    global? true
+  end
+
   oban do
     triggers do
       trigger :process do
@@ -42,6 +48,14 @@ defmodule AshOban.Test.Triggered do
         max_attempts 2
         scheduler_cron "* * * * *"
       end
+
+      trigger :tenant_aware do
+        list_tenants fn ->
+          [2]
+        end
+
+        action :process_atomically
+      end
     end
 
     scheduled_actions do
@@ -60,7 +74,7 @@ defmodule AshOban.Test.Triggered do
   end
 
   actions do
-    defaults [:create]
+    defaults create: [:tenant_id]
 
     read :read do
       primary? true
@@ -100,6 +114,7 @@ defmodule AshOban.Test.Triggered do
   attributes do
     uuid_primary_key :id
     attribute :processed, :boolean, default: false, allow_nil?: false
+    attribute :tenant_id, :integer, allow_nil?: false, default: 1
     timestamps()
   end
 end
