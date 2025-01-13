@@ -4,6 +4,7 @@ spark_locals_without_parens = [
   debug?: 1,
   domain: 1,
   extra_args: 1,
+  list_tenants: 1,
   lock_for_update?: 1,
   log_errors?: 1,
   log_final_error?: 1,

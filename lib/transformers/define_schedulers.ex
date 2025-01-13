@@ -133,12 +133,13 @@ defmodule AshOban.Transformers.DefineSchedulers do
           actor: actor,
           domain: unquote(domain)
         )
+        |> Ash.Query.set_tenant(tenant)
         |> Ash.stream!(unquote(batch_opts))
       end
 
     stream =
       quote location: :keep do
-        def stream(resource, actor) do
+        def stream(resource, actor, tenant) do
           unquote(pipeline)
         end
       end
@@ -231,16 +232,29 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   fn _ -> %{} end
               end
 
-            case AshOban.lookup_actor(args["actor"]) do
-              {:ok, actor} ->
-                unquote(resource)
-                |> stream(actor)
-                |> Stream.map(&AshOban.build_trigger(&1, trigger, actor: actor))
-                |> insert()
+            (AshOban.Info.oban_trigger(unquote(resource), unquote(trigger.name)).list_tenants ||
+               AshOban.Info.oban_list_tenants!(unquote(resource)))
+            |> then(fn
+              {module, o} ->
+                module.list_tenants(o)
 
-              {:error, e} ->
-                raise Ash.Error.to_ash_error(e)
-            end
+              list_tenants ->
+                list_tenants
+            end)
+            |> Enum.each(fn tenant ->
+              case AshOban.lookup_actor(args["actor"]) do
+                {:ok, actor} ->
+                  unquote(resource)
+                  |> stream(actor, tenant)
+                  |> Stream.map(&AshOban.build_trigger(&1, trigger, actor: actor))
+                  |> insert()
+
+                {:error, e} ->
+                  raise Ash.Error.to_ash_error(e)
+              end
+            end)
+
+            :ok
           rescue
             e ->
               Logger.error(
@@ -307,6 +321,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             Ash.Changeset.before_action(changeset, fn changeset ->
               query()
               |> Ash.Query.do_filter(primary_key)
+              |> Ash.Query.set_tenant(tenant)
               |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
               |> Ash.Query.for_read(unquote(read_action), %{},
                 authorize?: authorize?,
@@ -335,6 +350,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             Ash.Changeset.before_action(changeset, fn changeset ->
               query()
               |> Ash.Query.do_filter(primary_key)
+              |> Ash.Query.set_tenant(tenant)
               |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
               |> Ash.Query.for_read(unquote(read_action), %{},
                 authorize?: authorize?,
@@ -363,26 +379,26 @@ defmodule AshOban.Transformers.DefineSchedulers do
     prepare_error =
       if on_error_transaction? do
         quote location: :keep do
-          defp prepare_error(changeset, primary_key, authorize?, actor) do
+          defp prepare_error(changeset, primary_key, authorize?, actor, tenant) do
             unquote(get_and_lock)
           end
         end
       else
         quote location: :keep do
-          defp prepare_error(changeset, _, _, _), do: changeset
+          defp prepare_error(changeset, _, _, _, _), do: changeset
         end
       end
 
     prepare =
       if work_transaction? do
         quote location: :keep do
-          defp prepare(changeset, primary_key, authorize?, actor) do
+          defp prepare(changeset, primary_key, authorize?, actor, tenant) do
             unquote(get_and_lock)
           end
         end
       else
         quote location: :keep do
-          defp prepare(changeset, _, _, _), do: changeset
+          defp prepare(changeset, _, _, _, _), do: changeset
         end
       end
 
@@ -480,6 +496,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
           case AshOban.lookup_actor(args["actor"]) do
             {:ok, actor} ->
+              tenant = args["tenant"]
+
               query()
               |> Ash.Query.do_filter(primary_key)
               |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
@@ -515,10 +533,11 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
                   record
                   |> Ash.Changeset.new()
-                  |> prepare_error(primary_key, authorize?, actor)
+                  |> prepare_error(primary_key, authorize?, actor, tenant)
                   |> case do
                     changeset ->
                       changeset
+                      |> Ash.Changeset.set_tenant(tenant)
                       |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
                       |> Ash.Changeset.for_action(unquote(trigger.on_error), %{error: error},
                         authorize?: authorize?,
@@ -613,6 +632,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
             {:ok, actor} ->
               authorize? = AshOban.authorize?()
 
+              tenant = args["tenant"]
+
               AshOban.debug(
                 "Trigger #{unquote(inspect(resource))}.#{unquote(trigger.name)} triggered for primary key #{inspect(primary_key)}",
                 unquote(trigger.debug?)
@@ -627,6 +648,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
               unquote(resource)
               |> Ash.ActionInput.new()
+              |> Ash.ActionInput.set_tenant(tenant)
               |> Ash.ActionInput.set_context(%{private: %{ash_oban?: true}})
               |> Ash.ActionInput.for_action(
                 unquote(trigger.action),
@@ -690,6 +712,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
               {:ok, actor} ->
                 authorize? = AshOban.authorize?()
 
+                tenant = args["tenant"]
+
                 args =
                   if unquote(is_nil(trigger.read_metadata)) do
                     %{}
@@ -715,6 +739,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     Map.merge(unquote(Macro.escape(trigger.action_input || %{})), args),
                     authorize?: authorize?,
                     actor: actor,
+                    tenant: tenant,
                     domain: unquote(domain),
                     context: %{private: %{ash_oban?: true}},
                     skip_unknown_inputs: [:metadata],
@@ -729,6 +754,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     Map.merge(unquote(Macro.escape(trigger.action_input || %{})), args),
                     authorize?: authorize?,
                     actor: actor,
+                    tenant: tenant,
+                    domain: unquote(domain),
                     domain: unquote(domain),
                     context: %{private: %{ash_oban?: true}},
                     skip_unknown_inputs: [:metadata],
@@ -778,8 +805,11 @@ defmodule AshOban.Transformers.DefineSchedulers do
               {:ok, actor} ->
                 authorize? = AshOban.authorize?()
 
+                tenant = args["tenant"]
+
                 query()
                 |> Ash.Query.do_filter(primary_key)
+                |> Ash.Query.set_tenant(tenant)
                 |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
                 |> Ash.Query.for_read(unquote(read_action), %{},
                   authorize?: authorize?,
@@ -807,7 +837,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
                     record
                     |> Ash.Changeset.new()
-                    |> prepare(primary_key, authorize?, actor)
+                    |> prepare(primary_key, authorize?, actor, tenant)
+                    |> Ash.Changeset.set_tenant(tenant)
                     |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
                     |> Ash.Changeset.for_action(
                       unquote(trigger.action),

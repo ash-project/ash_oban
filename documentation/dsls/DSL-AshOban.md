@@ -38,6 +38,7 @@ end
 | Name | Type | Default | Docs |
 |------|------|---------|------|
 | [`domain`](#oban-domain){: #oban-domain } | `module` |  | The Domain to use when calling actions on this resource. Defaults to the resource's domain. |
+| [`list_tenants`](#oban-list_tenants){: #oban-list_tenants } | `list(any) \| (-> any) \| module` | `[nil]` | A list of tenants or a function behaviour that returns a list of tenants a trigger should be run for. Can be overwritten on the trigger level. |
 
 
 ## oban.triggers
@@ -96,6 +97,7 @@ end
 | [`action`](#oban-triggers-trigger-action){: #oban-triggers-trigger-action .spark-required} | `atom` |  | The action to be triggered. Defaults to the identifier of the resource plus the name of the trigger |
 | [`action_input`](#oban-triggers-trigger-action_input){: #oban-triggers-trigger-action_input } | `map` |  | Static inputs to supply to the update/destroy action when it is called. Any metadata produced by `read_metadata` will overwrite these values. |
 | [`extra_args`](#oban-triggers-trigger-extra_args){: #oban-triggers-trigger-extra_args } | `map \| (any -> any)` |  | Additional arguments to merge into the job's arguments map. Can either be a map or a function that takes the record and returns a map. |
+| [`list_tenants`](#oban-triggers-trigger-list_tenants){: #oban-triggers-trigger-list_tenants } | `list(any) \| (-> any) \| module` |  | A list of tenants or a function behaviour that returns a list of tenants a trigger should be run for. |
 | [`scheduler_queue`](#oban-triggers-trigger-scheduler_queue){: #oban-triggers-trigger-scheduler_queue } | `atom` |  | The queue to place the scheduler job in. The same queue as job is used by default (but with a priority of 1 so schedulers run first). |
 | [`debug?`](#oban-triggers-trigger-debug?){: #oban-triggers-trigger-debug? } | `boolean` | `false` | If set to `true`, detailed debug logging will be enabled for this trigger. You can also set `config :ash_oban, debug_all_triggers?: true` to enable debug logging for all triggers. If the action has `transaction?: false` this is automatically false. |
 | [`lock_for_update?`](#oban-triggers-trigger-lock_for_update?){: #oban-triggers-trigger-lock_for_update? } | `boolean` | `true` | If `true`, a transaction will be started before looking up the record, and it will be locked for update. Typically you should leave this on unless you have before/after/around transaction hooks. |

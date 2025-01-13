@@ -39,6 +39,7 @@ defmodule AshOban do
       :read_action,
       :action_input,
       :extra_args,
+      :list_tenants,
       :worker_read_action,
       :lock_for_update?,
       :queue,
@@ -100,6 +101,17 @@ defmodule AshOban do
         type: {:or, [:map, {:fun, 1}]},
         doc: """
         Additional arguments to merge into the job's arguments map. Can either be a map or a function that takes the record and returns a map.
+        """
+      ],
+      list_tenants: [
+        type:
+          {:or,
+           [
+             {:list, :any},
+             {:spark_function_behaviour, AshOban.ListTenants, {AshOban.ListTenants.Function, 0}}
+           ]},
+        doc: """
+        A list of tenants or a function behaviour that returns a list of tenants a trigger should be run for.
         """
       ],
       scheduler_queue: [
@@ -360,6 +372,18 @@ defmodule AshOban do
         type: {:behaviour, Ash.Domain},
         doc:
           "The Domain to use when calling actions on this resource. Defaults to the resource's domain."
+      ],
+      list_tenants: [
+        type:
+          {:or,
+           [
+             {:list, :any},
+             {:spark_function_behaviour, AshOban.ListTenants, {AshOban.ListTenants.Function, 0}}
+           ]},
+        default: [nil],
+        doc: """
+        A list of tenants or a function behaviour that returns a list of tenants a trigger should be run for. Can be overwritten on the trigger level.
+        """
       ]
     ],
     sections: [@triggers, @scheduled_actions]
@@ -487,7 +511,7 @@ defmodule AshOban do
   All other options are passed through to `c:Oban.Worker.new/2`
   """
   def build_trigger(%resource{} = record, trigger, opts \\ []) do
-    {opts, oban_job_opts} = Keyword.split(opts, [:actor, :args, :action_arguments])
+    {opts, oban_job_opts} = Keyword.split(opts, [:actor, :tenant, :args, :action_arguments])
 
     trigger =
       case trigger do
@@ -524,7 +548,8 @@ defmodule AshOban do
     %{
       primary_key: validate_primary_key(Map.take(record, primary_key), resource),
       metadata: metadata,
-      action_arguments: opts[:action_arguments] || %{}
+      action_arguments: opts[:action_arguments] || %{},
+      tenant: opts[:tenant]
     }
     |> AshOban.store_actor(opts[:actor])
     |> then(&Map.merge(extra_args, &1))

@@ -7,6 +7,8 @@ defmodule AshObanTest do
 
   use Oban.Testing, repo: AshOban.Test.Repo, prefix: "private"
 
+  require Ash.Query
+
   setup_all do
     AshOban.Test.Repo.start_link()
     Oban.start_link(AshOban.config([Domain], Application.get_env(:ash_oban, :oban)))
@@ -20,6 +22,7 @@ defmodule AshObanTest do
         :triggered_process,
         :triggered_process_2,
         :triggered_say_hello,
+        :triggered_tenant_aware,
         :triggered_process_generic
       ],
       &Oban.drain_queue(queue: &1)
@@ -27,7 +30,7 @@ defmodule AshObanTest do
   end
 
   test "nothing happens if no records exist" do
-    assert %{success: 3} = AshOban.Test.schedule_and_run_triggers(Triggered)
+    assert %{success: 4} = AshOban.Test.schedule_and_run_triggers(Triggered)
   end
 
   test "if a record exists, it is processed" do
@@ -113,12 +116,30 @@ defmodule AshObanTest do
     assert Ash.read_first!(Triggered).processed
   end
 
+  test "only jobs for the specified tenant are queued" do
+    tenant_1 =
+      Triggered
+      |> Ash.Changeset.for_create(:create, %{})
+      |> Ash.create!()
+
+    tenant_2 =
+      Triggered
+      |> Ash.Changeset.for_create(:create, %{tenant_id: 2})
+      |> Ash.create!()
+
+    assert %{success: 2} =
+             AshOban.Test.schedule_and_run_triggers({Triggered, :tenant_aware})
+
+    refute Ash.load!(tenant_1, :processed).processed
+    assert Ash.load!(tenant_2, :processed).processed
+  end
+
   test "if an actor is not set, it is nil when executing the job" do
     Triggered
     |> Ash.Changeset.for_create(:create)
     |> Ash.create!()
 
-    assert %{success: 5, failure: 1} =
+    assert %{success: 6, failure: 1} =
              AshOban.Test.schedule_and_run_triggers(Triggered)
   end
 
@@ -127,7 +148,8 @@ defmodule AshObanTest do
              %AshOban.Trigger{action: :process},
              %AshOban.Trigger{action: :process_atomically},
              %AshOban.Trigger{action: :process, scheduler: nil},
-             %AshOban.Trigger{name: :process_generic}
+             %AshOban.Trigger{name: :process_generic},
+             %AshOban.Trigger{name: :tenant_aware}
            ] = AshOban.Info.oban_triggers(Triggered)
   end
 
@@ -141,6 +163,7 @@ defmodule AshObanTest do
           triggered_process: 10,
           triggered_process_2: 10,
           triggered_say_hello: 10,
+          triggered_tenant_aware: 10,
           triggered_process_generic: 10
         ]
       )
@@ -151,6 +174,7 @@ defmodule AshObanTest do
                 [
                   crontab: [
                     {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello, []},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.TenantAware, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessGeneric, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessAtomically, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process, []}
@@ -161,6 +185,7 @@ defmodule AshObanTest do
                triggered_process: 10,
                triggered_process_2: 10,
                triggered_say_hello: 10,
+               triggered_tenant_aware: 10,
                triggered_process_generic: 10
              ]
            ] = config
@@ -182,6 +207,7 @@ defmodule AshObanTest do
              triggered_process: 10,
              triggered_process_2: 10,
              triggered_say_hello: 10,
+             triggered_tenant_aware: 10,
              triggered_process_generic: 10
            ]}
         ],
@@ -198,6 +224,8 @@ defmodule AshObanTest do
                   crontab: [
                     {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello,
                      [paused: false]},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.TenantAware,
+                     [paused: false]},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessGeneric,
                      [paused: false]},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessAtomically,
@@ -211,6 +239,7 @@ defmodule AshObanTest do
                   triggered_process: 10,
                   triggered_process_2: 10,
                   triggered_say_hello: 10,
+                  triggered_tenant_aware: 10,
                   triggered_process_generic: 10
                 ]}
              ],
