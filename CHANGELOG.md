@@ -5,6 +5,33 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.3.0](https://github.com/ash-project/ash_oban/compare/v0.2.6...v0.3.0) (2025-01-27)
+
+
+
+
+### Features:
+
+* add list tenants option (#109)
+
+* extra args (#107)
+
+* add sort option
+
+* better error message for scheduling a non existing trigger
+
+* allow custom sort for scheduler read
+
+### Bug Fixes:
+
+* set necessary context on generic actions
+
+### Improvements:
+
+* add igniter installer (#113)
+
+* Support triggering a job that uses a generic action (#99)
+
 ## [v0.2.6](https://github.com/ash-project/ash_oban/compare/v0.2.5...v0.2.6) (2024-11-04)
 
 
