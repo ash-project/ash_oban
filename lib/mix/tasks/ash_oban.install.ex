@@ -75,8 +75,9 @@ if Code.ensure_loaded?(Igniter) do
           AshOban.config(
             Application.fetch_env!(:#{app_name}, :ash_domains), 
             Application.fetch_env!(:#{app_name}, Oban)
-          )}
-          """}},
+          )
+          """
+          |> Sourceror.parse_string!()}},
         opts_updater: fn zipper ->
           case Igniter.Code.Function.move_to_function_call(zipper, {AshOban, :config}, [1, 2]) do
             {:ok, zipper} ->
