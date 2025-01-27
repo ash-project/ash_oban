@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.3.1](https://github.com/ash-project/ash_oban/compare/v0.3.0...v0.3.1) (2025-01-27)
+
+
+
+
+### Bug Fixes:
+
+* properly parse code before installing
+
 ## [v0.3.0](https://github.com/ash-project/ash_oban/compare/v0.2.6...v0.3.0) (2025-01-27)
 
 
