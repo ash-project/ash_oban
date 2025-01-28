@@ -18,7 +18,7 @@ defmodule AshOban.MixProject do
       deps: deps(),
       elixirc_paths: elixirc_paths(Mix.env()),
       dialyzer: [plt_add_apps: [:ash, :mix]],
-      docs: docs(),
+      docs: &docs/0,
       description: @description,
       source_url: "https://github.com/ash-project/ash_oban",
       homepage_url: "https://github.com/ash-project/ash_oban"
@@ -64,7 +64,7 @@ defmodule AshOban.MixProject do
       extras: [
         {"README.md", title: "Home"},
         "documentation/tutorials/getting-started-with-ash-oban.md",
-        "documentation/dsls/DSL-AshOban.md",
+        {"documentation/dsls/DSL-AshOban.md", search_data: Spark.Docs.search_data_for(AshOban)},
         "CHANGELOG.md"
       ],
       groups_for_extras: [
@@ -125,7 +125,7 @@ defmodule AshOban.MixProject do
         # dev/test dependencies
         {:igniter, "~> 0.5.0", only: [:dev, :test]},
         {:simple_sat, "~> 0.1", only: [:dev, :test]},
-        {:ex_doc, "~> 0.22", only: [:dev, :test], runtime: false},
+        {:ex_doc, "~> 0.37-rc", only: [:dev, :test], runtime: false},
         {:ex_check, "~> 0.12", only: [:dev, :test]},
         {:credo, ">= 0.0.0", only: [:dev, :test], runtime: false},
         {:dialyxir, ">= 0.0.0", only: [:dev, :test], runtime: false},
@@ -152,14 +152,12 @@ defmodule AshOban.MixProject do
       docs: [
         "spark.cheat_sheets",
         "docs",
-        "spark.replace_doc_links",
-        "spark.cheat_sheets_in_search"
+        "spark.replace_doc_links"
       ],
       "test.migrate": ["ecto.migrate"],
       "test.create": ["ecto.create"],
       "spark.formatter": "spark.formatter --extensions AshOban",
       "spark.cheat_sheets": "spark.cheat_sheets --extensions AshOban",
-      "spark.cheat_sheets_in_search": "spark.cheat_sheets_in_search --extensions AshOban",
       "ecto.gen.migration": "ecto.gen.migration --migrations-path=test_migrations",
       "ecto.migrate": "ecto.migrate --migrations-path=test_migrations",
       "ecto.setup": ["ecto.create", "ecto.migrate"]
