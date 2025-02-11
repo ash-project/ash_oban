@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.3.2](https://github.com/ash-project/ash_oban/compare/v0.3.1...v0.3.2) (2025-02-11)
+
+
+
+
+### Improvements:
+
+* Import ash_oban in formatter dep (#119)
+
 ## [v0.3.1](https://github.com/ash-project/ash_oban/compare/v0.3.0...v0.3.1) (2025-01-27)
 
 
