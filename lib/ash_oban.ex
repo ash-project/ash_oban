@@ -16,6 +16,7 @@ defmodule AshOban do
             lock_for_update?: boolean(),
             action_input: map(),
             max_attempts: pos_integer(),
+            trigger_once?: boolean(),
             record_limit: pos_integer(),
             log_final_error?: boolean(),
             log_errors?: boolean(),
@@ -50,6 +51,7 @@ defmodule AshOban do
       :scheduler_priority,
       :worker_priority,
       :max_attempts,
+      :trigger_once?,
       :stream_batch_size,
       :max_scheduler_attempts,
       :record_limit,
@@ -183,6 +185,21 @@ defmodule AshOban do
         default: 1,
         doc: """
         How many times to attempt the job. After all attempts have been exhausted, the scheduler may just reschedule it. Use the `on_error` action to update the record to make the scheduler no longer apply.
+        """
+      ],
+      trigger_once?: [
+        type: :boolean,
+        default: false,
+        doc: """
+        If set to `true` `completed` is added to list of states to check for uniqueness.
+
+        If the execution time of the job is very low, it's possible that jobs are executed and
+        completed while the scheduler is running. This can lead to jobs being scheduled for resoruces
+        that are already processed by the time the job gets inserted. Adding `completed` to the list of
+        states will lead to oban ignoring the job when inserted.
+
+        Only use this if nothing else is writing to the resource attribute that marks the it as processsed.
+        Because it will not be processed again as long the completed job is still in the db.
         """
       ],
       read_metadata: [

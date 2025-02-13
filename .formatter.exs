@@ -26,6 +26,7 @@ spark_locals_without_parens = [
   stream_batch_size: 1,
   trigger: 1,
   trigger: 2,
+  trigger_once?: 1,
   where: 1,
   worker_priority: 1,
   worker_read_action: 1

@@ -445,6 +445,20 @@ defmodule AshOban.Transformers.DefineSchedulers do
     work =
       work(trigger, worker, atomic?, trigger_action.type, pro?, read_action, resource, domain)
 
+    states =
+      [
+        :available,
+        :executing,
+        :retryable,
+        :scheduled,
+        if trigger.trigger_once? do
+          :completed
+        else
+          nil
+        end
+      ]
+      |> Enum.filter(&(not is_nil(&1)))
+
     Module.create(
       worker_module_name,
       quote location: :keep do
@@ -454,12 +468,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           queue: unquote(trigger.queue),
           unique: [
             period: :infinity,
-            states: [
-              :available,
-              :executing,
-              :retryable,
-              :scheduled
-            ]
+            states: unquote(states)
           ]
 
         require Logger
