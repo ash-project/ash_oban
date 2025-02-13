@@ -386,7 +386,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
         # if the entire work function is in a transaction, the record will
         # already be locked if it can be
         if can_lock? && trigger.lock_for_update? && !work_transaction? do
-          raise "copy this"
           get_and_lock_code
         else
           quote do
