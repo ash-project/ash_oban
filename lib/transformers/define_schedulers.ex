@@ -556,6 +556,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   |> Ash.Query.do_filter(primary_key)
                   |> lock_on_error_read()
                   |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+                  |> Ash.Query.set_tenant(tenant)
                   |> Ash.Query.for_read(unquote(read_action), %{},
                     authorize?: authorize?,
                     actor: actor,
@@ -874,6 +875,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   |> Ash.Query.do_filter(primary_key)
                   |> lock_on_read()
                   |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+                  |> Ash.Query.set_tenant(tenant)
                   |> Ash.Query.for_read(unquote(read_action), %{},
                     authorize?: authorize?,
                     actor: actor,
