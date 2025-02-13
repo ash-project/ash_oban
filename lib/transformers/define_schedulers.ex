@@ -291,9 +291,11 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
     can_transact? = Ash.DataLayer.data_layer_can?(dsl, :transact)
 
+    on_error = Ash.Resource.Info.action(dsl, trigger.on_error)
+
     on_error_transaction? =
       can_transact? && trigger.on_error &&
-        Ash.Resource.Info.action(dsl, trigger.on_error).transaction? && trigger.lock_for_update?
+        on_error.transaction? && trigger.lock_for_update?
 
     trigger_action = Ash.Resource.Info.action(dsl, trigger.action)
 
@@ -301,6 +303,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
       can_transact? && trigger_action.transaction? && trigger.lock_for_update?
 
     atomic? = Map.get(trigger_action, :require_atomic?, false)
+    on_error_atomic? = trigger.on_error && Map.get(on_error, :require_atomic?, false)
 
     can_lock? = Ash.DataLayer.data_layer_can?(dsl, {:lock, :for_update})
 
@@ -324,6 +327,55 @@ defmodule AshOban.Transformers.DefineSchedulers do
         end
       end
 
+    lock_on_error_read =
+      if can_lock? && trigger.lock_for_update? && on_error_transaction? do
+        quote do
+          def lock_on_error_read(query) do
+            Ash.Query.lock(query, :for_update)
+          end
+        end
+      else
+        quote do
+          def lock_on_error_read(query) do
+            query
+          end
+        end
+      end
+
+    get_and_lock_code =
+      quote do
+        Ash.Changeset.before_action(
+          changeset,
+          fn changeset ->
+            query()
+            |> Ash.Query.do_filter(primary_key)
+            |> Ash.Query.set_tenant(tenant)
+            |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+            |> Ash.Query.for_read(unquote(read_action), %{},
+              authorize?: authorize?,
+              actor: actor,
+              domain: unquote(domain)
+            )
+            |> Ash.Query.lock(:for_update)
+            |> Ash.read_one()
+            |> case do
+              {:ok, nil} ->
+                Ash.Changeset.add_error(
+                  changeset,
+                  AshOban.Errors.TriggerNoLongerApplies.exception([])
+                )
+
+              {:ok, record} ->
+                %{changeset | data: record}
+
+              {:error, error} ->
+                Ash.Changeset.add_error(changeset, error)
+            end
+          end,
+          prepend?: true
+        )
+      end
+
     get_and_lock =
       if atomic? do
         quote do
@@ -334,38 +386,26 @@ defmodule AshOban.Transformers.DefineSchedulers do
         # if the entire work function is in a transaction, the record will
         # already be locked if it can be
         if can_lock? && trigger.lock_for_update? && !work_transaction? do
+          raise "copy this"
+          get_and_lock_code
+        else
           quote do
-            Ash.Changeset.before_action(
-              changeset,
-              fn changeset ->
-                query()
-                |> Ash.Query.do_filter(primary_key)
-                |> Ash.Query.set_tenant(tenant)
-                |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-                |> Ash.Query.for_read(unquote(read_action), %{},
-                  authorize?: authorize?,
-                  actor: actor,
-                  domain: unquote(domain)
-                )
-                |> Ash.Query.lock(:for_update)
-                |> Ash.read_one()
-                |> case do
-                  {:ok, nil} ->
-                    Ash.Changeset.add_error(
-                      changeset,
-                      AshOban.Errors.TriggerNoLongerApplies.exception([])
-                    )
-
-                  {:ok, record} ->
-                    %{changeset | data: record}
-
-                  {:error, error} ->
-                    Ash.Changeset.add_error(changeset, error)
-                end
-              end,
-              prepend?: true
-            )
+            changeset
           end
+        end
+      end
+
+    on_error_get_and_lock =
+      if on_error_atomic? do
+        quote do
+          filter = query().filter
+          Ash.Changeset.filter(changeset, filter)
+        end
+      else
+        # if the entire work function is in a transaction, the record will
+        # already be locked if it can be
+        if can_lock? && trigger.lock_for_update? && !work_transaction? do
+          get_and_lock_code
         else
           quote do
             changeset
@@ -377,7 +417,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
       if on_error_transaction? do
         quote location: :keep do
           defp prepare_error(changeset, primary_key, authorize?, actor, tenant) do
-            unquote(get_and_lock)
+            unquote(on_error_get_and_lock)
           end
         end
       else
@@ -399,7 +439,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
         end
       end
 
-    handle_error = handle_error(trigger, resource, domain, read_action)
+    handle_error =
+      handle_error(trigger, resource, on_error && on_error.type, atomic?, domain, read_action)
 
     work =
       work(trigger, worker, atomic?, trigger_action.type, pro?, read_action, resource, domain)
@@ -423,6 +464,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
         require Logger
 
         unquote(lock_on_read)
+        unquote(lock_on_error_read)
         unquote(work)
         unquote(query)
         unquote(handle_error)
@@ -433,7 +475,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     )
   end
 
-  defp handle_error(trigger, resource, domain, read_action) do
+  defp handle_error(trigger, resource, action_type, atomic?, domain, read_action) do
     log_final_error =
       if trigger.log_errors? || trigger.log_final_error? do
         quote do
@@ -471,113 +513,220 @@ defmodule AshOban.Transformers.DefineSchedulers do
       end
 
     if trigger.on_error do
-      # We look up the record again since we have exited any potential transaction we were in before
-      quote location: :keep do
-        def handle_error(
-              %{max_attempts: max_attempts, attempt: attempt},
-              error,
-              primary_key,
-              stacktrace
+      if atomic? do
+        quote location: :keep, generated: true do
+          def handle_error(
+                %{max_attempts: max_attempts, attempt: attempt},
+                error,
+                primary_key,
+                stacktrace
+              )
+              when max_attempts != attempt do
+            unquote(log_error)
+            reraise error, stacktrace
+          end
+
+          def handle_error(
+                %{max_attempts: max_attempts, attempt: max_attempts, args: args} = job,
+                error,
+                primary_key,
+                stacktrace
+              ) do
+            AshOban.debug(
+              "Trigger #{unquote(inspect(resource))}.#{unquote(trigger.name)} triggered for primary key #{inspect(primary_key)}",
+              unquote(trigger.debug?)
             )
-            when max_attempts != attempt do
-          unquote(log_error)
-          reraise error, stacktrace
-        end
 
-        def handle_error(
-              %{max_attempts: max_attempts, attempt: max_attempts, args: args} = job,
-              error,
-              primary_key,
-              stacktrace
-            ) do
-          authorize? = AshOban.authorize?()
+            case AshOban.lookup_actor(args["actor"]) do
+              {:ok, actor} ->
+                authorize? = AshOban.authorize?()
 
-          case AshOban.lookup_actor(args["actor"]) do
-            {:ok, actor} ->
-              tenant = args["tenant"]
+                tenant = args["tenant"]
 
-              query()
-              |> Ash.Query.do_filter(primary_key)
-              |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-              |> Ash.Query.for_read(unquote(read_action), %{},
-                authorize?: authorize?,
-                actor: actor,
-                domain: unquote(domain)
-              )
-              |> Ash.read_one()
-              |> case do
-                {:error, error} ->
-                  AshOban.debug(
-                    """
-                    Record with primary key #{inspect(primary_key)} encountered an error in #{unquote(inspect(resource))}#{unquote(trigger.name)}
-
-                    #{Exception.format(:error, error, AshOban.stacktrace(error))}
-                    """,
-                    unquote(trigger.debug?)
-                  )
-
-                  {:error, error}
-
-                {:ok, nil} ->
-                  AshOban.debug(
-                    "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
-                    unquote(trigger.debug?)
-                  )
-
-                  {:discard, :trigger_no_longer_applies}
-
-                {:ok, record} ->
-                  unquote(log_final_error)
-
-                  record
-                  |> Ash.Changeset.new()
-                  |> prepare_error(primary_key, authorize?, actor, tenant)
-                  |> case do
-                    changeset ->
-                      changeset
-                      |> Ash.Changeset.set_tenant(tenant)
-                      |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
-                      |> Ash.Changeset.for_action(unquote(trigger.on_error), %{error: error},
-                        authorize?: authorize?,
-                        actor: actor,
-                        domain: unquote(domain),
-                        skip_unknown_inputs: [:error]
-                      )
-                      |> AshOban.update_or_destroy()
-                      |> case do
-                        :ok ->
-                          :ok
-
-                        {:ok, result} ->
-                          :ok
-
-                        {:error, error} ->
-                          error = Ash.Error.to_ash_error(error, stacktrace)
-
-                          Logger.error("""
-                          Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
-
-                          #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
-                          """)
-
-                          reraise error, stacktrace
-                      end
+                args =
+                  if unquote(is_nil(trigger.read_metadata)) do
+                    %{}
+                  else
+                    %{metadata: args["metadata"]}
                   end
-              end
+                  |> Map.merge(args["action_arguments"] || %{})
 
-            {:error, error} ->
-              AshOban.debug(
-                """
-                Record with primary key #{inspect(primary_key)} encountered an error in #{unquote(inspect(resource))}#{unquote(trigger.name)}
+                query =
+                  query()
+                  |> Ash.Query.do_filter(primary_key)
+                  |> lock_on_error_read()
+                  |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+                  |> Ash.Query.for_read(unquote(read_action), %{},
+                    authorize?: authorize?,
+                    actor: actor,
+                    domain: unquote(domain)
+                  )
 
-                Could not lookup actor with #{inspect(args["actor"])}
+                if unquote(action_type) == :update do
+                  Ash.bulk_update!(
+                    query,
+                    unquote(trigger.on_error),
+                    %{},
+                    authorize?: authorize?,
+                    actor: actor,
+                    tenant: tenant,
+                    domain: unquote(domain),
+                    context: %{private: %{ash_oban?: true}},
+                    return_errors?: true,
+                    notify?: true,
+                    return_records?: true
+                  )
+                else
+                  Ash.bulk_destroy!(
+                    query,
+                    unquote(trigger.on_error),
+                    %{},
+                    authorize?: authorize?,
+                    actor: actor,
+                    tenant: tenant,
+                    domain: unquote(domain),
+                    domain: unquote(domain),
+                    context: %{private: %{ash_oban?: true}},
+                    return_errors?: true,
+                    notify?: true
+                  )
+                end
 
-                #{Exception.format(:error, error, AshOban.stacktrace(error))}
-                """,
-                unquote(trigger.debug?)
+                :ok
+
+              {:error, error} ->
+                AshOban.debug(
+                  """
+                  Record with primary key #{inspect(primary_key)} encountered an error in error handler #{unquote(inspect(resource))}#{unquote(trigger.name)}
+
+                  Could not lookup actor with #{inspect(args["actor"])}
+
+                  #{Exception.format(:error, error, AshOban.stacktrace(error))}
+                  """,
+                  unquote(trigger.debug?)
+                )
+
+                raise Ash.Error.to_error_class(error)
+            end
+          rescue
+            error ->
+              handle_error(
+                job,
+                Ash.Error.to_ash_error(error, __STACKTRACE__),
+                primary_key,
+                __STACKTRACE__
               )
+          end
+        end
+      else
+        # We look up the record again since we have exited any potential transaction we were in before
+        quote location: :keep do
+          def handle_error(
+                %{max_attempts: max_attempts, attempt: attempt},
+                error,
+                primary_key,
+                stacktrace
+              )
+              when max_attempts != attempt do
+            unquote(log_error)
+            reraise error, stacktrace
+          end
 
-              {:error, error}
+          def handle_error(
+                %{max_attempts: max_attempts, attempt: max_attempts, args: args} = job,
+                error,
+                primary_key,
+                stacktrace
+              ) do
+            authorize? = AshOban.authorize?()
+
+            case AshOban.lookup_actor(args["actor"]) do
+              {:ok, actor} ->
+                tenant = args["tenant"]
+
+                query()
+                |> Ash.Query.do_filter(primary_key)
+                |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+                |> Ash.Query.for_read(unquote(read_action), %{},
+                  authorize?: authorize?,
+                  actor: actor,
+                  domain: unquote(domain)
+                )
+                |> Ash.read_one()
+                |> case do
+                  {:error, error} ->
+                    AshOban.debug(
+                      """
+                      Record with primary key #{inspect(primary_key)} encountered an error in #{unquote(inspect(resource))}#{unquote(trigger.name)}
+
+                      #{Exception.format(:error, error, AshOban.stacktrace(error))}
+                      """,
+                      unquote(trigger.debug?)
+                    )
+
+                    {:error, error}
+
+                  {:ok, nil} ->
+                    AshOban.debug(
+                      "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
+                      unquote(trigger.debug?)
+                    )
+
+                    {:discard, :trigger_no_longer_applies}
+
+                  {:ok, record} ->
+                    unquote(log_final_error)
+
+                    record
+                    |> Ash.Changeset.new()
+                    |> prepare_error(primary_key, authorize?, actor, tenant)
+                    |> case do
+                      changeset ->
+                        changeset
+                        |> Ash.Changeset.set_tenant(tenant)
+                        |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
+                        |> Ash.Changeset.for_action(unquote(trigger.on_error), %{error: error},
+                          authorize?: authorize?,
+                          actor: actor,
+                          domain: unquote(domain),
+                          skip_unknown_inputs: [:error]
+                        )
+                        |> AshOban.update_or_destroy()
+                        |> case do
+                          :ok ->
+                            :ok
+
+                          {:ok, result} ->
+                            :ok
+
+                          {:error, error} ->
+                            error = Ash.Error.to_ash_error(error, stacktrace)
+
+                            Logger.error("""
+                            Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
+
+                            #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
+                            """)
+
+                            reraise error, stacktrace
+                        end
+                    end
+                end
+
+              {:error, error} ->
+                AshOban.debug(
+                  """
+                  Record with primary key #{inspect(primary_key)} encountered an error in #{unquote(inspect(resource))}#{unquote(trigger.name)}
+
+                  Could not lookup actor with #{inspect(args["actor"])}
+
+                  #{Exception.format(:error, error, AshOban.stacktrace(error))}
+                  """,
+                  unquote(trigger.debug?)
+                )
+
+                {:error, error}
+            end
           end
         end
       end
