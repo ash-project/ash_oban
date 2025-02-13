@@ -309,6 +309,21 @@ defmodule AshOban.Transformers.DefineSchedulers do
         Map.get(trigger_action, :atomic_upgrade_with) ||
         Ash.Resource.Info.primary_action!(resource, :read).name
 
+    lock_on_read =
+      if can_lock? && trigger.lock_for_update? && work_transaction? do
+        quote do
+          def lock_on_read(query) do
+            Ash.Query.lock(query, :for_update)
+          end
+        end
+      else
+        quote do
+          def lock_on_read(query) do
+            query
+          end
+        end
+      end
+
     get_and_lock =
       if atomic? do
         quote do
@@ -316,7 +331,9 @@ defmodule AshOban.Transformers.DefineSchedulers do
           Ash.Changeset.filter(changeset, filter)
         end
       else
-        if can_lock? do
+        # if the entire work function is in a transaction, the record will
+        # already be locked if it can be
+        if can_lock? && trigger.lock_for_update? && !work_transaction? do
           quote do
             Ash.Changeset.before_action(changeset, fn changeset ->
               query()
@@ -347,31 +364,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           end
         else
           quote do
-            Ash.Changeset.before_action(changeset, fn changeset ->
-              query()
-              |> Ash.Query.do_filter(primary_key)
-              |> Ash.Query.set_tenant(tenant)
-              |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-              |> Ash.Query.for_read(unquote(read_action), %{},
-                authorize?: authorize?,
-                actor: actor,
-                domain: unquote(domain)
-              )
-              |> Ash.read_one()
-              |> case do
-                {:ok, nil} ->
-                  Ash.Changeset.add_error(
-                    changeset,
-                    AshOban.Errors.TriggerNoLongerApplies.exception([])
-                  )
-
-                {:ok, record} ->
-                  %{changeset | data: record}
-
-                {:error, error} ->
-                  Ash.Changeset.add_error(changeset, error)
-              end
-            end)
+            changeset
           end
         end
       end
@@ -425,6 +418,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
         require Logger
 
+        unquote(lock_on_read)
         unquote(work)
         unquote(query)
         unquote(handle_error)
@@ -725,6 +719,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 query =
                   query()
                   |> Ash.Query.do_filter(primary_key)
+                  |> lock_on_read()
                   |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
                   |> Ash.Query.for_read(unquote(read_action), %{},
                     authorize?: authorize?,
@@ -811,6 +806,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 |> Ash.Query.do_filter(primary_key)
                 |> Ash.Query.set_tenant(tenant)
                 |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+                |> lock_on_read()
                 |> Ash.Query.for_read(unquote(read_action), %{},
                   authorize?: authorize?,
                   actor: actor,
