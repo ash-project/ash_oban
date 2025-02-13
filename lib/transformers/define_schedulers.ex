@@ -206,6 +206,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             period: :infinity,
             states: [
               :available,
+              :executing,
               :retryable,
               :scheduled
             ]

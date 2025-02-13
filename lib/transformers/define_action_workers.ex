@@ -65,6 +65,7 @@ defmodule AshOban.Transformers.DefineActionWorkers do
             period: :infinity,
             states: [
               :available,
+              :executing,
               :retryable,
               :scheduled
             ]
