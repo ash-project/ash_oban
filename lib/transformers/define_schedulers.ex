@@ -246,7 +246,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 {:ok, actor} ->
                   unquote(resource)
                   |> stream(actor, tenant)
-                  |> Stream.map(&AshOban.build_trigger(&1, trigger, actor: actor))
+                  |> Stream.map(&AshOban.build_trigger(&1, trigger, actor: actor, tenant: tenant))
                   |> insert()
 
                 {:error, e} ->
