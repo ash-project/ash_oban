@@ -16,7 +16,12 @@ defmodule AshOban.Changes.RunObanTrigger do
       AshOban.run_trigger(
         result,
         trigger,
-        Keyword.put(opts[:oban_job_opts] || [], :actor, context.actor)
+        Keyword.merge(
+          opts[:oban_job_opts] || [],
+          context
+          |> Ash.Context.to_opts()
+          |> Keyword.take([:actor, :tenant])
+        )
       )
 
       {:ok, result}
