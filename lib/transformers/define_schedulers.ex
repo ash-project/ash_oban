@@ -335,32 +335,36 @@ defmodule AshOban.Transformers.DefineSchedulers do
         # already be locked if it can be
         if can_lock? && trigger.lock_for_update? && !work_transaction? do
           quote do
-            Ash.Changeset.before_action(changeset, fn changeset ->
-              query()
-              |> Ash.Query.do_filter(primary_key)
-              |> Ash.Query.set_tenant(tenant)
-              |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-              |> Ash.Query.for_read(unquote(read_action), %{},
-                authorize?: authorize?,
-                actor: actor,
-                domain: unquote(domain)
-              )
-              |> Ash.Query.lock(:for_update)
-              |> Ash.read_one()
-              |> case do
-                {:ok, nil} ->
-                  Ash.Changeset.add_error(
-                    changeset,
-                    AshOban.Errors.TriggerNoLongerApplies.exception([])
-                  )
+            Ash.Changeset.before_action(
+              changeset,
+              fn changeset ->
+                query()
+                |> Ash.Query.do_filter(primary_key)
+                |> Ash.Query.set_tenant(tenant)
+                |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+                |> Ash.Query.for_read(unquote(read_action), %{},
+                  authorize?: authorize?,
+                  actor: actor,
+                  domain: unquote(domain)
+                )
+                |> Ash.Query.lock(:for_update)
+                |> Ash.read_one()
+                |> case do
+                  {:ok, nil} ->
+                    Ash.Changeset.add_error(
+                      changeset,
+                      AshOban.Errors.TriggerNoLongerApplies.exception([])
+                    )
 
-                {:ok, record} ->
-                  %{changeset | data: record}
+                  {:ok, record} ->
+                    %{changeset | data: record}
 
-                {:error, error} ->
-                  Ash.Changeset.add_error(changeset, error)
-              end
-            end)
+                  {:error, error} ->
+                    Ash.Changeset.add_error(changeset, error)
+                end
+              end,
+              prepend?: true
+            )
           end
         else
           quote do
