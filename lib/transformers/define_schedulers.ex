@@ -576,13 +576,14 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   Ash.bulk_update!(
                     query,
                     unquote(trigger.on_error),
-                    %{},
+                    %{error: error},
                     authorize?: authorize?,
                     actor: actor,
                     tenant: tenant,
                     domain: unquote(domain),
                     context: %{private: %{ash_oban?: true}},
                     return_errors?: true,
+                    skip_unknown_inputs: [:error],
                     notify?: true,
                     return_records?: true
                   )
@@ -590,7 +591,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   Ash.bulk_destroy!(
                     query,
                     unquote(trigger.on_error),
-                    %{},
+                    %{error: error},
                     authorize?: authorize?,
                     actor: actor,
                     tenant: tenant,
@@ -598,6 +599,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     domain: unquote(domain),
                     context: %{private: %{ash_oban?: true}},
                     return_errors?: true,
+                    skip_unknown_inputs: [:error],
                     notify?: true
                   )
                 end
