@@ -15,6 +15,7 @@ defmodule AshOban.Test.Triggered do
   oban do
     triggers do
       trigger :process do
+        trigger_once? true
         action :process
         where expr(processed != true)
         sort inserted_at: :asc
