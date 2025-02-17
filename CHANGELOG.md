@@ -5,6 +5,31 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.3.3](https://github.com/ash-project/ash_oban/compare/v0.3.2...v0.3.3) (2025-02-17)
+
+
+
+
+### Bug Fixes:
+
+* pass `error` in bulk variants of error handler
+
+* don't lock on atomic operation
+
+* include `:executing` in the unique job states
+
+* Ensure `run_oban_trigger` and scheduler are aware of the tenant in context-driven multi tenancy (#122)
+
+* if we get and lock, do it before anything else
+
+### Improvements:
+
+* add trigger_once? option (#123)
+
+* do error handling atomically as well
+
+* avoid duplicative reads when working in a transaction
+
 ## [v0.3.2](https://github.com/ash-project/ash_oban/compare/v0.3.1...v0.3.2) (2025-02-11)
 
 
