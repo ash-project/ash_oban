@@ -28,6 +28,7 @@ spark_locals_without_parens = [
   trigger: 2,
   trigger_once?: 1,
   where: 1,
+  worker_opts: 1,
   worker_priority: 1,
   worker_read_action: 1
 ]

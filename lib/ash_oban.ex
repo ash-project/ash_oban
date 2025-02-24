@@ -30,6 +30,7 @@ defmodule AshOban do
             scheduler: module | nil,
             state: :active | :paused | :deleted,
             worker: module,
+            worker_opts: keyword(),
             __identifier__: atom,
             on_error: atom
           }
@@ -60,6 +61,7 @@ defmodule AshOban do
       :state,
       :scheduler,
       :worker,
+      :worker_opts,
       :on_error,
       :log_final_error?,
       :log_errors?,
@@ -245,6 +247,12 @@ defmodule AshOban do
         type: :atom,
         doc:
           "An update action to call after the last attempt has failed. See the getting started guide for more."
+      ],
+      worker_opts: [
+        type: :keyword_list,
+        default: [],
+        doc:
+          "Options to set on the worker. ATTENTION: this may overwrite options set by ash_oban, make sure you know what you are doing."
       ]
     ]
   }

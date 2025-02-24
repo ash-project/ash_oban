@@ -463,13 +463,18 @@ defmodule AshOban.Transformers.DefineSchedulers do
       worker_module_name,
       quote location: :keep do
         use unquote(worker),
-          priority: unquote(trigger.scheduler_priority),
-          max_attempts: unquote(trigger.max_attempts),
-          queue: unquote(trigger.queue),
-          unique: [
-            period: :infinity,
-            states: unquote(states)
-          ]
+            Keyword.merge(
+              [
+                priority: unquote(trigger.scheduler_priority),
+                max_attempts: unquote(trigger.max_attempts),
+                queue: unquote(trigger.queue),
+                unique: [
+                  period: :infinity,
+                  states: unquote(states)
+                ]
+              ],
+              unquote(trigger.worker_opts)
+            )
 
         require Logger
 
