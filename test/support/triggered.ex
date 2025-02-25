@@ -42,6 +42,7 @@ defmodule AshOban.Test.Triggered do
         max_attempts 2
         worker_read_action(:read)
         scheduler_cron false
+        worker_opts tags: ["tag1", "tag2"]
       end
 
       trigger :process_generic do
