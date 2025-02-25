@@ -251,8 +251,14 @@ defmodule AshOban do
       worker_opts: [
         type: :keyword_list,
         default: [],
-        doc:
-          "Options to set on the worker. ATTENTION: this may overwrite options set by ash_oban, make sure you know what you are doing."
+        doc: """
+        Options to set on the worker.
+
+        ATTENTION: this may overwrite options set by ash_oban, make sure you know what you are doing.
+
+        See [Oban.Worker](https://hexdocs.pm/oban/Oban.Worker.html#module-defining-workers) for options
+        and [Oban.Pro.Worker](https://oban.pro/docs/pro/Oban.Pro.Worker.html) for oban pro
+        """
       ]
     ]
   }
