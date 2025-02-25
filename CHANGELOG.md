@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.3.4](https://github.com/ash-project/ash_oban/compare/v0.3.3...v0.3.4) (2025-02-25)
+
+
+
+
+### Improvements:
+
+* add worker_opts for triggers (#126)
+
 ## [v0.3.3](https://github.com/ash-project/ash_oban/compare/v0.3.2...v0.3.3) (2025-02-17)
 
 
