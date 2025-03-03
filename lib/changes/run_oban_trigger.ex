@@ -27,4 +27,8 @@ defmodule AshOban.Changes.RunObanTrigger do
       {:ok, result}
     end)
   end
+
+  def atomic(changeset, opts, context) do
+    {:ok, change(changeset, opts, context)}
+  end
 end
