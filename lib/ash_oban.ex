@@ -528,6 +528,30 @@ defmodule AshOban do
   end
 
   @doc """
+  Runs a specific trigger for the records provided.
+
+  ## Options
+
+  - `:actor` - the actor to set on the job. Requires configuring an actor persister.
+  - `:args` - additional arguments to merge into the job's arguments map.
+
+  All other options are passed through to `c:Oban.Worker.new/2`
+  """
+  def run_triggers(records, trigger, opts \\ []) do
+    jobs =
+      records
+      |> Enum.map(&build_trigger(&1, trigger, opts))
+
+    if AshOban.Info.pro?() do
+      jobs
+      |> Oban.insert_all()
+    else
+      jobs
+      |> Enum.map(&Oban.insert!/1)
+    end
+  end
+
+  @doc """
   Builds a specific trigger for the record provided, but does not insert it into the database.
 
   ## Options
