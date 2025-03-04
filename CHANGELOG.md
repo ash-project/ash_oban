@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.3.5](https://github.com/ash-project/ash_oban/compare/v0.3.4...v0.3.5) (2025-03-04)
+
+
+
+
+### Improvements:
+
+* add atomic callback for `run_oban_trigger`
+
 ## [v0.3.4](https://github.com/ash-project/ash_oban/compare/v0.3.3...v0.3.4) (2025-02-25)
 
 
