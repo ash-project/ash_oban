@@ -29,6 +29,14 @@ defmodule AshOban.Test.Triggered do
       end
 
       trigger :process_atomically do
+        extra_args fn
+          %{number: number} when is_number(number) ->
+            %{number: number}
+
+          _ ->
+            %{}
+        end
+
         action :process_atomically
         queue :triggered_process
         where expr(processed != true)
@@ -83,6 +91,11 @@ defmodule AshOban.Test.Triggered do
       pagination keyset?: true
     end
 
+    create :bulk_create do
+      accept [:number]
+      change run_oban_trigger(:process_atomically)
+    end
+
     update :process_atomically do
       change set_attribute(:processed, true)
     end
@@ -116,6 +129,7 @@ defmodule AshOban.Test.Triggered do
   attributes do
     uuid_primary_key :id
     attribute :processed, :boolean, default: false, allow_nil?: false
+    attribute :number, :integer, public?: true
     attribute :tenant_id, :integer, allow_nil?: false, default: 1
     timestamps()
   end

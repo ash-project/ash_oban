@@ -44,7 +44,6 @@ defmodule AshObanTest do
              )
   end
 
-  @tag :focus
   test "extra args are set on a job" do
     Triggered
     |> Ash.Changeset.for_create(:create, %{})
@@ -132,6 +131,22 @@ defmodule AshObanTest do
 
     refute Ash.load!(tenant_1, :processed).processed
     assert Ash.load!(tenant_2, :processed).processed
+  end
+
+  @tag :focus
+  test "bulk create triggers after_batch change" do
+    [
+      %{number: 1},
+      %{number: 2},
+      %{number: 3},
+      %{number: 4}
+    ]
+    |> Ash.bulk_create!(Triggered, :bulk_create)
+
+    jobs =
+      all_enqueued(worker: Triggered.AshOban.Worker.ProcessAtomically) |> Enum.sort_by(& &1.id)
+
+    assert [1, 2, 3, 4] = Enum.map(jobs, &Map.get(&1.args, "number"))
   end
 
   test "if an actor is not set, it is nil when executing the job" do
