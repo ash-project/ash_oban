@@ -666,6 +666,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 query()
                 |> Ash.Query.do_filter(primary_key)
                 |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+                |> Ash.Query.set_tenant(tenant)
                 |> Ash.Query.for_read(unquote(read_action), %{},
                   authorize?: authorize?,
                   actor: actor,
