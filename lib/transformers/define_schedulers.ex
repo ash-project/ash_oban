@@ -459,22 +459,24 @@ defmodule AshOban.Transformers.DefineSchedulers do
       ]
       |> Enum.filter(&(not is_nil(&1)))
 
+    worker_opts =
+      Keyword.merge(
+        [
+          priority: trigger.scheduler_priority,
+          max_attempts: trigger.max_attempts,
+          queue: trigger.queue,
+          unique: [
+            period: :infinity,
+            states: states
+          ]
+        ],
+        trigger.worker_opts
+      )
+
     Module.create(
       worker_module_name,
       quote location: :keep do
-        use unquote(worker),
-            Keyword.merge(
-              [
-                priority: unquote(trigger.scheduler_priority),
-                max_attempts: unquote(trigger.max_attempts),
-                queue: unquote(trigger.queue),
-                unique: [
-                  period: :infinity,
-                  states: unquote(states)
-                ]
-              ],
-              unquote(trigger.worker_opts)
-            )
+        use unquote(worker), unquote(worker_opts)
 
         require Logger
 
