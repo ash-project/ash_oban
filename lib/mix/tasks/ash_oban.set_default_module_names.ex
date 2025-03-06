@@ -44,46 +44,88 @@ if Code.ensure_loaded?(Igniter) do
 
     @impl Igniter.Mix.Task
     def igniter(igniter) do
-      # Do your work here and return an updated igniter
-      {igniter, resources} = Ash.Resource.Igniter.list_resources(igniter)
+      {igniter, resources} =
+        Igniter.Project.Module.find_all_matching_modules(igniter, fn _resource, zipper ->
+          zipper
+          |> Igniter.Code.Module.move_to_use(Ash.Resource.Igniter.resource_mods(igniter))
+          |> case do
+            {:ok, _} ->
+              with {:ok, zipper} <-
+                     Igniter.Code.Function.move_to_function_call_in_current_scope(
+                       zipper,
+                       :oban,
+                       1
+                     ),
+                   {:ok, _zipper} <- Igniter.Code.Common.move_to_do_block(zipper) do
+                true
+              else
+                _ ->
+                  false
+              end
+
+            _ ->
+              false
+          end
+        end)
 
       Enum.reduce(resources, igniter, fn resource, igniter ->
-        igniter
-        |> Igniter.Project.Module.find_and_update_module!(resource, fn zipper ->
-          replace_trigger_worker_module(
-            zipper,
-            :triggers,
-            :trigger,
-            :worker_module_name,
-            &module_name(resource, &1, "Worker")
-          )
-        end)
-        |> Igniter.Project.Module.find_and_update_module!(resource, fn zipper ->
-          replace_trigger_worker_module(
-            zipper,
-            :triggers,
-            :trigger,
-            :scheduler_module_name,
-            &module_name(resource, &1, "Scheduler")
-          )
-        end)
-        |> Igniter.Project.Module.find_and_update_module!(resource, fn zipper ->
-          replace_trigger_worker_module(
-            zipper,
-            :scheduled_actions,
-            :schedule,
-            :worker_module_name,
-            &module_name(resource, &1, "Scheduler")
-          )
+        Igniter.Project.Module.find_and_update_module!(igniter, resource, fn zipper ->
+          with {:ok, zipper} <-
+                 Igniter.Code.Function.move_to_function_call_in_current_scope(zipper, :oban, 1),
+               {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper) do
+            Igniter.Util.Loading.with_spinner("updating #{inspect(resource)}", fn ->
+              zipper =
+                Sourceror.Zipper.within(zipper, fn zipper ->
+                  {:ok, zipper} =
+                    replace_trigger_worker_module(
+                      zipper,
+                      :triggers,
+                      :trigger,
+                      :worker_module_name,
+                      &module_name(resource, &1, "Worker")
+                    )
+
+                  zipper
+                end)
+
+              zipper =
+                Sourceror.Zipper.within(zipper, fn zipper ->
+                  {:ok, zipper} =
+                    replace_trigger_worker_module(
+                      zipper,
+                      :triggers,
+                      :trigger,
+                      :scheduler_module_name,
+                      &module_name(resource, &1, "Scheduler")
+                    )
+
+                  zipper
+                end)
+
+              Sourceror.Zipper.within(zipper, fn zipper ->
+                {:ok, zipper} =
+                  replace_trigger_worker_module(
+                    zipper,
+                    :scheduled_actions,
+                    :schedule,
+                    :worker_module_name,
+                    &module_name(resource, &1, "Scheduler")
+                  )
+
+                zipper
+              end)
+              |> then(&{:ok, &1})
+            end)
+          else
+            _ ->
+              {:ok, zipper}
+          end
         end)
       end)
     end
 
     defp replace_trigger_worker_module(zipper, section_name, entity_name, option_name, setter) do
       with {:ok, zipper} <-
-             Igniter.Code.Function.move_to_function_call_in_current_scope(zipper, :oban, 1),
-           {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
-           {:ok, zipper} <-
              Igniter.Code.Function.move_to_function_call_in_current_scope(
                zipper,
                section_name,
