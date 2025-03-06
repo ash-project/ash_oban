@@ -14,7 +14,7 @@ defmodule AshOban.Transformers.DefineActionWorkers do
     |> AshOban.Info.oban_scheduled_actions()
     |> Enum.reduce(dsl, fn scheduled_action, dsl ->
       worker_module_name =
-        module_name(module, scheduled_action)
+        scheduled_action.worker_module_name || module_name(module, scheduled_action)
 
       define_worker(module, worker_module_name, scheduled_action, dsl)
 

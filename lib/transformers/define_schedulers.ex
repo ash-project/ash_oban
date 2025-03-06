@@ -15,10 +15,11 @@ defmodule AshOban.Transformers.DefineSchedulers do
     |> Enum.reduce(dsl, fn trigger, dsl ->
       scheduler_module_name =
         if trigger.scheduler_cron do
-          module_name(module, trigger, "Scheduler")
+          trigger.scheduler_module_name ||
+            module_name(module, trigger, "Scheduler")
         end
 
-      worker_module_name = module_name(module, trigger, "Worker")
+      worker_module_name = trigger.worker_module_name || module_name(module, trigger, "Worker")
 
       define_worker(module, worker_module_name, trigger, dsl)
 

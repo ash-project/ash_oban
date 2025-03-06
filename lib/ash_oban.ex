@@ -16,6 +16,8 @@ defmodule AshOban do
             lock_for_update?: boolean(),
             action_input: map(),
             max_attempts: pos_integer(),
+            worker_module_name: module() | nil,
+            scheduler_module_name: module() | nil,
             trigger_once?: boolean(),
             record_limit: pos_integer(),
             log_final_error?: boolean(),
@@ -46,6 +48,8 @@ defmodule AshOban do
       :lock_for_update?,
       :queue,
       :debug?,
+      :worker_module_name,
+      :scheduler_module_name,
       :read_metadata,
       :scheduler_cron,
       :scheduler_queue,
@@ -134,6 +138,18 @@ defmodule AshOban do
         default: true,
         doc:
           "If `true`, a transaction will be started before looking up the record, and it will be locked for update. Typically you should leave this on unless you have before/after/around transaction hooks."
+      ],
+      worker_module_name: [
+        type: :module,
+        doc: """
+        The module name to be used for the generated worker.
+        """
+      ],
+      scheduler_module_name: [
+        type: :module,
+        doc: """
+        The module name to be used for the generated scheduler.
+        """
       ],
       scheduler_cron: [
         type: {:or, [:string, {:literal, false}]},
@@ -274,6 +290,7 @@ defmodule AshOban do
             cron: String.t(),
             action_input: map(),
             worker: module(),
+            worker_module_name: module() | nil,
             max_attempts: non_neg_integer(),
             queue: atom,
             debug?: boolean,
@@ -287,6 +304,7 @@ defmodule AshOban do
       :cron,
       :debug,
       :priority,
+      :worker_module_name,
       :action_input,
       :max_attempts,
       :queue,
@@ -318,6 +336,12 @@ defmodule AshOban do
       action: [
         type: :atom,
         doc: "The generic or create action to call when the schedule is triggered."
+      ],
+      worker_module_name: [
+        type: :module,
+        doc: """
+        The module name to be used for the generated worker.
+        """
       ],
       queue: [
         type: :atom,
@@ -424,11 +448,32 @@ defmodule AshOban do
 
   @moduledoc """
   Tools for working with AshOban triggers.
+
+  ## Module Names
+
+  Each trigger and scheduled action must have a defined module
+  name, otherwise changing the name of the trigger will lead to
+  "dangling" jobs. Because Oban uses the module name to determine
+  which code should execute when a job runs, changing the module name
+  associated with a trigger will cause those jobs to fail and be lost
+  if their worker's module name was configured. By configuring the module
+  name explicitly, renaming the resource or the trigger will not cause
+  an issue.
+
+  This was an oversight in the initial design of AshOban triggers and
+  scheduled actions, and in the future the module names will be required
+  to ensure that this does not happen.
+
+  Use `mix ash_oban.set_default_module_names` to set the module names to
+  their appropriate default values.
   """
 
   use Spark.Dsl.Extension,
     sections: @sections,
     imports: [AshOban.Changes.BuiltinChanges],
+    verifiers: [
+      AshOban.Verifiers.VerifyModuleNames
+    ],
     transformers: [
       AshOban.Transformers.SetDefaults,
       AshOban.Transformers.DefineSchedulers,
@@ -721,6 +766,23 @@ defmodule AshOban do
       resources_and_triggers ->
         if opts[:require?] do
           require_cron!(base, cron_plugin)
+        end
+
+        if base[:crontab][:sync_mode] != :automatic do
+          IO.warn("""
+          The crontab `sync_mode` should be set to `:automatic`. Without this set,
+          removing a trigger from your resource would cause a dangling cron job to
+          exist in the database. If you don't set this, you *must* ensure that you
+          *do not* remove triggers from your resource that have a `scheduler_cron`
+          configured (which defaults to `* * * * *`), without first setting their
+          `state` to `:deleted`, and deploying that change. After that deploy, you
+          can then safely remove the trigger. i.e
+
+              trigger do
+                ...
+                state :deleted
+              end
+          """)
         end
 
         Enum.reduce(resources_and_triggers, base, fn {resource, trigger}, config ->

@@ -19,6 +19,7 @@ spark_locals_without_parens = [
   schedule: 2,
   schedule: 3,
   scheduler_cron: 1,
+  scheduler_module_name: 1,
   scheduler_priority: 1,
   scheduler_queue: 1,
   sort: 1,
@@ -28,6 +29,7 @@ spark_locals_without_parens = [
   trigger: 2,
   trigger_once?: 1,
   where: 1,
+  worker_module_name: 1,
   worker_opts: 1,
   worker_priority: 1,
   worker_read_action: 1
