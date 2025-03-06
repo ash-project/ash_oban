@@ -51,7 +51,7 @@ defmodule AshOban.Verifiers.VerifyModuleNames do
     dsl_state
     |> AshOban.Info.oban_scheduled_actions()
     |> Enum.reject(fn trigger ->
-      trigger.module_name
+      trigger.worker_module_name
     end)
     |> case do
       [] ->
