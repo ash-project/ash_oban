@@ -26,6 +26,8 @@ defmodule AshOban.Test.Triggered do
         end)
 
         worker_read_action :read
+        worker_module_name AshOban.Test.Triggered.AshOban.Worker.Process
+        scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.Process
       end
 
       trigger :process_atomically do
@@ -42,6 +44,8 @@ defmodule AshOban.Test.Triggered do
         where expr(processed != true)
         max_attempts 2
         worker_read_action(:read)
+        worker_module_name AshOban.Test.Triggered.AshOban.Worker.ProcessAtomically
+        scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.ProcessAtomically
       end
 
       trigger :process_2 do
@@ -51,12 +55,16 @@ defmodule AshOban.Test.Triggered do
         worker_read_action(:read)
         scheduler_cron false
         worker_opts tags: ["tag1", "tag2"]
+        worker_module_name AshOban.Test.Triggered.AshOban.Worker.Process2
+        scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.Process2
       end
 
       trigger :process_generic do
         action :say_hello
         max_attempts 2
         scheduler_cron "* * * * *"
+        worker_module_name AshOban.Test.Triggered.AshOban.Worker.ProcessGeneric
+        scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.ProcessGeneric
       end
 
       trigger :tenant_aware do
@@ -65,6 +73,8 @@ defmodule AshOban.Test.Triggered do
         end
 
         action :process_atomically
+        worker_module_name AshOban.Test.Triggered.AshOban.Worker.TenantAware
+        scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.TenantAware
       end
     end
 
