@@ -73,49 +73,50 @@ if Code.ensure_loaded?(Igniter) do
           with {:ok, zipper} <-
                  Igniter.Code.Function.move_to_function_call_in_current_scope(zipper, :oban, 1),
                {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper) do
-            Igniter.Util.Loading.with_spinner("updating #{inspect(resource)}", fn ->
-              zipper =
-                Sourceror.Zipper.within(zipper, fn zipper ->
-                  {:ok, zipper} =
-                    replace_trigger_worker_module(
-                      zipper,
-                      :triggers,
-                      :trigger,
-                      :worker_module_name,
-                      &module_name(resource, &1, "Worker")
-                    )
-
-                  zipper
-                end)
-
-              zipper =
-                Sourceror.Zipper.within(zipper, fn zipper ->
-                  {:ok, zipper} =
-                    replace_trigger_worker_module(
-                      zipper,
-                      :triggers,
-                      :trigger,
-                      :scheduler_module_name,
-                      &module_name(resource, &1, "Scheduler")
-                    )
-
-                  zipper
-                end)
-
+            # Igniter.Util.Loading.with_spinner("updating #{inspect(resource)}", fn ->
+            zipper =
               Sourceror.Zipper.within(zipper, fn zipper ->
                 {:ok, zipper} =
                   replace_trigger_worker_module(
                     zipper,
-                    :scheduled_actions,
-                    :schedule,
+                    :triggers,
+                    :trigger,
                     :worker_module_name,
+                    &module_name(resource, &1, "Worker")
+                  )
+
+                zipper
+              end)
+
+            zipper =
+              Sourceror.Zipper.within(zipper, fn zipper ->
+                {:ok, zipper} =
+                  replace_trigger_worker_module(
+                    zipper,
+                    :triggers,
+                    :trigger,
+                    :scheduler_module_name,
                     &module_name(resource, &1, "Scheduler")
                   )
 
                 zipper
               end)
-              |> then(&{:ok, &1})
+
+            Sourceror.Zipper.within(zipper, fn zipper ->
+              {:ok, zipper} =
+                replace_trigger_worker_module(
+                  zipper,
+                  :scheduled_actions,
+                  :schedule,
+                  :worker_module_name,
+                  &module_name(resource, &1, "ActionWorker")
+                )
+
+              zipper
             end)
+            |> then(&{:ok, &1})
+
+            # end)
           else
             _ ->
               {:ok, zipper}
@@ -139,9 +140,10 @@ if Code.ensure_loaded?(Igniter) do
                    Igniter.Code.Function.move_to_function_call_in_current_scope(
                      zipper,
                      entity_name,
-                     2
+                     [1, 2, 3]
                    ),
-                 {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper),
+                 {:do_block, {:ok, zipper}} <-
+                   {:do_block, Igniter.Code.Common.move_to_do_block(zipper)},
                  :error <-
                    Igniter.Code.Function.move_to_function_call_in_current_scope(
                      zipper,
@@ -150,7 +152,10 @@ if Code.ensure_loaded?(Igniter) do
                    ) do
               true
             else
-              _ ->
+              {:do_block, :error} ->
+                true
+
+              _other ->
                 false
             end
           end,
@@ -159,17 +164,42 @@ if Code.ensure_loaded?(Igniter) do
                    Igniter.Code.Function.move_to_function_call_in_current_scope(
                      zipper,
                      entity_name,
-                     2
+                     [1, 2, 3]
                    ),
                  {:ok, name_zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 0),
                  {:ok, name} <- Igniter.Code.Common.expand_literal(name_zipper),
-                 {:ok, zipper} <- Igniter.Code.Common.move_to_do_block(zipper) do
+                 {:do_block, _, _, {:ok, zipper}} <-
+                   {:do_block, zipper, name, Igniter.Code.Common.move_to_do_block(zipper)} do
               {:ok,
                Igniter.Code.Common.add_code(zipper, """
                #{option_name} #{inspect(setter.(name))}
                """)}
             else
-              _ ->
+              {:do_block, zipper, name, :error} ->
+                code =
+                  """
+                  #{option_name} #{inspect(setter.(name))}
+                  """
+                  |> Sourceror.parse_string!()
+
+                with {:ok, %{node: {call, meta, args}}} <-
+                       Igniter.Code.Function.append_argument(
+                         zipper,
+                         [
+                           {{:__block__, [], [:do]}, {:__block__, [], [{:__block__, [], [code]}]}}
+                         ]
+                       ) do
+                  {:ok,
+                   Sourceror.Zipper.replace(
+                     zipper,
+                     {call, Keyword.put(meta, :do, line: 0), args}
+                   )}
+                else
+                  _ ->
+                    {:ok, zipper}
+                end
+
+              _other ->
                 {:ok, zipper}
             end
           end

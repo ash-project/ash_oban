@@ -79,7 +79,9 @@ defmodule AshOban.Test.Triggered do
     end
 
     scheduled_actions do
-      schedule :say_hello, "0 0 1 1 *"
+      schedule :say_hello, "0 0 1 1 *" do
+        worker_module_name AshOban.Test.Triggered.AshOban.ActionWorker.SayHello
+      end
     end
   end
 
