@@ -182,19 +182,19 @@ if Code.ensure_loaded?(Igniter) do
                   """
                   |> Sourceror.parse_string!()
 
-                with {:ok, %{node: {call, meta, args}}} <-
-                       Igniter.Code.Function.append_argument(
-                         zipper,
-                         [
-                           {{:__block__, [], [:do]}, {:__block__, [], [{:__block__, [], [code]}]}}
-                         ]
-                       ) do
-                  {:ok,
-                   Sourceror.Zipper.replace(
-                     zipper,
-                     {call, Keyword.put(meta, :do, line: 0), args}
-                   )}
-                else
+                case Igniter.Code.Function.append_argument(
+                       zipper,
+                       [
+                         {{:__block__, [], [:do]}, {:__block__, [], [{:__block__, [], [code]}]}}
+                       ]
+                     ) do
+                  {:ok, %{node: {call, meta, args}}} ->
+                    {:ok,
+                     Sourceror.Zipper.replace(
+                       zipper,
+                       {call, Keyword.put(meta, :do, line: 0), args}
+                     )}
+
                   _ ->
                     {:ok, zipper}
                 end

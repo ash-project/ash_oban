@@ -1,4 +1,5 @@
 defmodule AshOban.Verifiers.VerifyModuleNames do
+  @moduledoc "Verifies that module names have been set for triggers and scheduled actions"
   use Spark.Dsl.Verifier
 
   def verify(dsl_state) do
