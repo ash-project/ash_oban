@@ -5,6 +5,33 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.4.0](https://github.com/ash-project/ash_oban/compare/v0.3.5...v0.4.0) (2025-03-11)
+
+
+
+
+### Features:
+
+* after_batch for RunObanTrigger (#130)
+
+### Bug Fixes:
+
+* use proper name for scheduled actions in name setter task
+
+* detect constructors w/ no do blocks in name setter task
+
+* add missing tenant in handle_error query (#131)
+
+* make sure to pass literal opts to use worker
+
+### Improvements:
+
+* add module name configurations deprecate not using them
+
+* add `mix ash_oban.set_default_module_names`
+
+* add upgrader for setting default module names in 0.4.0
+
 ## [v0.3.5](https://github.com/ash-project/ash_oban/compare/v0.3.4...v0.3.5) (2025-03-04)
 
 
