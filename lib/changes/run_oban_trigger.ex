@@ -22,6 +22,7 @@ defmodule AshOban.Changes.RunObanTrigger do
           context
           |> Ash.Context.to_opts()
           |> Keyword.take([:actor, :tenant])
+          |> Keyword.update(:tenant, nil, &Ash.ToTenant.to_tenant(&1, changeset.resource))
         )
       )
 
@@ -59,6 +60,7 @@ defmodule AshOban.Changes.RunObanTrigger do
         context
         |> Ash.Context.to_opts()
         |> Keyword.take([:actor, :tenant])
+        |> Keyword.update(:tenant, nil, &Ash.ToTenant.to_tenant(&1, changeset.resource))
       )
     )
 

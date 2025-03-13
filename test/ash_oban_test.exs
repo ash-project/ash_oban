@@ -158,6 +158,25 @@ defmodule AshObanTest do
              AshOban.Test.schedule_and_run_triggers(Triggered)
   end
 
+  test "if a tenant is converted with Ash.ToTenant" do
+    tenant =
+      Triggered
+      |> Ash.Changeset.for_create(:create, %{tenant_id: 2})
+      |> Ash.create!()
+
+    tenant =
+      Triggered
+      |> Ash.Query.for_read(:read)
+      |> Ash.read_one!(tenant: tenant)
+
+    tenant
+    |> Ash.Changeset.for_update(:update_triggered)
+    |> Ash.update!()
+
+    assert %{success: 7, failure: 0} =
+             AshOban.Test.schedule_and_run_triggers(Triggered)
+  end
+
   test "dsl introspection" do
     assert [
              %AshOban.Trigger{action: :process},
