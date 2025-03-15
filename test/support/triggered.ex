@@ -108,6 +108,11 @@ defmodule AshOban.Test.Triggered do
       change run_oban_trigger(:process_atomically)
     end
 
+    update :update_triggered do
+      change set_attribute(:processed, true)
+      change run_oban_trigger(:process_atomically)
+    end
+
     update :process_atomically do
       change set_attribute(:processed, true)
     end
@@ -144,5 +149,9 @@ defmodule AshOban.Test.Triggered do
     attribute :number, :integer, public?: true
     attribute :tenant_id, :integer, allow_nil?: false, default: 1
     timestamps()
+  end
+
+  defimpl Ash.ToTenant do
+    def to_tenant(%{tenant_id: id}, _resource), do: id
   end
 end
