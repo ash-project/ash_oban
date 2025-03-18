@@ -698,7 +698,7 @@ defmodule AshOban do
 
     base =
       Keyword.update(base, :plugins, [], fn plugins ->
-        Enum.map(plugins, fn item ->
+        Enum.map(plugins || [], fn item ->
           if is_atom(item) do
             {item, []}
           else
