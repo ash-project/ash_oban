@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.4.1](https://github.com/ash-project/ash_oban/compare/v0.4.0...v0.4.1) (2025-03-18)
+
+
+
+
+### Bug Fixes:
+
+* pass tenant through Ash.ToTenant in run_oban_trigger (#138)
+
+* don't warn on sync_mode when not using oban pro
+
 ## [v0.4.0](https://github.com/ash-project/ash_oban/compare/v0.3.5...v0.4.0) (2025-03-11)
 
 
