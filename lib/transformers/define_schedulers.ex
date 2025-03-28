@@ -765,7 +765,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     if is_nil(trigger.where) do
       quote location: :keep do
         def query do
-          unquote(resource)
+          Ash.Query.new(unquote(resource))
         end
       end
     else
