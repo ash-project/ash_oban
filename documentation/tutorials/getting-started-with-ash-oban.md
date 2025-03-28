@@ -145,7 +145,7 @@ defmodule MyApp.AshObanActorPersister do
 
   def store(%MyApp.User{id: id}), do: %{"type" => "user", "id" => id}
 
-  def lookup(%{"type" => "user", "id" => id}), do: MyApp.Accounts.get(MyApp.User, id)
+  def lookup(%{"type" => "user", "id" => id}), do: MyApp.Accounts.get_user_by_id(id)
 
   # This allows you to set a default actor
   # in cases where no actor was present
