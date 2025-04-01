@@ -99,6 +99,26 @@ if Code.ensure_loaded?(Igniter) do
           end
         end
       )
+      |> Igniter.Project.Config.configure(
+        "config.exs",
+        app_name,
+        [Oban, :plugins],
+        [{Oban.Plugins.Cron, []}],
+        updater: fn list ->
+          case Igniter.Code.List.prepend_new_to_list(list, {Oban.Plugins.Cron, []}, fn old, new ->
+                 if Igniter.Code.Tuple.tuple?(old) do
+                   with {:ok, plugin} <- Igniter.Code.Tuple.tuple_elem(old, 0) do
+                     Igniter.Code.Common.nodes_equal?(plugin, Oban.Plugins.Cron)
+                   end
+                 else
+                   Igniter.Code.Common.nodes_equal?(old, new)
+                 end
+               end) do
+            {:ok, list} -> {:ok, list}
+            :error -> {:ok, list}
+          end
+        end
+      )
     end
   end
 else
