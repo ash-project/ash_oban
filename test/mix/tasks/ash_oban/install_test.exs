@@ -40,14 +40,19 @@ defmodule Mix.Tasks.AshOban.InstallTest do
   test "adds the cron plugin to the oban config", %{igniter: igniter} do
     igniter
     |> assert_has_patch("config/config.exs", ~S'''
-        ...|
-    5  5   |  notifier: Oban.Notifiers.Postgres,
-    6  6   |  queues: [default: 10],
+    1  1   |import Config
+    2  2   |
+       3 + |config :ash_oban, pro?: false
+       4 + |
+    3  5   |config :test, Oban,
+    4  6   |  engine: Oban.Engines.Basic,
+    5  7   |  notifier: Oban.Notifiers.Postgres,
+    6  8   |  queues: [default: 10],
     7    - |  repo: Test.Repo
-       7 + |  repo: Test.Repo,
-       8 + |  plugins: [{Oban.Plugins.Cron, []}]
-    8  9   |
-    9 10   |import_config "#{config_env()}.exs"
+       9 + |  repo: Test.Repo,
+      10 + |  plugins: [{Oban.Pro.Plugins.DynamicCron, []}]
+    8 11   |
+    9 12   |import_config "#{config_env()}.exs"
         ...|
     ''')
   end
