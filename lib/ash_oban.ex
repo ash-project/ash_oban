@@ -769,7 +769,7 @@ defmodule AshOban do
         end
 
         if (pro_dynamic_queues_plugin? || pro_dynamic_cron_plugin?) &&
-             base[:crontab] != :automatic do
+             base[:sync_mode] != :automatic do
           IO.warn("""
           The crontab `sync_mode` should be set to `:automatic`. Without this set,
           removing a trigger from your resource would cause a dangling cron job to
