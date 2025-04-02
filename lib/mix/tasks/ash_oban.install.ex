@@ -27,7 +27,6 @@ if Code.ensure_loaded?(Igniter) do
     @shortdoc "#{__MODULE__.Docs.short_doc()}"
 
     @moduledoc __MODULE__.Docs.long_doc()
-
     use Igniter.Mix.Task
 
     @impl Igniter.Mix.Task
@@ -65,6 +64,9 @@ if Code.ensure_loaded?(Igniter) do
     @impl Igniter.Mix.Task
     def igniter(igniter) do
       app_name = Igniter.Project.Application.app_name(igniter)
+      pro? = Igniter.Project.Deps.has_dep?(igniter, :oban_pro)
+
+      cron_plugin = if pro?, do: Oban.Plugins.Cron, else: Oban.Pro.Plugins.DynamicCron
 
       # Do your work here and return an updated igniter
       igniter
@@ -98,6 +100,36 @@ if Code.ensure_loaded?(Igniter) do
               {:ok, Igniter.Code.Common.replace_code(zipper, new_code)}
           end
         end
+      )
+      |> Igniter.Project.Config.configure(
+        "config.exs",
+        app_name,
+        [Oban, :plugins],
+        [{cron_plugin, []}],
+        updater: fn list ->
+          case Igniter.Code.List.prepend_new_to_list(list, {cron_plugin, []}, fn old, new ->
+                 if Igniter.Code.Tuple.tuple?(old) do
+                   case Igniter.Code.Tuple.tuple_elem(old, 0) do
+                     {:ok, plugin} ->
+                       Igniter.Code.Common.nodes_equal?(plugin, cron_plugin)
+
+                     :error ->
+                       false
+                   end
+                 else
+                   Igniter.Code.Common.nodes_equal?(old, new)
+                 end
+               end) do
+            {:ok, list} -> {:ok, list}
+            :error -> {:ok, list}
+          end
+        end
+      )
+      |> Igniter.Project.Config.configure(
+        "config.exs",
+        :ash_oban,
+        [:pro?],
+        pro?
       )
     end
   end
