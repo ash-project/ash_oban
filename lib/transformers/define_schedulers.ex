@@ -590,6 +590,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     tenant: tenant,
                     domain: unquote(domain),
                     context: %{private: %{ash_oban?: true}},
+                    strategy: [:atomic, :stream],
                     return_errors?: true,
                     skip_unknown_inputs: [:error],
                     notify?: true,
@@ -606,6 +607,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     domain: unquote(domain),
                     domain: unquote(domain),
                     context: %{private: %{ash_oban?: true}},
+                    strategy: [:atomic, :stream],
                     return_errors?: true,
                     skip_unknown_inputs: [:error],
                     notify?: true
@@ -912,6 +914,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     domain: unquote(domain),
                     context: %{private: %{ash_oban?: true}},
                     skip_unknown_inputs: [:metadata],
+                    strategy: [:atomic, :stream],
                     return_errors?: true,
                     notify?: true,
                     return_records?: true
@@ -928,6 +931,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     domain: unquote(domain),
                     context: %{private: %{ash_oban?: true}},
                     skip_unknown_inputs: [:metadata],
+                    strategy: [:atomic, :stream],
                     return_errors?: true,
                     notify?: true
                   )
