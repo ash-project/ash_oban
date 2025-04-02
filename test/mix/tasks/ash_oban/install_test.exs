@@ -50,7 +50,7 @@ defmodule Mix.Tasks.AshOban.InstallTest do
     6  8   |  queues: [default: 10],
     7    - |  repo: Test.Repo
        9 + |  repo: Test.Repo,
-      10 + |  plugins: [{Oban.Pro.Plugins.DynamicCron, []}]
+      10 + |  plugins: [{Oban.Plugins.Cron, []}]
     8 11   |
     9 12   |import_config "#{config_env()}.exs"
         ...|

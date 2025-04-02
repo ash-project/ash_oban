@@ -66,7 +66,7 @@ if Code.ensure_loaded?(Igniter) do
       app_name = Igniter.Project.Application.app_name(igniter)
       pro? = Igniter.Project.Deps.has_dep?(igniter, :oban_pro)
 
-      cron_plugin = if pro?, do: Oban.Plugins.Cron, else: Oban.Pro.Plugins.DynamicCron
+      cron_plugin = if pro?, do: Oban.Pro.Plugins.DynamicCron, else: Oban.Plugins.Cron
 
       # Do your work here and return an updated igniter
       igniter
