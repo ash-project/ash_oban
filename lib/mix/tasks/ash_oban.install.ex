@@ -109,8 +109,12 @@ if Code.ensure_loaded?(Igniter) do
         updater: fn list ->
           case Igniter.Code.List.prepend_new_to_list(list, {cron_plugin, []}, fn old, new ->
                  if Igniter.Code.Tuple.tuple?(old) do
-                   with {:ok, plugin} <- Igniter.Code.Tuple.tuple_elem(old, 0) do
-                     Igniter.Code.Common.nodes_equal?(plugin, cron_plugin)
+                   case Igniter.Code.Tuple.tuple_elem(old, 0) do
+                     {:ok, plugin} ->
+                       Igniter.Code.Common.nodes_equal?(plugin, cron_plugin)
+
+                     :error ->
+                       false
                    end
                  else
                    Igniter.Code.Common.nodes_equal?(old, new)
