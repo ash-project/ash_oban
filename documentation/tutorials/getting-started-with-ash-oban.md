@@ -160,6 +160,26 @@ Then, configure this in application config.
 config :ash_oban, :actor_persister, MyApp.AshObanActorPersister
 ```
 
+This global configuration will affect all oban triggers. You can also configure
+an actor persister on individual triggers and scheduled actions, i.e
+
+```elixir
+trigger :name do
+  ...
+  actor_persister MyApp.AshObanActorPersister
+end
+```
+
+Or you can use `:none` to override the globally configured actor persister
+
+```elixir
+trigger :name do
+  ...
+  actor_persister :none
+end
+```
+
+
 ### Considerations
 
 There are a few things that are important to keep in mind:
