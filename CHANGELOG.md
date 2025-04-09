@@ -5,6 +5,29 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.4.2](https://github.com/ash-project/ash_oban/compare/v0.4.1...v0.4.2) (2025-04-09)
+
+
+
+
+### Bug Fixes:
+
+* only check sync mode for cron plugin (#149)
+
+* check the proper location of `sync_mode`
+
+* add correct cron plugin (#147)
+
+* fix typing error for queries
+
+### Improvements:
+
+* add `actor_persister` trigger/scheduled action config
+
+* allow both atomic and stream strategies (#148)
+
+* add cron plugin to oban config (#146)
+
 ## [v0.4.1](https://github.com/ash-project/ash_oban/compare/v0.4.0...v0.4.1) (2025-03-18)
 
 
