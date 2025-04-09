@@ -74,7 +74,7 @@ defmodule AshOban.Transformers.DefineActionWorkers do
         require Logger
         @impl unquote(worker)
         def unquote(function_name)(%Oban.Job{args: args} = job) do
-          case AshOban.lookup_actor(args["actor"]) do
+          case AshOban.lookup_actor(args["actor"], unquote(scheduled_action.actor_persister)) do
             {:ok, actor} ->
               authorize? = AshOban.authorize?()
 

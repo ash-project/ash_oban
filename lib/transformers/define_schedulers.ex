@@ -244,7 +244,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 list_tenants
             end)
             |> Enum.each(fn tenant ->
-              case AshOban.lookup_actor(args["actor"]) do
+              case AshOban.lookup_actor(args["actor"], unquote(trigger.actor_persister)) do
                 {:ok, actor} ->
                   unquote(resource)
                   |> stream(actor, tenant)
@@ -555,7 +555,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
               unquote(trigger.debug?)
             )
 
-            case AshOban.lookup_actor(args["actor"]) do
+            case AshOban.lookup_actor(args["actor"], unquote(trigger.actor_persister)) do
               {:ok, actor} ->
                 authorize? = AshOban.authorize?()
 
@@ -662,7 +662,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
               ) do
             authorize? = AshOban.authorize?()
 
-            case AshOban.lookup_actor(args["actor"]) do
+            case AshOban.lookup_actor(args["actor"], unquote(trigger.actor_persister)) do
               {:ok, actor} ->
                 tenant = args["tenant"]
 
@@ -798,7 +798,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
       quote location: :keep, generated: true do
         @impl unquote(worker)
         def unquote(function_name)(%Oban.Job{args: %{"primary_key" => primary_key} = args} = job) do
-          case AshOban.lookup_actor(args["actor"]) do
+          case AshOban.lookup_actor(args["actor"], unquote(trigger.actor_persister)) do
             {:ok, actor} ->
               authorize? = AshOban.authorize?()
 
@@ -878,7 +878,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
               unquote(trigger.debug?)
             )
 
-            case AshOban.lookup_actor(args["actor"]) do
+            case AshOban.lookup_actor(args["actor"], unquote(trigger.actor_persister)) do
               {:ok, actor} ->
                 authorize? = AshOban.authorize?()
 
@@ -974,7 +974,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
               unquote(trigger.debug?)
             )
 
-            case AshOban.lookup_actor(args["actor"]) do
+            case AshOban.lookup_actor(args["actor"], unquote(trigger.actor_persister)) do
               {:ok, actor} ->
                 authorize? = AshOban.authorize?()
 

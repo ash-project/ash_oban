@@ -23,6 +23,7 @@ defmodule AshOban do
             log_final_error?: boolean(),
             log_errors?: boolean(),
             debug?: boolean(),
+            actor_persister: module() | :none | nil,
             max_scheduler_attempts: pos_integer(),
             read_metadata: (Ash.Resource.record() -> map),
             stream_batch_size: pos_integer(),
@@ -55,6 +56,7 @@ defmodule AshOban do
       :scheduler_queue,
       :scheduler_priority,
       :worker_priority,
+      :actor_persister,
       :max_attempts,
       :trigger_once?,
       :stream_batch_size,
@@ -110,6 +112,11 @@ defmodule AshOban do
         doc: """
         Additional arguments to merge into the job's arguments map. Can either be a map or a function that takes the record and returns a map.
         """
+      ],
+      actor_persister: [
+        type: {:or, [{:literal, :none}, {:behaviour, AshOban.PersistActor}]},
+        doc:
+          "An `AshOban.PersistActor` to use to store the actor. Defaults to to the configured `config :ash_oban, :actor_persister`. Set to `:none` to override the configured default."
       ],
       list_tenants: [
         type:
@@ -294,6 +301,7 @@ defmodule AshOban do
             max_attempts: non_neg_integer(),
             queue: atom,
             debug?: boolean,
+            actor_persister: module() | :none | nil,
             state: :active | :paused | :deleted,
             priority: non_neg_integer()
           }
@@ -304,6 +312,7 @@ defmodule AshOban do
       :cron,
       :debug,
       :priority,
+      :actor_persister,
       :worker_module_name,
       :action_input,
       :max_attempts,
@@ -336,6 +345,11 @@ defmodule AshOban do
       action: [
         type: :atom,
         doc: "The generic or create action to call when the schedule is triggered."
+      ],
+      actor_persister: [
+        type: {:or, [{:literal, :none}, {:behaviour, AshOban.PersistActor}]},
+        doc:
+          "An `AshOban.PersistActor` to use to store the actor. Defaults to to the configured `config :ash_oban, :actor_persister`. Set to `:none` to override the configured default."
       ],
       worker_module_name: [
         type: :module,
@@ -510,15 +524,15 @@ defmodule AshOban do
           AshOban.Info.oban_scheduled_action(resource, name)
     end
     |> case do
-      %AshOban.Schedule{worker: worker} ->
+      %AshOban.Schedule{worker: worker} = schedule ->
         %{}
-        |> store_actor(opts[:actor])
+        |> store_actor(opts[:actor], schedule.actor_persister)
         |> worker.new()
         |> Oban.insert!()
 
-      %AshOban.Trigger{scheduler: scheduler} ->
+      %AshOban.Trigger{scheduler: scheduler} = trigger ->
         %{}
-        |> store_actor(opts[:actor])
+        |> store_actor(opts[:actor], trigger.actor_persister)
         |> scheduler.new()
         |> Oban.insert!()
 
@@ -532,11 +546,22 @@ defmodule AshOban do
     Application.get_env(:ash_oban, :authorize?, true)
   end
 
-  @spec store_actor(args :: map, actor :: any) :: any
-  def store_actor(args, nil), do: args
+  @spec store_actor(
+          args :: map,
+          actor :: any,
+          actor_persister :: module() | :none | nil
+        ) :: any
+  def store_actor(args, actor, actor_persister \\ nil)
 
-  def store_actor(args, actor) do
-    case Application.get_env(:ash_oban, :actor_persister) do
+  def store_actor(args, nil, _actor_persister) do
+    args
+  end
+
+  def store_actor(args, actor, actor_persister) do
+    case actor_persister || Application.get_env(:ash_oban, :actor_persister) do
+      :none ->
+        args
+
       nil ->
         args
 
@@ -545,9 +570,12 @@ defmodule AshOban do
     end
   end
 
-  @spec lookup_actor(actor_json :: any) :: any
-  def lookup_actor(actor_json) do
-    case Application.get_env(:ash_oban, :actor_persister) do
+  @spec lookup_actor(actor_json :: any, actor_persister :: module() | :none | nil) :: any
+  def lookup_actor(actor_json, actor_persister \\ nil) do
+    case actor_persister || Application.get_env(:ash_oban, :actor_persister) do
+      :none ->
+        {:ok, nil}
+
       nil ->
         {:ok, nil}
 
@@ -651,7 +679,7 @@ defmodule AshOban do
       action_arguments: opts[:action_arguments] || %{},
       tenant: opts[:tenant]
     }
-    |> AshOban.store_actor(opts[:actor])
+    |> AshOban.store_actor(opts[:actor], trigger.actor_persister)
     |> then(&Map.merge(extra_args, &1))
     |> then(&Map.merge(opts[:args] || %{}, &1))
     |> trigger.worker.new(oban_job_opts)
