@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.4.3](https://github.com/ash-project/ash_oban/compare/v0.4.2...v0.4.3) (2025-04-13)
+
+
+
+
+### Improvements:
+
+* add `AshOban.Igniter`
+
 ## [v0.4.2](https://github.com/ash-project/ash_oban/compare/v0.4.1...v0.4.2) (2025-04-09)
 
 
