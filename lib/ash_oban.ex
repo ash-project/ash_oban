@@ -590,7 +590,12 @@ defmodule AshOban do
   ## Options
 
   - `:actor` - the actor to set on the job. Requires configuring an actor persister.
+  - `:tenant` - the tenant to set on the job.
+  - `:action_arguments` - additional arguments to merge into the action invocation's arguments map.
+     affects the uniqueness checks for the job.
   - `:args` - additional arguments to merge into the job's arguments map.
+     the action will not use these arguments, it can only be used to affect the job uniqueness checks.
+     you likely are looking for the `:action_arguments` job.
 
   All other options are passed through to `c:Oban.Worker.new/2`
   """
@@ -606,7 +611,12 @@ defmodule AshOban do
   ## Options
 
   - `:actor` - the actor to set on the job. Requires configuring an actor persister.
+  - `:tenant` - the tenant to set on the job.
+  - `:action_arguments` - additional arguments to merge into the action invocation's arguments map.
+     affects the uniqueness checks for the job.
   - `:args` - additional arguments to merge into the job's arguments map.
+     the action will not use these arguments, it can only be used to affect the job uniqueness checks.
+     you likely are looking for the `:action_arguments` job.
 
   All other options are passed through to `c:Oban.Worker.new/2`
   """
@@ -630,6 +640,7 @@ defmodule AshOban do
   ## Options
 
   - `:actor` - the actor to set on the job. Requires configuring an actor persister.
+  - `:tenant` - the tenant to set on the job.
   - `:action_arguments` - additional arguments to merge into the action invocation's arguments map.
      affects the uniqueness checks for the job.
   - `:args` - additional arguments to merge into the job's arguments map.
