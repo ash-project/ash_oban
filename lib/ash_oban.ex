@@ -589,10 +589,8 @@ defmodule AshOban do
 
   ## Options
 
-  - `:actor` - the actor to set on the job. Requires configuring an actor persister.
-  - `:args` - additional arguments to merge into the job's arguments map.
-
-  All other options are passed through to `c:Oban.Worker.new/2`
+  Options are passed through to `build_trigger/3` check its documentation
+  for the possible values
   """
   def run_trigger(record, trigger, opts \\ []) do
     record
@@ -605,10 +603,8 @@ defmodule AshOban do
 
   ## Options
 
-  - `:actor` - the actor to set on the job. Requires configuring an actor persister.
-  - `:args` - additional arguments to merge into the job's arguments map.
-
-  All other options are passed through to `c:Oban.Worker.new/2`
+  Options are passed through to `build_trigger/3` check its documentation
+  for the possible values
   """
   def run_triggers(records, trigger, opts \\ []) do
     jobs =
@@ -630,6 +626,7 @@ defmodule AshOban do
   ## Options
 
   - `:actor` - the actor to set on the job. Requires configuring an actor persister.
+  - `:tenant` - the tenant to set on the job.
   - `:action_arguments` - additional arguments to merge into the action invocation's arguments map.
      affects the uniqueness checks for the job.
   - `:args` - additional arguments to merge into the job's arguments map.
