@@ -1,4 +1,5 @@
 defmodule AshOban.Igniter do
+  @moduledoc "Codemods and utilities for resources that use `AshOban`."
   @doc "Adds the given code block to the resource's `triggers` block if there is no existing trigger with the given name"
   def add_new_trigger(igniter, resource, name, trigger) do
     {igniter, defines?} = defines_trigger(igniter, resource, name)
