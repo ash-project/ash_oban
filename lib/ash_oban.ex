@@ -219,12 +219,13 @@ defmodule AshOban do
         If set to `true` `completed` is added to list of states to check for uniqueness.
 
         If the execution time of the job is very low, it's possible that jobs are executed and
-        completed while the scheduler is running. This can lead to jobs being scheduled for resoruces
+        completed while the scheduler is running. This can lead to jobs being scheduled for resources
         that are already processed by the time the job gets inserted. Adding `completed` to the list of
         states will lead to oban ignoring the job when inserted.
 
-        Only use this if nothing else is writing to the resource attribute that marks the it as processsed.
-        Because it will not be processed again as long the completed job is still in the db.
+        Only use this if nothing else is writing to the resource attribute that marks it as processsed.
+        Because it will not be processed again as long the completed job is still in the db. You also don't
+        need this if the job executing puts the record into a state that makes it no longer eligible for scheduling.
         """
       ],
       read_metadata: [
