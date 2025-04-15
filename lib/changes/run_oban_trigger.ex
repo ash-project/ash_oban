@@ -41,6 +41,10 @@ defmodule AshOban.Changes.RunObanTrigger do
   end
 
   @impl true
+  def after_batch([], _opts, _context) do
+    []
+  end
+
   def after_batch([{changeset, _} | _] = changesets_and_results, opts, context) do
     trigger = AshOban.Info.oban_trigger(changeset.resource, opts[:trigger])
 
