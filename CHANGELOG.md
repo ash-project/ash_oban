@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.4.5](https://github.com/ash-project/ash_oban/compare/v0.4.4...v0.4.5) (2025-04-15)
+
+
+
+
+### Bug Fixes:
+
+* handle empty batch in after_batch
+
 ## [v0.4.4](https://github.com/ash-project/ash_oban/compare/v0.4.3...v0.4.4) (2025-04-14)
 
 
