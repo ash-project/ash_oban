@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.4.6](https://github.com/ash-project/ash_oban/compare/v0.4.5...v0.4.6) (2025-04-29)
+
+
+
+
+### Bug Fixes:
+
+* don't add schedulers to cron when not defined
+
 ## [v0.4.5](https://github.com/ash-project/ash_oban/compare/v0.4.4...v0.4.5) (2025-04-15)
 
 
