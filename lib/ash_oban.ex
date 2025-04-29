@@ -814,7 +814,15 @@ defmodule AshOban do
           """)
         end
 
-        Enum.reduce(resources_and_triggers, base, fn {resource, trigger}, config ->
+        resources_and_triggers
+        |> Enum.reject(fn
+          %{scheduler_cron: false} ->
+            true
+
+          _ ->
+            false
+        end)
+        |> Enum.reduce(base, fn {resource, trigger}, config ->
           add_job(config, cron_plugin, resource, trigger)
         end)
     end
