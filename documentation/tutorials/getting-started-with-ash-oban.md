@@ -1,12 +1,13 @@
 # Getting Started With Ash Oban
 
-AshOban will likely grow to provide many more oban-related features, but for now the primary focus is on "triggers".
-
-A trigger describes an action that is run periodically.
-
 ## Get familiar with Ash resources
 
 If you haven't already, read the [Ash Getting Started Guide](https://hexdocs.pm/ash/get-started.html), and familiarize yourself with Ash and Ash resources.
+
+## Get familiar with AshOban Triggers & Scheduled Actions
+
+See [Triggers and Scheduled Actions](/documentation/topics/triggers-and-scheduled-actions.md) to read
+about what `AshOban` provides.
 
 ## Bring in the `ash_oban` dependency
 
@@ -15,8 +16,6 @@ If you haven't already, read the [Ash Getting Started Guide](https://hexdocs.pm/
 ```
 
 ## Setup
-
-First, follow the [Oban setup guide](https://hexdocs.pm/oban/installation.html).
 
 ### Oban Pro
 
@@ -30,7 +29,17 @@ Oban Pro lives in a separate hex repository, and therefore we, unfortunately, ca
 What this means is that any version you use in hex will technically be accepted, and if you don't have the oban pro package installed
 and you use the above configuration, you will get compile time errors/warnings.
 
-### Setting up AshOban
+<!-- tabs-open -->
+
+### Using Igniter (recommended)
+
+This will install oban as well.
+
+```elixir
+mix igniter.install ash_oban
+```
+
+### Manual
 
 Next, allow AshOban to alter your configuration in your Application module:
 
@@ -43,6 +52,8 @@ Next, allow AshOban to alter your configuration in your Application module:
 # OR this, to selectively enable AshOban only for specific domains
 {Oban, AshOban.config([YourDomain, YourOtherDomain], your_oban_config)}
 ```
+
+<!-- tabs-close -->
 
 ## Usage
 

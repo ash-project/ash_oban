@@ -14,6 +14,10 @@ Welcome! This is the extension for integrating [Ash](https://hexdocs.pm/ash) res
 
 - [Getting Started with AshOban](documentation/tutorials/getting-started-with-ash-oban.md)
 
+## Topics
+
+- [Triggers and Scheduled Actions](documentation/topics/triggers-and-scheduled-actions.md)
+
 ## Reference
 
 - [AshOban DSL](documentation/dsls/DSL-AshOban.md)

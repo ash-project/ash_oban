@@ -64,6 +64,7 @@ defmodule AshOban.MixProject do
       extras: [
         {"README.md", title: "Home"},
         "documentation/tutorials/getting-started-with-ash-oban.md",
+        "documentation/topics/triggers-and-scheduled-actions.md",
         {"documentation/dsls/DSL-AshOban.md", search_data: Spark.Docs.search_data_for(AshOban)},
         "CHANGELOG.md"
       ],
