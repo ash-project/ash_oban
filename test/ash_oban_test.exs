@@ -23,14 +23,15 @@ defmodule AshObanTest do
         :triggered_process_2,
         :triggered_say_hello,
         :triggered_tenant_aware,
-        :triggered_process_generic
+        :triggered_process_generic,
+        :triggered_fail_oban_job
       ],
       &Oban.drain_queue(queue: &1)
     )
   end
 
   test "nothing happens if no records exist" do
-    assert %{success: 4} = AshOban.Test.schedule_and_run_triggers(Triggered)
+    assert %{success: 6} = AshOban.Test.schedule_and_run_triggers(Triggered)
   end
 
   test "if a record exists, it is processed" do
@@ -133,6 +134,28 @@ defmodule AshObanTest do
     assert Ash.load!(tenant_2, :processed).processed
   end
 
+  test "on_error_fails_oban_job? false will succeed the job" do
+    model = Triggered
+      |> Ash.Changeset.for_create(:create, %{})
+      |> Ash.create!()
+
+    assert %{success: 2, discard: 0} =
+             AshOban.Test.schedule_and_run_triggers({Triggered, :dont_fail_oban_job})
+
+    assert Ash.load!(model, :processed).processed
+  end
+
+  test "on_error_fails_oban_job? true will fail the job" do
+    model = Triggered
+      |> Ash.Changeset.for_create(:create, %{})
+      |> Ash.create!()
+
+    assert %{discard: 1, success: 1} =
+             AshOban.Test.schedule_and_run_triggers({Triggered, :fail_oban_job})
+
+    assert Ash.load!(model, :processed).processed
+  end
+
   @tag :focus
   test "bulk create triggers after_batch change" do
     [
@@ -154,7 +177,7 @@ defmodule AshObanTest do
     |> Ash.Changeset.for_create(:create)
     |> Ash.create!()
 
-    assert %{success: 6, failure: 1} =
+    assert %{success: 8, failure: 1} =
              AshOban.Test.schedule_and_run_triggers(Triggered)
   end
 
@@ -173,7 +196,7 @@ defmodule AshObanTest do
     |> Ash.Changeset.for_update(:update_triggered)
     |> Ash.update!()
 
-    assert %{success: 7, failure: 0} =
+    assert %{success: 9, failure: 0} =
              AshOban.Test.schedule_and_run_triggers(Triggered)
   end
 
@@ -183,7 +206,9 @@ defmodule AshObanTest do
              %AshOban.Trigger{action: :process_atomically},
              %AshOban.Trigger{action: :process, scheduler: nil},
              %AshOban.Trigger{name: :process_generic},
-             %AshOban.Trigger{name: :tenant_aware}
+             %AshOban.Trigger{name: :tenant_aware},
+             %AshOban.Trigger{name: :fail_oban_job},
+             %AshOban.Trigger{name: :dont_fail_oban_job}
            ] = AshOban.Info.oban_triggers(Triggered)
   end
 
@@ -198,7 +223,8 @@ defmodule AshObanTest do
           triggered_process_2: 10,
           triggered_say_hello: 10,
           triggered_tenant_aware: 10,
-          triggered_process_generic: 10
+          triggered_process_generic: 10,
+          triggered_fail_oban_job: 10
         ]
       )
 
@@ -208,10 +234,12 @@ defmodule AshObanTest do
                 [
                   crontab: [
                     {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello, []},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.DontFailObanJob, []},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.FailObanJob, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.TenantAware, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessGeneric, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessAtomically, []},
-                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process, []}
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process, []},
                   ]
                 ]}
              ],
@@ -220,7 +248,8 @@ defmodule AshObanTest do
                triggered_process_2: 10,
                triggered_say_hello: 10,
                triggered_tenant_aware: 10,
-               triggered_process_generic: 10
+               triggered_process_generic: 10,
+               triggered_fail_oban_job: 10
              ]
            ] = config
   end
@@ -242,7 +271,8 @@ defmodule AshObanTest do
              triggered_process_2: 10,
              triggered_say_hello: 10,
              triggered_tenant_aware: 10,
-             triggered_process_generic: 10
+             triggered_process_generic: 10,
+             triggered_fail_oban_job: 10
            ]}
         ],
         queues: false
@@ -258,6 +288,10 @@ defmodule AshObanTest do
                   crontab: [
                     {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello,
                      [paused: false]},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.DontFailObanJob,
+                     [paused: false]},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.FailObanJob,
+                     [paused: false]},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.TenantAware,
                      [paused: false]},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessGeneric,
@@ -265,7 +299,7 @@ defmodule AshObanTest do
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessAtomically,
                      [paused: false]},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process,
-                     [paused: false]}
+                     [paused: false]},
                   ]
                 ]},
                {Oban.Pro.Plugins.DynamicQueues,
@@ -274,7 +308,8 @@ defmodule AshObanTest do
                   triggered_process_2: 10,
                   triggered_say_hello: 10,
                   triggered_tenant_aware: 10,
-                  triggered_process_generic: 10
+                  triggered_process_generic: 10,
+                  triggered_fail_oban_job: 10
                 ]}
              ],
              queues: false

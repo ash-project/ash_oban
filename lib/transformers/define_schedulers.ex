@@ -717,16 +717,22 @@ defmodule AshOban.Transformers.DefineSchedulers do
                         |> AshOban.update_or_destroy()
                         |> case do
                           :ok ->
-                            :ok
+                            case unquote(trigger.on_error_fails_oban_job?) do
+                              true -> reraise error, stacktrace
+                              false -> :ok
+                            end
 
-                          {:ok, result} ->
-                            :ok
+                          {:ok, _} ->
+                            case unquote(trigger.on_error_fails_oban_job?) do
+                              true -> reraise error, stacktrace
+                              false -> :ok
+                            end
 
                           {:error, error} ->
                             error = Ash.Error.to_ash_error(error, stacktrace)
 
                             Logger.error("""
-                            Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!
+                            Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!!
 
                             #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
                             """)
