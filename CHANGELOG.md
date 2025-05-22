@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.4.7](https://github.com/ash-project/ash_oban/compare/v0.4.6...v0.4.7) (2025-05-22)
+
+
+
+
+### Improvements:
+
+* add usage-rules.md file
+
 ## [v0.4.6](https://github.com/ash-project/ash_oban/compare/v0.4.5...v0.4.6) (2025-04-29)
 
 
