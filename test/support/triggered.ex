@@ -76,6 +76,25 @@ defmodule AshOban.Test.Triggered do
         worker_module_name AshOban.Test.Triggered.AshOban.Worker.TenantAware
         scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.TenantAware
       end
+
+      trigger :fail_oban_job do
+        action :process_failure
+        where expr(processed != true)
+        on_error_fails_oban_job? true
+        on_error :process_atomically
+        worker_module_name AshOban.Test.Triggered.AshOban.Worker.FailObanJob
+        scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.FailObanJob
+      end
+
+      trigger :dont_fail_oban_job do
+        action :process_failure
+        where expr(processed != true)
+        on_error_fails_oban_job? false
+        on_error :process_atomically
+        queue :triggered_fail_oban_job
+        worker_module_name AshOban.Test.Triggered.AshOban.Worker.DontFailObanJob
+        scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.DontFailObanJob
+      end
     end
 
     scheduled_actions do
@@ -130,6 +149,13 @@ defmodule AshOban.Test.Triggered do
         send(self(), {:actor, context.actor})
         changeset
       end
+    end
+
+    update :process_failure do
+      require_atomic? false
+      change after_action(fn changeset, record, _context ->
+        1 / 0
+      end)
     end
 
     action :say_hello, :string do
