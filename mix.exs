@@ -39,7 +39,7 @@ defmodule AshOban.MixProject do
     [
       name: :ash_oban,
       licenses: ["MIT"],
-      files: ~w(lib .formatter.exs mix.exs README* LICENSE*
+      files: ~w(lib .formatter.exs mix.exs README* LICENSE* usage-rules.md
       CHANGELOG* documentation),
       links: %{
         GitHub: "https://github.com/ash-project/ash_oban"
