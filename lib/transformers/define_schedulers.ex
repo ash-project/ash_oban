@@ -717,13 +717,13 @@ defmodule AshOban.Transformers.DefineSchedulers do
                         |> AshOban.update_or_destroy()
                         |> case do
                           :ok ->
-                            case unquote(trigger.on_error_fails_oban_job?) do
+                            case unquote(trigger.on_error_fails_job?) do
                               true -> reraise error, stacktrace
                               false -> :ok
                             end
 
                           {:ok, _} ->
-                            case unquote(trigger.on_error_fails_oban_job?) do
+                            case unquote(trigger.on_error_fails_job?) do
                               true -> reraise error, stacktrace
                               false -> :ok
                             end

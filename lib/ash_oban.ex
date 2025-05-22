@@ -36,7 +36,7 @@ defmodule AshOban do
             worker_opts: keyword(),
             __identifier__: atom,
             on_error: atom,
-            on_error_fails_oban_job?: boolean()
+            on_error_fails_job?: boolean()
           }
 
     defstruct [
@@ -70,7 +70,7 @@ defmodule AshOban do
       :worker,
       :worker_opts,
       :on_error,
-      :on_error_fails_oban_job?,
+      :on_error_fails_job?,
       :log_final_error?,
       :log_errors?,
       :__identifier__
@@ -274,7 +274,7 @@ defmodule AshOban do
         doc:
           "An update action to call after the last attempt has failed. See the getting started guide for more."
       ],
-      on_error_fails_oban_job?: [
+      on_error_fails_job?: [
         type: :boolean,
         default: false,
         doc: """

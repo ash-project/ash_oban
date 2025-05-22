@@ -134,8 +134,9 @@ defmodule AshObanTest do
     assert Ash.load!(tenant_2, :processed).processed
   end
 
-  test "on_error_fails_oban_job? false will succeed the job" do
-    model = Triggered
+  test "on_error_fails_job? false will succeed the job" do
+    model =
+      Triggered
       |> Ash.Changeset.for_create(:create, %{})
       |> Ash.create!()
 
@@ -145,8 +146,9 @@ defmodule AshObanTest do
     assert Ash.load!(model, :processed).processed
   end
 
-  test "on_error_fails_oban_job? true will fail the job" do
-    model = Triggered
+  test "on_error_fails_job? true will fail the job" do
+    model =
+      Triggered
       |> Ash.Changeset.for_create(:create, %{})
       |> Ash.create!()
 
@@ -239,7 +241,7 @@ defmodule AshObanTest do
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.TenantAware, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessGeneric, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessAtomically, []},
-                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process, []},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process, []}
                   ]
                 ]}
              ],
@@ -299,7 +301,7 @@ defmodule AshObanTest do
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessAtomically,
                      [paused: false]},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process,
-                     [paused: false]},
+                     [paused: false]}
                   ]
                 ]},
                {Oban.Pro.Plugins.DynamicQueues,

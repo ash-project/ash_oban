@@ -80,7 +80,7 @@ defmodule AshOban.Test.Triggered do
       trigger :fail_oban_job do
         action :process_failure
         where expr(processed != true)
-        on_error_fails_oban_job? true
+        on_error_fails_job?(true)
         on_error :process_atomically
         worker_module_name AshOban.Test.Triggered.AshOban.Worker.FailObanJob
         scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.FailObanJob
@@ -89,7 +89,7 @@ defmodule AshOban.Test.Triggered do
       trigger :dont_fail_oban_job do
         action :process_failure
         where expr(processed != true)
-        on_error_fails_oban_job? false
+        on_error_fails_job?(false)
         on_error :process_atomically
         queue :triggered_fail_oban_job
         worker_module_name AshOban.Test.Triggered.AshOban.Worker.DontFailObanJob
@@ -153,9 +153,10 @@ defmodule AshOban.Test.Triggered do
 
     update :process_failure do
       require_atomic? false
+
       change after_action(fn changeset, record, _context ->
-        1 / 0
-      end)
+               1 / 0
+             end)
     end
 
     action :say_hello, :string do
