@@ -140,7 +140,7 @@ end
 | [`where`](#oban-triggers-trigger-where){: #oban-triggers-trigger-where } | `any` |  | The filter expression to determine if something should be triggered |
 | [`sort`](#oban-triggers-trigger-sort){: #oban-triggers-trigger-sort } | `any` |  | The sort applied to the query that determines if something should be triggered |
 | [`on_error`](#oban-triggers-trigger-on_error){: #oban-triggers-trigger-on_error } | `atom` |  | An update action to call after the last attempt has failed. See the getting started guide for more. |
-| [`on_error_fails_job?`](#oban-triggers-trigger-on_error_fails_job?){: #oban-triggers-trigger-on_error_fails_job?} | `boolean` |  | Fail the Oban Job if the action fails. |
+| [`on_error_fails_job?`](#oban-triggers-trigger-on_error_fails_job?){: #oban-triggers-trigger-on_error_fails_job? } | `boolean` | `false` | Determines if the oban job will be failed on the last attempt when there is an on_error handler that is called. If there is no on_error, then the action is always marked as failed on the last attempt. |
 | [`worker_opts`](#oban-triggers-trigger-worker_opts){: #oban-triggers-trigger-worker_opts } | `keyword` | `[]` | Options to set on the worker. ATTENTION: this may overwrite options set by ash_oban, make sure you know what you are doing. See [Oban.Worker](https://hexdocs.pm/oban/Oban.Worker.html#module-defining-workers) for options and [Oban.Pro.Worker](https://oban.pro/docs/pro/Oban.Pro.Worker.html) for oban pro |
 
 

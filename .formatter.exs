@@ -12,6 +12,7 @@ spark_locals_without_parens = [
   max_attempts: 1,
   max_scheduler_attempts: 1,
   on_error: 1,
+  on_error_fails_job?: 1,
   priority: 1,
   queue: 1,
   read_action: 1,
