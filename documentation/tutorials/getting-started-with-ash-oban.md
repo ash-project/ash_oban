@@ -87,7 +87,7 @@ end
 ```
 
 Make sure to add the queue to the list of queues in Oban configuration.
-Default queue is resources short name plus the name of the scheduled action. 
+Default queue is resources short name plus the name of the trigger. 
 For the above example you would add `:resource_process` queue to Oban queues in config.
 Alternatively, you can define your own queue in the trigger.
 
