@@ -642,7 +642,17 @@ defmodule AshOban.Transformers.DefineSchedulers do
         end
       else
         # We look up the record again since we have exited any potential transaction we were in before
-        quote location: :keep do
+        quote generated: true, location: :keep do
+          if unquote(trigger.on_error_fails_job?) do
+            defp trigger_on_error_fails_job(error, stacktrace) do
+              reraise error, stacktrace
+            end
+          else
+            defp trigger_on_error_fails_job(_error, _stacktrace) do
+              :ok
+            end
+          end
+
           def handle_error(
                 %{max_attempts: max_attempts, attempt: attempt},
                 error,
@@ -717,16 +727,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
                         |> AshOban.update_or_destroy()
                         |> case do
                           :ok ->
-                            case unquote(trigger.on_error_fails_job?) do
-                              true -> reraise error, stacktrace
-                              false -> :ok
-                            end
+                            trigger_on_error_fails_job(error, stacktrace)
 
                           {:ok, _} ->
-                            case unquote(trigger.on_error_fails_job?) do
-                              true -> reraise error, stacktrace
-                              false -> :ok
-                            end
+                            trigger_on_error_fails_job(error, stacktrace)
 
                           {:error, error} ->
                             error = Ash.Error.to_ash_error(error, stacktrace)
