@@ -174,12 +174,13 @@ defmodule AshOban do
       ],
       queue: [
         type: :atom,
-        doc: "The queue to place the worker job in. The trigger name is used by default."
+        doc:
+          "The queue to place the job in. Defaults to the resources short name plus the name of the trigger."
       ],
       record_limit: [
         type: :pos_integer,
         doc:
-          "If set, any given run of the scheduler will only ever schedule this many items maximum"
+          "If set, any given run of the scheduler will only ever schedule this many items maximum."
       ],
       log_errors?: [
         type: :boolean,
