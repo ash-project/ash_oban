@@ -59,30 +59,37 @@ Next, allow AshOban to alter your configuration in your Application module:
 
 Finally, configure your triggers in your resources.
 
-Add the `AshOban` extension:
-
-```elixir
-use Ash.Resource, domain: MyDomain, extensions: [AshOban]
-```
+Add the `AshOban` extension and define a trigger.
 
 For example:
 
 ```elixir
-oban do
-  triggers do
-    # add a trigger called `:process`
-    trigger :process do
-      # this trigger calls the `process` action
-      action :process
-      # for any record that has `processed != true`
-      where expr(processed != true)
-      # checking for matches every minute
-      scheduler_cron "* * * * *"
-      on_error :errored
+defmodule MyApp.Resource do
+  use Ash.Resource, domain: MyDomain, extensions: [AshOban]
+
+  ...
+
+  oban do
+    triggers do
+      # add a trigger called `:process`
+      trigger :process do
+        # this trigger calls the `process` action
+        action :process
+        # for any record that has `processed != true`
+        where expr(processed != true)
+        # checking for matches every minute
+        scheduler_cron "* * * * *"
+        on_error :errored
+      end
     end
   end
 end
 ```
+
+Make sure to add the queue to the list of queues in Oban configuration.
+Default queue is resources short name plus the name of the scheduled action. 
+For the above example you would add `:resource_process` queue to Oban queues in config.
+Alternatively, you can define your own queue in the trigger.
 
 See the DSL documentation for more: [`AshOban`](/documentation/dsl/DSL-AshOban.md)
 
