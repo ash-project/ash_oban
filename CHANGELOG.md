@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.4.9](https://github.com/ash-project/ash_oban/compare/v0.4.8...v0.4.9) (2025-06-02)
+
+
+
+
+### Bug Fixes:
+
+* solve dialyzer error for on_error_fails_job
+
 ## [v0.4.8](https://github.com/ash-project/ash_oban/compare/v0.4.7...v0.4.8) (2025-05-30)
 
 
