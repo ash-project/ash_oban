@@ -159,7 +159,7 @@ Create a module that is responsible for translating the current user to a value 
 
 ```elixir
 defmodule MyApp.AshObanActorPersister do
-  use AshOban.PersistActor
+  use AshOban.ActorPersister
 
   def store(%MyApp.User{id: id}), do: %{"type" => "user", "id" => id}
 
