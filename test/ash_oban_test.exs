@@ -31,7 +31,7 @@ defmodule AshObanTest do
   end
 
   test "nothing happens if no records exist" do
-    assert %{success: 6} = AshOban.Test.schedule_and_run_triggers(Triggered)
+    assert %{success: 7} = AshOban.Test.schedule_and_run_triggers(Triggered)
   end
 
   test "if a record exists, it is processed" do
@@ -158,6 +158,23 @@ defmodule AshObanTest do
     assert Ash.load!(model, :processed).processed
   end
 
+  test "on_error_fails_job? true with custom backoff will fail the job" do
+    model =
+      Triggered
+      |> Ash.Changeset.for_create(:create, %{})
+      |> Ash.create!()
+
+    # Im not sure how to properly test that backoff has been called
+    assert %{failure: 1, success: 1} =
+             AshOban.Test.schedule_and_run_triggers({Triggered, :fail_oban_job_custom_backoff})
+
+    assert Ash.load!(model, :processed).processed == false
+
+    # :timer.sleep(1500)
+
+    # assert Ash.load!(model, :processed).processed == true
+  end
+
   @tag :focus
   test "bulk create triggers after_batch change" do
     [
@@ -179,7 +196,7 @@ defmodule AshObanTest do
     |> Ash.Changeset.for_create(:create)
     |> Ash.create!()
 
-    assert %{success: 8, failure: 1} =
+    assert %{success: 9, failure: 1} =
              AshOban.Test.schedule_and_run_triggers(Triggered)
   end
 
@@ -198,7 +215,7 @@ defmodule AshObanTest do
     |> Ash.Changeset.for_update(:update_triggered)
     |> Ash.update!()
 
-    assert %{success: 9, failure: 0} =
+    assert %{success: 10, failure: 0} =
              AshOban.Test.schedule_and_run_triggers(Triggered)
   end
 
@@ -210,7 +227,8 @@ defmodule AshObanTest do
              %AshOban.Trigger{name: :process_generic},
              %AshOban.Trigger{name: :tenant_aware},
              %AshOban.Trigger{name: :fail_oban_job},
-             %AshOban.Trigger{name: :dont_fail_oban_job}
+             %AshOban.Trigger{name: :dont_fail_oban_job},
+             %AshOban.Trigger{name: :fail_oban_job_custom_backoff}
            ] = AshOban.Info.oban_triggers(Triggered)
   end
 
@@ -236,6 +254,7 @@ defmodule AshObanTest do
                 [
                   crontab: [
                     {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello, []},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.FailObanJobWithCustomBackoff, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.DontFailObanJob, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.FailObanJob, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.TenantAware, []},
@@ -289,6 +308,8 @@ defmodule AshObanTest do
                   sync_mode: :automatic,
                   crontab: [
                     {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello,
+                     [paused: false]},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.FailObanJobWithCustomBackoff,
                      [paused: false]},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.DontFailObanJob,
                      [paused: false]},

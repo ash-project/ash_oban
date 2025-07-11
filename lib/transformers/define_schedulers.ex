@@ -446,6 +446,48 @@ defmodule AshOban.Transformers.DefineSchedulers do
     work =
       work(trigger, worker, atomic?, trigger_action.type, pro?, read_action, resource, domain)
 
+    backoff =
+      if trigger.backoff do
+        case trigger.backoff do
+          fun when is_function(fun) ->
+            quote location: :keep do
+              @impl unquote(worker)
+              def backoff(job) do
+                unquote(fun).(job)
+              end
+            end
+
+          backoff ->
+            quote location: :keep do
+              @impl unquote(worker)
+              def backoff(_job) do
+                unquote(backoff)
+              end
+            end
+        end
+      end
+
+    timeout =
+      if trigger.timeout do
+        case trigger.timeout do
+          fun when is_function(fun) ->
+            quote location: :keep do
+              @impl unquote(worker)
+              def timeout(job) do
+                unquote(fun).(job)
+              end
+            end
+
+          timeout ->
+            quote location: :keep do
+              @impl unquote(worker)
+              def timeout(_job) do
+                unquote(timeout)
+              end
+            end
+        end
+      end
+
     states =
       [
         :available,
@@ -488,6 +530,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
         unquote(handle_error)
         unquote(prepare)
         unquote(prepare_error)
+        unquote(backoff)
+        unquote(timeout)
       end,
       Macro.Env.location(__ENV__)
     )
