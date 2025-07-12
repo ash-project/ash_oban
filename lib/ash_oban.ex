@@ -35,8 +35,8 @@ defmodule AshOban do
             state: :active | :paused | :deleted,
             worker: module,
             worker_opts: keyword(),
-            backoff: pos_integer() | (map -> pos_integer()) | nil,
-            timeout: pos_integer() | (map -> pos_integer()) | nil,
+            backoff: pos_integer() | (map -> pos_integer()) | :exponential,
+            timeout: pos_integer() | (map -> pos_integer()) | :infinity,
             __identifier__: atom,
             on_error: atom,
             on_error_fails_job?: boolean()
