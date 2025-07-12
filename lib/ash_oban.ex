@@ -300,8 +300,8 @@ defmodule AshOban do
         """
       ],
       backoff: [
-        type: {:or, [:pos_integer, {:fun, 1}, {:literal, false}]},
-        default: false,
+        type: {:or, [:pos_integer, {:fun, 1}, {:literal, :exponential}]},
+        default: :exponential,
         doc: """
         Configure after how much time job should (in seconds) be retried in case of error if more retries available.
         Can be a number of seconds or a function that takes the job and returns a number of seconds.

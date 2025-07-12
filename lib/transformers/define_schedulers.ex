@@ -447,45 +447,47 @@ defmodule AshOban.Transformers.DefineSchedulers do
       work(trigger, worker, atomic?, trigger_action.type, pro?, read_action, resource, domain)
 
     backoff =
-      if trigger.backoff do
-        case trigger.backoff do
-          fun when is_function(fun) ->
-            quote location: :keep do
-              @impl unquote(worker)
-              def backoff(job) do
-                unquote(fun).(job)
-              end
-            end
+      case trigger.backoff do
+        :exponential ->
+          nil
 
-          backoff ->
-            quote location: :keep do
-              @impl unquote(worker)
-              def backoff(_job) do
-                unquote(backoff)
-              end
+        fun when is_function(fun) ->
+          quote location: :keep do
+            @impl unquote(worker)
+            def backoff(job) do
+              unquote(fun).(job)
             end
-        end
+          end
+
+        backoff ->
+          quote location: :keep do
+            @impl unquote(worker)
+            def backoff(_job) do
+              unquote(backoff)
+            end
+          end
       end
 
     timeout =
-      if trigger.timeout do
-        case trigger.timeout do
-          fun when is_function(fun) ->
-            quote location: :keep do
-              @impl unquote(worker)
-              def timeout(job) do
-                unquote(fun).(job)
-              end
-            end
+      case trigger.timeout do
+        :infinity ->
+          nil
 
-          timeout ->
-            quote location: :keep do
-              @impl unquote(worker)
-              def timeout(_job) do
-                unquote(timeout)
-              end
+        fun when is_function(fun) ->
+          quote location: :keep do
+            @impl unquote(worker)
+            def timeout(job) do
+              unquote(fun).(job)
             end
-        end
+          end
+
+        timeout ->
+          quote location: :keep do
+            @impl unquote(worker)
+            def timeout(_job) do
+              unquote(timeout)
+            end
+          end
       end
 
     states =
