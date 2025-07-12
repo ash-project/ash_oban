@@ -300,21 +300,38 @@ defmodule AshOban do
         """
       ],
       backoff: [
-        type: {:or, [:pos_integer, {:fun, 1}]},
+        type: {:or, [:pos_integer, {:fun, 1}, {:literal, false}]},
+        default: false,
         doc: """
         Configure after how much time job should (in seconds) be retried in case of error if more retries available.
         Can be a number of seconds or a function that takes the job and returns a number of seconds.
         Will not be executed if default max_attempts value of 1 will be used.
 
         See [Oban.Worker](https://hexdocs.pm/oban/Oban.Worker.html#module-customizing-backoff) for more about backoff.
+
+          backoff 10
+          backoff fn _job -> 10 end
+          backoff fn %Oban.Job{attempt: attempt} -> 10 * attempt end
+          backoff fn %Oban.Job{attempt: attempt, unsaved_error: unsaved_error} ->
+            %{kind: _, reason: reason, stacktrace: _} = unsaved_error
+
+            case reason do
+              %MyApp.ApiError{status: 429} -> 300
+              _ -> trunc(:math.pow(attempt, 4))
+            end
+          end
         """
       ],
       timeout: [
-        type: {:or, [:pos_integer, {:fun, 1}]},
+        type: {:or, [:pos_integer, {:fun, 1}, {:literal, :infinity}]},
+        default: :infinity,
         doc: """
         Configure timeout for the job in milliseconds.
 
         See [Oban.Worker timeout](https://hexdocs.pm/oban/Oban.Worker.html#module-customizing-timeout) for more about timeout.
+
+          timeout 30_000
+          timeout fn _job -> :timer.seconds(30) end
         """
       ]
     ]

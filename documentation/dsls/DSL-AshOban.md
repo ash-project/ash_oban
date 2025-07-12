@@ -142,6 +142,8 @@ end
 | [`on_error`](#oban-triggers-trigger-on_error){: #oban-triggers-trigger-on_error } | `atom` |  | An update action to call after the last attempt has failed. See the getting started guide for more. |
 | [`on_error_fails_job?`](#oban-triggers-trigger-on_error_fails_job?){: #oban-triggers-trigger-on_error_fails_job? } | `boolean` | `false` | Determines if the oban job will be failed on the last attempt when there is an on_error handler that is called. If there is no on_error, then the action is always marked as failed on the last attempt. |
 | [`worker_opts`](#oban-triggers-trigger-worker_opts){: #oban-triggers-trigger-worker_opts } | `keyword` | `[]` | Options to set on the worker. ATTENTION: this may overwrite options set by ash_oban, make sure you know what you are doing. See [Oban.Worker](https://hexdocs.pm/oban/Oban.Worker.html#module-defining-workers) for options and [Oban.Pro.Worker](https://oban.pro/docs/pro/Oban.Pro.Worker.html) for oban pro |
+| [`backoff`](#oban-triggers-trigger-backoff){: #oban-triggers-trigger-backoff } | `pos_integer \| (any -> any)` |  | Configure after how much time job should (in seconds) be retried in case of error if more retries available. Can be a number of seconds or a function that takes the job and returns a number of seconds. Will not be executed if default max_attempts value of 1 will be used. See [Oban.Worker](https://hexdocs.pm/oban/Oban.Worker.html#module-customizing-backoff) for more about backoff. |
+| [`timeout`](#oban-triggers-trigger-timeout){: #oban-triggers-trigger-timeout } | `pos_integer \| (any -> any)` | `:infinity` | Configure timeout for the job in milliseconds. See [Oban.Worker timeout](https://hexdocs.pm/oban/Oban.Worker.html#module-customizing-timeout) for more about timeout. |
 
 
 
