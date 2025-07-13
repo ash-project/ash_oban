@@ -95,6 +95,19 @@ defmodule AshOban.Test.Triggered do
         worker_module_name AshOban.Test.Triggered.AshOban.Worker.DontFailObanJob
         scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.DontFailObanJob
       end
+
+      trigger :fail_oban_job_custom_backoff do
+        action :process_failure
+        where expr(processed != true)
+        backoff(fn _job -> 1 end)
+        max_attempts 2
+        on_error_fails_job?(true)
+        on_error :process_atomically
+        queue :triggered_fail_oban_job
+        worker_module_name AshOban.Test.Triggered.AshOban.Worker.FailObanJobWithCustomBackoff
+
+        scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.FailObanJobWithCustomBackoff
+      end
     end
 
     scheduled_actions do
