@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.4.10](https://github.com/ash-project/ash_oban/compare/v0.4.9...v0.4.10) (2025-07-17)
+
+
+
+
+### Improvements:
+
+* support backoff + timeout options (#176) by Roberts Guļāns
+
 ## [v0.4.9](https://github.com/ash-project/ash_oban/compare/v0.4.8...v0.4.9) (2025-06-02)
 
 
