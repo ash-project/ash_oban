@@ -159,7 +159,7 @@ defmodule AshObanTest do
   end
 
   test "on_error_fails_job? true with custom backoff will fail the job" do
-    model =
+    _model =
       Triggered
       |> Ash.Changeset.for_create(:create, %{})
       |> Ash.create!()

@@ -560,7 +560,9 @@ defmodule AshOban do
 
   ## Options
 
-    `:actor` - the actor to set on the job. Requires configuring an actor persister.
+  - `:actor` - the actor to set on the job. Requires configuring an actor persister.
+  - `:action_arguments` - additional arguments to merge into the action invocation's arguments map.
+     affects the uniqueness checks for the job. This only affects scheduled actions.
   """
   def schedule(resource, trigger, opts \\ []) do
     case trigger do
@@ -576,7 +578,9 @@ defmodule AshOban do
     end
     |> case do
       %AshOban.Schedule{worker: worker} = schedule ->
-        %{}
+        %{
+          action_arguments: opts[:action_arguments] || %{}
+        }
         |> store_actor(opts[:actor], schedule.actor_persister)
         |> worker.new()
         |> Oban.insert!()
