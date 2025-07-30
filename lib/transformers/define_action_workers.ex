@@ -83,7 +83,9 @@ defmodule AshOban.Transformers.DefineActionWorkers do
                 unquote(scheduled_action.debug?)
               )
 
-              input = unquote(Macro.escape(scheduled_action.action_input || %{}))
+              input =
+                (args["action_arguments"] || %{})
+                |> Map.merge(unquote(Macro.escape(scheduled_action.action_input || %{})))
 
               input =
                 if job.max_attempts == job.attempt do

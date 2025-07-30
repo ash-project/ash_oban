@@ -173,8 +173,16 @@ defmodule AshOban.Test.Triggered do
     end
 
     action :say_hello, :string do
+      argument :target, :string
+
       run fn input, _ ->
-        {:ok, "Hello"}
+        case input.arguments do
+          %{target: target} ->
+            {:ok, "Hello, #{target}"}
+
+          _ ->
+            {:ok, "Hello"}
+        end
       end
     end
   end
