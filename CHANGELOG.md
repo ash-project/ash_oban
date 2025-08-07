@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.4.11](https://github.com/ash-project/ash_oban/compare/v0.4.10...v0.4.11) (2025-08-07)
+
+
+
+
+### Improvements:
+
+* support passing action_arguments to AshOban.schedule/3 (#180) by infinitis
+
 ## [v0.4.10](https://github.com/ash-project/ash_oban/compare/v0.4.9...v0.4.10) (2025-07-17)
 
 
