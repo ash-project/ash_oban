@@ -113,7 +113,7 @@ end
 Then you could schedule it to run every 6 hours:
 
 ```elixir
-schedule :import_from_github, "@hourly" do
+schedule :import_from_github, "0 */6 * * *" do
   worker_module_name AshOban.Test.Triggered.AshOban.ActionWorker.SayHello
 end
 ```
