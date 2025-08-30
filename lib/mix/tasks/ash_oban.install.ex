@@ -71,6 +71,7 @@ if Code.ensure_loaded?(Igniter) do
       # Do your work here and return an updated igniter
       igniter
       |> Igniter.Project.Formatter.import_dep(:ash_oban)
+      |> Igniter.Project.Config.configure_new("config.exs", app_name, [:ash_domains], [])
       |> Igniter.Project.Application.add_new_child(
         {Oban,
          {:code,
