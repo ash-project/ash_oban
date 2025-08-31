@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.4.12](https://github.com/ash-project/ash_oban/compare/v0.4.11...v0.4.12) (2025-08-31)
+
+
+
+
+### Bug Fixes:
+
+* ensure ash_domains is set to a value when installing by Zach Daniel
+
 ## [v0.4.11](https://github.com/ash-project/ash_oban/compare/v0.4.10...v0.4.11) (2025-08-07)
 
 
