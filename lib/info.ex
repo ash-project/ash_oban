@@ -2,9 +2,11 @@ defmodule AshOban.Info do
   @moduledoc "Introspection for AshOban"
 
   use Spark.InfoGenerator, extension: AshOban, sections: [:oban]
-  @pro Application.compile_env(:ash_oban, :pro?) || false
 
-  def pro?, do: @pro
+  @spec pro? :: boolean
+  def pro? do
+    Application.get_env(:ash_oban, :pro?) || false
+  end
 
   @spec oban_trigger(Ash.Resource.t() | Spark.Dsl.t(), atom) :: nil | AshOban.Trigger.t()
   def oban_trigger(resource, name) do

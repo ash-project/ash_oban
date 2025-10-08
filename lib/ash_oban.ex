@@ -886,20 +886,8 @@ defmodule AshOban do
     Keyword.update!(config, :plugins, fn plugins ->
       Enum.map(plugins, fn
         {^cron_plugin, config} ->
-          opts =
-            case {cron_plugin, trigger.state} do
-              {_cron_plugin, :paused} ->
-                [paused: true]
-
-              {_cron_plugin, :deleted} ->
-                [delete: true]
-
-              {Oban.Pro.Plugins.DynamicCron, :active} ->
-                [paused: false]
-
-              _ ->
-                []
-            end
+          is_pro_version? = AshOban.Info.pro?()
+          opts = maybe_set_state_for_pro_version(is_pro_version?, cron_plugin, trigger)
 
           cron =
             case trigger do
@@ -916,6 +904,36 @@ defmodule AshOban do
           other
       end)
     end)
+  end
+
+  defp maybe_set_state_for_pro_version(true = _is_pro_version?, cron_plugin, trigger) do
+    case {cron_plugin, trigger.state} do
+      {_cron_plugin, :paused} ->
+        [paused: true]
+
+      {_cron_plugin, :deleted} ->
+        [delete: true]
+
+      {Oban.Pro.Plugins.DynamicCron, :active} ->
+        [paused: false]
+
+      _ ->
+        []
+    end
+  end
+
+  defp maybe_set_state_for_pro_version(_is_pro_version, _cron_plugin, trigger) do
+    state = Map.get(trigger, :state, nil)
+
+    if not is_nil(state) && state in [:paused, :deleted] do
+      Logger.warning(
+        "The `state` option on triggers and scheduled actions is only supported when using Oban Pro. Ignoring state #{inspect(state)}"
+      )
+
+      :ok
+    end
+
+    []
   end
 
   defp require_queues!(config, resource, false, trigger) do

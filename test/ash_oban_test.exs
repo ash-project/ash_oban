@@ -1,5 +1,6 @@
 defmodule AshObanTest do
   use ExUnit.Case, async: false
+  import ExUnit.CaptureLog
   doctest AshOban
 
   alias AshOban.Test.Domain
@@ -19,6 +20,7 @@ defmodule AshObanTest do
   setup do
     Enum.each(
       [
+        :triggered_process_with_state,
         :triggered_process,
         :triggered_process_2,
         :triggered_say_hello,
@@ -215,6 +217,7 @@ defmodule AshObanTest do
 
   test "dsl introspection" do
     assert [
+             %AshOban.Trigger{action: :process_with_state},
              %AshOban.Trigger{action: :process},
              %AshOban.Trigger{action: :process_atomically},
              %AshOban.Trigger{action: :process, scheduler: nil},
@@ -233,6 +236,7 @@ defmodule AshObanTest do
           {Oban.Plugins.Cron, []}
         ],
         queues: [
+          triggered_process_with_state: 10,
           triggered_process: 10,
           triggered_process_2: 10,
           triggered_say_hello: 10,
@@ -255,11 +259,13 @@ defmodule AshObanTest do
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.TenantAware, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessGeneric, []},
                     {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessAtomically, []},
-                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process, []}
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process, []},
+                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessWithState, []}
                   ]
                 ]}
              ],
              queues: [
+               triggered_process_with_state: 10,
                triggered_process: 10,
                triggered_process_2: 10,
                triggered_say_hello: 10,
@@ -270,68 +276,178 @@ defmodule AshObanTest do
            ] = config
   end
 
-  test "oban pro configuration" do
-    config =
-      AshOban.config([Domain],
-        engine: Oban.Pro.Engines.Smart,
-        plugins: [
-          {Oban.Pro.Plugins.DynamicCron,
-           [
-             timezone: "Europe/Rome",
-             sync_mode: :automatic,
-             crontab: []
-           ]},
-          {Oban.Pro.Plugins.DynamicQueues,
-           queues: [
-             triggered_process: 10,
-             triggered_process_2: 10,
-             triggered_say_hello: 10,
-             triggered_tenant_aware: 10,
-             triggered_process_generic: 10,
-             triggered_fail_oban_job: 10
-           ]}
-        ],
-        queues: false
-      )
+  describe "oban pro configuration" do
+    setup [:ash_oban_pro]
+    @tag pro?: true
+    test "if oban.pro true, puts `state` in crontab opts" do
+      config =
+        AshOban.config([Domain],
+          engine: Oban.Pro.Engines.Smart,
+          plugins: [
+            {Oban.Pro.Plugins.DynamicCron,
+             [
+               timezone: "Europe/Rome",
+               sync_mode: :automatic,
+               crontab: []
+             ]},
+            {Oban.Pro.Plugins.DynamicQueues,
+             queues: [
+               triggered_process_with_state: 10,
+               triggered_process: 10,
+               triggered_process_2: 10,
+               triggered_say_hello: 10,
+               triggered_tenant_aware: 10,
+               triggered_process_generic: 10,
+               triggered_fail_oban_job: 10
+             ]}
+          ],
+          queues: false
+        )
 
-    assert [
-             engine: Oban.Pro.Engines.Smart,
-             plugins: [
-               {Oban.Pro.Plugins.DynamicCron,
-                [
-                  timezone: "Europe/Rome",
-                  sync_mode: :automatic,
-                  crontab: [
-                    {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello,
-                     [paused: false]},
-                    {"* * * * *",
-                     AshOban.Test.Triggered.AshOban.Scheduler.FailObanJobWithCustomBackoff,
-                     [paused: false]},
-                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.DontFailObanJob,
-                     [paused: false]},
-                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.FailObanJob,
-                     [paused: false]},
-                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.TenantAware,
-                     [paused: false]},
-                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessGeneric,
-                     [paused: false]},
-                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessAtomically,
-                     [paused: false]},
-                    {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process,
-                     [paused: false]}
-                  ]
-                ]},
-               {Oban.Pro.Plugins.DynamicQueues,
-                queues: [
-                  triggered_process: 10,
-                  triggered_process_2: 10,
-                  triggered_say_hello: 10,
-                  triggered_tenant_aware: 10,
-                  triggered_process_generic: 10,
-                  triggered_fail_oban_job: 10
-                ]}
-             ],
-             queues: false
-           ] = config
+      assert [
+               engine: Oban.Pro.Engines.Smart,
+               plugins: [
+                 {Oban.Pro.Plugins.DynamicCron,
+                  [
+                    timezone: "Europe/Rome",
+                    sync_mode: :automatic,
+                    crontab: [
+                      {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello,
+                       [paused: false]},
+                      {"* * * * *",
+                       AshOban.Test.Triggered.AshOban.Scheduler.FailObanJobWithCustomBackoff,
+                       [paused: false]},
+                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.DontFailObanJob,
+                       [paused: false]},
+                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.FailObanJob,
+                       [paused: false]},
+                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.TenantAware,
+                       [paused: false]},
+                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessGeneric,
+                       [paused: false]},
+                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessAtomically,
+                       [paused: false]},
+                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process,
+                       [paused: false]},
+                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessWithState,
+                       [paused: true]}
+                    ]
+                  ]},
+                 {Oban.Pro.Plugins.DynamicQueues,
+                  queues: [
+                    triggered_process_with_state: 10,
+                    triggered_process: 10,
+                    triggered_process_2: 10,
+                    triggered_say_hello: 10,
+                    triggered_tenant_aware: 10,
+                    triggered_process_generic: 10,
+                    triggered_fail_oban_job: 10
+                  ]}
+               ],
+               queues: false
+             ] = config
+    end
+
+    @tag pro?: false
+    test "if oban.pro is false, configuration removes `state` in crontab opts" do
+      config =
+        AshOban.config([Domain],
+          engine: Oban.Pro.Engines.Smart,
+          plugins: [
+            {Oban.Pro.Plugins.DynamicCron,
+             [
+               timezone: "Europe/Rome",
+               sync_mode: :automatic,
+               crontab: []
+             ]},
+            {Oban.Pro.Plugins.DynamicQueues,
+             queues: [
+               triggered_process_with_state: 10,
+               triggered_process: 10,
+               triggered_process_2: 10,
+               triggered_say_hello: 10,
+               triggered_tenant_aware: 10,
+               triggered_process_generic: 10,
+               triggered_fail_oban_job: 10
+             ]}
+          ],
+          queues: false
+        )
+
+      assert [
+               engine: Oban.Pro.Engines.Smart,
+               plugins: [
+                 {Oban.Pro.Plugins.DynamicCron,
+                  [
+                    timezone: "Europe/Rome",
+                    sync_mode: :automatic,
+                    crontab: [
+                      {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello, []},
+                      {"* * * * *",
+                       AshOban.Test.Triggered.AshOban.Scheduler.FailObanJobWithCustomBackoff, []},
+                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.DontFailObanJob, []},
+                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.FailObanJob, []},
+                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.TenantAware, []},
+                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessGeneric, []},
+                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessAtomically,
+                       []},
+                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.Process, []},
+                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessWithState, []}
+                    ]
+                  ]},
+                 {Oban.Pro.Plugins.DynamicQueues,
+                  queues: [
+                    triggered_process_with_state: 10,
+                    triggered_process: 10,
+                    triggered_process_2: 10,
+                    triggered_say_hello: 10,
+                    triggered_tenant_aware: 10,
+                    triggered_process_generic: 10,
+                    triggered_fail_oban_job: 10
+                  ]}
+               ],
+               queues: false
+             ] = config
+    end
+
+    @tag pro?: false
+    test "if oban.pro is false, setting state on Plugins captures log warning" do
+      log =
+        capture_log(fn ->
+          AshOban.config([Domain],
+            engine: Oban.Pro.Engines.Smart,
+            plugins: [
+              {Oban.Pro.Plugins.DynamicCron,
+               [
+                 timezone: "Europe/Rome",
+                 sync_mode: :automatic,
+                 crontab: []
+               ]},
+              {Oban.Pro.Plugins.DynamicQueues,
+               queues: [
+                 triggered_process_with_state: 10,
+                 triggered_process: 10,
+                 triggered_process_2: 10,
+                 triggered_say_hello: 10,
+                 triggered_tenant_aware: 10,
+                 triggered_process_generic: 10,
+                 triggered_fail_oban_job: 10
+               ]}
+            ],
+            queues: false
+          )
+        end)
+
+      assert log =~
+               "The `state` option on triggers and scheduled actions is only supported when using Oban Pro. Ignoring state :paused"
+    end
   end
+
+  defp ash_oban_pro(%{pro?: true} = _context) do
+    Application.put_env(:ash_oban, :pro?, true)
+    on_exit(fn -> Application.put_env(:ash_oban, :pro?, false) end)
+    :ok
+  end
+
+  defp ash_oban_pro(context), do: context
 end
