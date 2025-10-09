@@ -20,13 +20,23 @@ if Mix.env() == :test do
       {Oban.Plugins.Cron, []}
     ],
     queues: [
-      triggered_process_with_state: 10,
       triggered_process: 10,
       triggered_process_2: 10,
       triggered_say_hello: 10,
       triggered_tenant_aware: 10,
       triggered_process_generic: 10,
       triggered_fail_oban_job: 10
+    ]
+
+  config :ash_oban, :oban_pro,
+    testing: :manual,
+    repo: AshOban.Test.Repo,
+    prefix: "private",
+    plugins: [
+      {Oban.Plugins.Cron, []}
+    ],
+    queues: [
+      triggered_pro_process_with_state: 10
     ]
 
   config :ash_oban, actor_persister: AshOban.Test.ActorPersister

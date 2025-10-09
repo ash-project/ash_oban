@@ -926,11 +926,7 @@ defmodule AshOban do
     state = Map.get(trigger, :state, nil)
 
     if not is_nil(state) && state in [:paused, :deleted] do
-      Logger.warning(
-        "The `state` option on triggers and scheduled actions is only supported when using Oban Pro. Ignoring state #{inspect(state)}"
-      )
-
-      :ok
+      raise "The `state` option on triggers and scheduled actions is only supported when using Oban Pro. Ignoring state #{inspect(state)}"
     end
 
     []
