@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshOban.Checks.AshObanInteraction do
   @moduledoc """
   This check is true if the context `private.ash_oban?` is set to true.

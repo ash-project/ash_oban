@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshOban.MixProject do
   use Mix.Project
 
@@ -37,12 +41,19 @@ defmodule AshOban.MixProject do
 
   defp package do
     [
-      name: :ash_oban,
+      maintainers: [
+        "Zach Daniel <zach@zachdaniel.dev>"
+      ],
       licenses: ["MIT"],
       files: ~w(lib .formatter.exs mix.exs README* LICENSE* usage-rules.md
       CHANGELOG* documentation),
       links: %{
-        GitHub: "https://github.com/ash-project/ash_oban"
+        "GitHub" => "https://github.com/ash-project/ash_oban",
+        "Changelog" => "https://github.com/ash-project/ash_oban/blob/main/CHANGELOG.md",
+        "Discord" => "https://discord.gg/HTHRaaVPUc",
+        "Website" => "https://ash-hq.org",
+        "Forum" => "https://elixirforum.com/c/elixir-framework-forums/ash-framework-forum",
+        "REUSE Compliance" => "https://api.reuse.software/info/github.com/ash-project/ash_oban"
       }
     ]
   end

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshOban.Changes.RunObanTrigger do
   @moduledoc """
   Runs an oban trigger by name.
