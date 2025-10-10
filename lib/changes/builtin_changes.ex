@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshOban.Changes.BuiltinChanges do
   @moduledoc "Builtin changes for `AshOban`"
 

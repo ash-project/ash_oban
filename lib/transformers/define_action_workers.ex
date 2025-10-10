@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshOban.Transformers.DefineActionWorkers do
   # Define scheduler and worker modules.
   @moduledoc false

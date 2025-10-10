@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshOban.Verifiers.VerifyModuleNames do
   @moduledoc "Verifies that module names have been set for triggers and scheduled actions"
   use Spark.Dsl.Verifier

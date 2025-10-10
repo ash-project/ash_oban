@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshOban.ActorPersister do
   @moduledoc """
   A behaviour for storing and retrieving an actor from oban job arguments

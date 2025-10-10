@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2020 Zach Daniel
+
+SPDX-License-Identifier: MIT
+-->
+
 # Triggers and Scheduled Actions
 
 AshOban provides two primitives which, combined, should handle most use cases.
