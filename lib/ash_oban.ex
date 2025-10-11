@@ -82,7 +82,8 @@ defmodule AshOban do
       :on_error_fails_job?,
       :log_final_error?,
       :log_errors?,
-      :__identifier__
+      :__identifier__,
+      :__spark_metadata__
     ]
 
     def transform(%{read_action: read_action, worker_read_action: nil} = trigger) do
@@ -375,7 +376,8 @@ defmodule AshOban do
       :worker,
       :debug?,
       :state,
-      :__identifier__
+      :__identifier__,
+      :__spark_metadata__
     ]
   end
 
