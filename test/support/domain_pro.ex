@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshOban.Test.DomainPro do
   @moduledoc """
   A domain to test oban triggers with pro features.

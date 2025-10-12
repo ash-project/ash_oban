@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2020 Zach Daniel
+#
+# SPDX-License-Identifier: MIT
+
 defmodule AshOban.Test.TriggeredPro do
   @moduledoc """
   A resource to test oban triggers with pro features.
