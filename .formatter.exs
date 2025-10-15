@@ -32,6 +32,7 @@ spark_locals_without_parens = [
   sort: 1,
   state: 1,
   stream_batch_size: 1,
+  stream_with: 1,
   timeout: 1,
   trigger: 1,
   trigger: 2,

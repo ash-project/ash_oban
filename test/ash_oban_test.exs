@@ -9,7 +9,6 @@ defmodule AshObanTest do
   alias AshOban.Test.Domain
   alias AshOban.Test.DomainPro
   alias AshOban.Test.Triggered
-  # alias AshOban.Test.TriggeredPro
 
   use Oban.Testing, repo: AshOban.Test.Repo, prefix: "private"
 
@@ -37,6 +36,19 @@ defmodule AshObanTest do
         ],
         &Oban.drain_queue(queue: &1)
       )
+    end
+
+    test "all triggers has a default `stream_with` attribute" do
+      assert [
+               %AshOban.Trigger{action: :process, stream_with: :keyset},
+               %AshOban.Trigger{action: :process_atomically, stream_with: :keyset},
+               %AshOban.Trigger{action: :process, scheduler: nil, stream_with: :keyset},
+               %AshOban.Trigger{name: :process_generic, stream_with: :keyset},
+               %AshOban.Trigger{name: :tenant_aware, stream_with: :keyset},
+               %AshOban.Trigger{name: :fail_oban_job, stream_with: :keyset},
+               %AshOban.Trigger{name: :dont_fail_oban_job, stream_with: :keyset},
+               %AshOban.Trigger{name: :fail_oban_job_custom_backoff, stream_with: :keyset}
+             ] = AshOban.Info.oban_triggers(Triggered)
     end
 
     test "nothing happens if no records exist" do

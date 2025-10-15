@@ -32,6 +32,7 @@ defmodule AshOban do
             max_scheduler_attempts: pos_integer(),
             read_metadata: (Ash.Resource.record() -> map),
             stream_batch_size: pos_integer(),
+            stream_with: :keyset | :offset | :full_read,
             scheduler_priority: non_neg_integer(),
             worker_priority: non_neg_integer(),
             where: Ash.Expr.t(),
@@ -68,6 +69,7 @@ defmodule AshOban do
       :max_attempts,
       :trigger_once?,
       :stream_batch_size,
+      :stream_with,
       :max_scheduler_attempts,
       :record_limit,
       :where,
@@ -181,6 +183,13 @@ defmodule AshOban do
         type: :pos_integer,
         doc:
           "The batch size to pass when streaming records from using `Ash.stream!/2`. No batch size is passed if none is provided here, so the default is used."
+      ],
+      stream_with: [
+        type: {:one_of, [:keyset, :offset, :full_read]},
+        default: :keyset,
+        doc: """
+        How to stream records when processing the trigger. Defaults to `:keyset`, which is the most efficient and reliable option. Use `:offset` if you need to support databases that don't support keyset pagination (e.g. MySQL). Use `:full_read` if you need to support scenarios where the `where` clause may change between batches (e.g. if it depends on time).
+        """
       ],
       queue: [
         type: :atom,
