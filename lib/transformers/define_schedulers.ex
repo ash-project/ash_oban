@@ -93,10 +93,12 @@ defmodule AshOban.Transformers.DefineSchedulers do
         end
       end
 
+    stream_with = Map.get(trigger, :stream_with, :keyset)
+
     batch_opts =
       if trigger.stream_batch_size do
         quote do
-          [batch_size: unquote(trigger.stream_batch_size)]
+          [batch_size: unquote(trigger.stream_batch_size), stream_with: unquote(stream_with)]
         end
       else
         quote do
