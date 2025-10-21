@@ -44,7 +44,8 @@ defmodule AshOban do
             timeout: pos_integer() | (map -> pos_integer()) | :infinity,
             __identifier__: atom,
             on_error: atom,
-            on_error_fails_job?: boolean()
+            on_error_fails_job?: boolean(),
+            shared_context?: boolean()
           }
 
     defstruct [
@@ -84,6 +85,7 @@ defmodule AshOban do
       :on_error_fails_job?,
       :log_final_error?,
       :log_errors?,
+      :shared_context?,
       :__identifier__,
       :__spark_metadata__
     ]
@@ -301,6 +303,15 @@ defmodule AshOban do
         Determines if the oban job will be failed on the last attempt when there is an on_error handler that is called. If there is no on_error, then the action is always marked as failed on the last attempt.
         """
       ],
+      shared_context?: [
+        type: :boolean,
+        doc: """
+        If set to `true`, the `ash_oban?: true` flag will be placed in shared context instead of regular context.
+        Shared context propagates to related actions called via `manage_relationship` and can be passed to other
+        action invocations using the context as scope, making it easier to detect AshOban execution in nested actions.
+        If not specified, inherits the global `shared_context?` setting from the `oban` section.
+        """
+      ],
       worker_opts: [
         type: :keyword_list,
         default: [],
@@ -368,7 +379,8 @@ defmodule AshOban do
             debug?: boolean,
             actor_persister: module() | :none | nil,
             state: :active | :paused | :deleted,
-            priority: non_neg_integer()
+            priority: non_neg_integer(),
+            shared_context?: boolean()
           }
 
     defstruct [
@@ -385,6 +397,7 @@ defmodule AshOban do
       :worker,
       :debug?,
       :state,
+      :shared_context?,
       :__identifier__,
       :__spark_metadata__
     ]
@@ -452,6 +465,15 @@ defmodule AshOban do
         default: false,
         doc:
           "If set to `true`, detailed debug logging will be enabled for this trigger. You can also set `config :ash_oban, debug_all_triggers?: true` to enable debug logging for all triggers."
+      ],
+      shared_context?: [
+        type: :boolean,
+        doc: """
+        If set to `true`, the `ash_oban?: true` flag will be placed in shared context instead of regular context.
+        Shared context propagates to related actions called via `manage_relationship` and can be passed to other
+        action invocations using the context as scope, making it easier to detect AshOban execution in nested actions.
+        If not specified, inherits the global `shared_context?` setting from the `oban` section.
+        """
       ]
     ]
   }
@@ -518,6 +540,16 @@ defmodule AshOban do
         default: [nil],
         doc: """
         A list of tenants or a function behaviour that returns a list of tenants a trigger should be run for. Can be overwritten on the trigger level.
+        """
+      ],
+      shared_context?: [
+        type: :boolean,
+        default: false,
+        doc: """
+        If set to `true`, the `ash_oban?: true` flag will be placed in shared context instead of regular context.
+        Shared context propagates to related actions called via `manage_relationship` and can be passed to other
+        action invocations using the context as scope, making it easier to detect AshOban execution in nested actions.
+        Can be overridden per trigger or scheduled action.
         """
       ]
     ],
