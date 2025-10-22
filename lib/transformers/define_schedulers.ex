@@ -109,7 +109,13 @@ defmodule AshOban.Transformers.DefineSchedulers do
     pipeline =
       quote do
         resource
-        |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+        |> Ash.Query.set_context(
+          if unquote(trigger.shared_context?) do
+            %{shared: %{private: %{ash_oban?: true}}}
+          else
+            %{private: %{ash_oban?: true}}
+          end
+        )
         |> Ash.Query.select(unquote(primary_key))
         |> limit_stream()
       end
@@ -358,7 +364,13 @@ defmodule AshOban.Transformers.DefineSchedulers do
             query()
             |> Ash.Query.do_filter(primary_key)
             |> Ash.Query.set_tenant(tenant)
-            |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+            |> Ash.Query.set_context(
+              if unquote(trigger.shared_context?) do
+                %{shared: %{private: %{ash_oban?: true}}}
+              else
+                %{private: %{ash_oban?: true}}
+              end
+            )
             |> Ash.Query.for_read(unquote(read_action), %{},
               authorize?: authorize?,
               actor: actor,
@@ -624,7 +636,13 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 query =
                   query()
                   |> Ash.Query.do_filter(primary_key)
-                  |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+                  |> Ash.Query.set_context(
+                    if unquote(trigger.shared_context?) do
+                      %{shared: %{private: %{ash_oban?: true}}}
+                    else
+                      %{private: %{ash_oban?: true}}
+                    end
+                  )
                   |> Ash.Query.set_tenant(tenant)
                   |> Ash.Query.for_read(unquote(read_action), %{},
                     authorize?: authorize?,
@@ -641,7 +659,12 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     actor: actor,
                     tenant: tenant,
                     domain: unquote(domain),
-                    context: %{private: %{ash_oban?: true}},
+                    context:
+                      if unquote(trigger.shared_context?) do
+                        %{shared: %{private: %{ash_oban?: true}}}
+                      else
+                        %{private: %{ash_oban?: true}}
+                      end,
                     strategy: [:atomic, :atomic_batches, :stream],
                     return_errors?: true,
                     skip_unknown_inputs: [:error],
@@ -658,7 +681,12 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     tenant: tenant,
                     domain: unquote(domain),
                     domain: unquote(domain),
-                    context: %{private: %{ash_oban?: true}},
+                    context:
+                      if unquote(trigger.shared_context?) do
+                        %{shared: %{private: %{ash_oban?: true}}}
+                      else
+                        %{private: %{ash_oban?: true}}
+                      end,
                     strategy: [:atomic, :atomic_batches, :stream],
                     return_errors?: true,
                     skip_unknown_inputs: [:error],
@@ -730,7 +758,13 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
                 query()
                 |> Ash.Query.do_filter(primary_key)
-                |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+                |> Ash.Query.set_context(
+                  if unquote(trigger.shared_context?) do
+                    %{shared: %{private: %{ash_oban?: true}}}
+                  else
+                    %{private: %{ash_oban?: true}}
+                  end
+                )
                 |> Ash.Query.set_tenant(tenant)
                 |> Ash.Query.for_read(unquote(read_action), %{},
                   authorize?: authorize?,
@@ -769,7 +803,13 @@ defmodule AshOban.Transformers.DefineSchedulers do
                       changeset ->
                         changeset
                         |> Ash.Changeset.set_tenant(tenant)
-                        |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
+                        |> Ash.Changeset.set_context(
+                          if unquote(trigger.shared_context?) do
+                            %{shared: %{private: %{ash_oban?: true}}}
+                          else
+                            %{private: %{ash_oban?: true}}
+                          end
+                        )
                         |> Ash.Changeset.for_action(unquote(trigger.on_error), %{error: error},
                           authorize?: authorize?,
                           actor: actor,
@@ -881,7 +921,13 @@ defmodule AshOban.Transformers.DefineSchedulers do
               unquote(resource)
               |> Ash.ActionInput.new()
               |> Ash.ActionInput.set_tenant(tenant)
-              |> Ash.ActionInput.set_context(%{private: %{ash_oban?: true}})
+              |> Ash.ActionInput.set_context(
+                if unquote(trigger.shared_context?) do
+                  %{shared: %{private: %{ash_oban?: true}}}
+                else
+                  %{private: %{ash_oban?: true}}
+                end
+              )
               |> Ash.ActionInput.for_action(
                 unquote(trigger.action),
                 input,
@@ -957,7 +1003,13 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 query =
                   query()
                   |> Ash.Query.do_filter(primary_key)
-                  |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+                  |> Ash.Query.set_context(
+                    if unquote(trigger.shared_context?) do
+                      %{shared: %{private: %{ash_oban?: true}}}
+                    else
+                      %{private: %{ash_oban?: true}}
+                    end
+                  )
                   |> Ash.Query.set_tenant(tenant)
                   |> Ash.Query.for_read(unquote(read_action), %{},
                     authorize?: authorize?,
@@ -974,7 +1026,12 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     actor: actor,
                     tenant: tenant,
                     domain: unquote(domain),
-                    context: %{private: %{ash_oban?: true}},
+                    context:
+                      if unquote(trigger.shared_context?) do
+                        %{shared: %{private: %{ash_oban?: true}}}
+                      else
+                        %{private: %{ash_oban?: true}}
+                      end,
                     skip_unknown_inputs: [:metadata],
                     strategy: [:atomic, :atomic_batches, :stream],
                     return_errors?: true,
@@ -991,7 +1048,12 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     tenant: tenant,
                     domain: unquote(domain),
                     domain: unquote(domain),
-                    context: %{private: %{ash_oban?: true}},
+                    context:
+                      if unquote(trigger.shared_context?) do
+                        %{shared: %{private: %{ash_oban?: true}}}
+                      else
+                        %{private: %{ash_oban?: true}}
+                      end,
                     skip_unknown_inputs: [:metadata],
                     strategy: [:atomic, :atomic_batches, :stream],
                     return_errors?: true,
@@ -1045,7 +1107,13 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 query()
                 |> Ash.Query.do_filter(primary_key)
                 |> Ash.Query.set_tenant(tenant)
-                |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+                |> Ash.Query.set_context(
+                  if unquote(trigger.shared_context?) do
+                    %{shared: %{private: %{ash_oban?: true}}}
+                  else
+                    %{private: %{ash_oban?: true}}
+                  end
+                )
                 |> lock_on_read()
                 |> Ash.Query.for_read(unquote(read_action), %{},
                   authorize?: authorize?,
@@ -1075,7 +1143,13 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     |> Ash.Changeset.new()
                     |> prepare(primary_key, authorize?, actor, tenant)
                     |> Ash.Changeset.set_tenant(tenant)
-                    |> Ash.Changeset.set_context(%{private: %{ash_oban?: true}})
+                    |> Ash.Changeset.set_context(
+                      if unquote(trigger.shared_context?) do
+                        %{shared: %{private: %{ash_oban?: true}}}
+                      else
+                        %{private: %{ash_oban?: true}}
+                      end
+                    )
                     |> Ash.Changeset.for_action(
                       unquote(trigger.action),
                       Map.merge(unquote(Macro.escape(trigger.action_input || %{})), args),

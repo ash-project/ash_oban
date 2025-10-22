@@ -24,6 +24,7 @@ if Mix.env() == :test do
       {Oban.Plugins.Cron, []}
     ],
     queues: [
+      default: 10,
       triggered_process: 10,
       triggered_process_2: 10,
       triggered_say_hello: 10,

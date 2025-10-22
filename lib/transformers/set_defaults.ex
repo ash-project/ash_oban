@@ -110,7 +110,9 @@ defmodule AshOban.Transformers.SetDefaults do
       Transformer.replace_entity(dsl, [:oban, :scheduled_actions], %{
         scheduled_action
         | action: action_name,
-          queue: queue
+          queue: queue,
+          shared_context?:
+            scheduled_action.shared_context? || AshOban.Info.oban_shared_context?(dsl) || false
       })
     end)
   end
@@ -174,7 +176,9 @@ defmodule AshOban.Transformers.SetDefaults do
         | read_action: read_action.name,
           queue: queue,
           scheduler_queue: trigger.scheduler_queue || queue,
-          action: trigger.action || trigger.name
+          action: trigger.action || trigger.name,
+          shared_context?:
+            trigger.shared_context? || AshOban.Info.oban_shared_context?(dsl) || false
       })
     end)
   end

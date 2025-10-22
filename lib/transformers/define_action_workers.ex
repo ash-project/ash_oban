@@ -100,7 +100,13 @@ defmodule AshOban.Transformers.DefineActionWorkers do
 
               unquote(resource)
               |> Ash.ActionInput.new()
-              |> Ash.ActionInput.set_context(%{private: %{ash_oban?: true}})
+              |> Ash.ActionInput.set_context(
+                if unquote(scheduled_action.shared_context?) do
+                  %{shared: %{private: %{ash_oban?: true}}}
+                else
+                  %{private: %{ash_oban?: true}}
+                end
+              )
               |> Ash.ActionInput.for_action(
                 unquote(scheduled_action.action),
                 input,
