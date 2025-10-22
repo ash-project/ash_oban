@@ -117,6 +117,15 @@ defmodule AshOban.Transformers.DefineSchedulers do
           end
         )
         |> Ash.Query.select(unquote(primary_key))
+        |> then(fn query ->
+          tenant_attribute = Ash.Resource.Info.multitenancy_attribute(unquote(resource))
+
+          if tenant_attribute do
+            Ash.Query.select(query, tenant_attribute)
+          else
+            query
+          end
+        end)
         |> limit_stream()
       end
 
