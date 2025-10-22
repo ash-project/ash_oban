@@ -751,6 +751,26 @@ defmodule AshOban do
 
     primary_key = Ash.Resource.Info.primary_key(resource)
 
+    tenant =
+      if opts[:tenant] do
+        opts[:tenant]
+      else
+        tenant_attribute = Ash.Resource.Info.multitenancy_attribute(resource)
+
+        if tenant_attribute do
+          case Map.get(record, tenant_attribute) do
+            %Ash.NotLoaded{} ->
+              nil
+
+            %Ash.ForbiddenField{} ->
+              nil
+
+            tenant ->
+              tenant
+          end
+        end
+      end
+
     metadata =
       case trigger do
         %{read_metadata: read_metadata} when is_function(read_metadata) ->
@@ -776,7 +796,7 @@ defmodule AshOban do
       primary_key: validate_primary_key(Map.take(record, primary_key), resource),
       metadata: metadata,
       action_arguments: opts[:action_arguments] || %{},
-      tenant: opts[:tenant]
+      tenant: tenant
     }
     |> AshOban.store_actor(opts[:actor], trigger.actor_persister)
     |> then(&Map.merge(extra_args, &1))
