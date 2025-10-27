@@ -11,6 +11,25 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.5.0](https://github.com/ash-project/ash_oban/compare/v0.4.12...v0.5.0) (2025-10-27)
+
+
+
+
+### Features:
+
+* use shared context for ash_oban? interaction if shared_context? DSL option is set (#194) by Barnabas Jovanovics
+
+### Bug Fixes:
+
+* Add __spark_metadata__ field to trigger and scheduled_action structs (#191) by Jechol Lee
+
+* when oban.pro is false, defaults crontab options to [] (#189) by paugramming
+
+### Improvements:
+
+* added stream_with option (default: :keyset) (#193) by paugramming
+
 ## [v0.4.12](https://github.com/ash-project/ash_oban/compare/v0.4.11...v0.4.12) (2025-08-31)
 
 
