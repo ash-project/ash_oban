@@ -109,15 +109,21 @@ defmodule AshOban.Transformers.DefineSchedulers do
     pipeline =
       quote do
         resource
-        |> Ash.Query.set_context(
-          if unquote(trigger.shared_context?) do
-            %{shared: %{private: %{ash_oban?: true}}}
-          else
-            %{private: %{ash_oban?: true}}
-          end
-        )
         |> Ash.Query.select(unquote(primary_key))
         |> limit_stream()
+      end
+
+    pipeline =
+      if trigger.shared_context? do
+        quote do
+          unquote(pipeline)
+          |> Ash.Query.set_context(%{shared: %{private: %{ash_oban?: true}}})
+        end
+      else
+        quote do
+          unquote(pipeline)
+          |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
+        end
       end
 
     pipeline =
