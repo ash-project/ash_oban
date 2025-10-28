@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.5.1](https://github.com/ash-project/ash_oban/compare/v0.5.0...v0.5.1) (2025-10-28)
+
+
+
+
+### Bug Fixes:
+
+* dialyzer error in generated scheduler (#197) by Barnabas Jovanovics
+
 ## [v0.5.0](https://github.com/ash-project/ash_oban/compare/v0.4.12...v0.5.0) (2025-10-27)
 
 
