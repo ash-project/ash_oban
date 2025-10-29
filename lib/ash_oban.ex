@@ -564,6 +564,18 @@ defmodule AshOban do
         action invocations using the context as scope, making it easier to detect AshOban execution in nested actions.
         Can be overridden per trigger or scheduled action.
         """
+      ],
+      use_tenant_from_record?: [
+        type: :boolean,
+        default: false,
+        doc: """
+        If set to `true`, the tenant will be extracted from the record's tenant attribute
+        when building trigger jobs. This allows using a multitenancy `:allow_global`
+        read action for the scheduler and a regular read for the worker_read_action.
+
+        When `false`, only the explicit `:tenant` option passed to `build_trigger` will be used.
+        Can be overridden per trigger.
+        """
       ]
     ],
     sections: [@triggers, @scheduled_actions]
