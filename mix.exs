@@ -151,8 +151,7 @@ defmodule AshOban.MixProject do
 
   defp ash_version(default_version) do
     case System.get_env("ASH_VERSION") do
-      # nil -> default_version
-      nil -> [path: "../ash"]
+      nil -> default_version
       "local" -> [path: "../ash"]
       "main" -> [git: "https://github.com/ash-project/ash.git"]
       version -> "~> #{version}"
