@@ -318,11 +318,12 @@ defmodule AshOban do
         type: :boolean,
         default: false,
         doc: """
-        If set to `true`, the tenant will be extracted from the record's tenant attribute
-        when building the trigger job. This allows using a multitenancy `:allow_global`
-        read action for the scheduler and a regular read for the worker_read_action.
+        If set to `true`, the tenant will be extracted from each record's tenant attribute
+        and used when the worker processes that record. This allows the scheduler to use a
+        multitenancy `:allow_global` read action to find records across all tenants, while
+        the worker action still runs with the correct tenant context for each individual record.
 
-        When `false`, only the explicit `:tenant` option passed to `build_trigger` will be used.
+        If not specified, inherits the global `use_tenant_from_record?` setting from the `oban` section.
         """
       ],
       worker_opts: [
@@ -569,11 +570,12 @@ defmodule AshOban do
         type: :boolean,
         default: false,
         doc: """
-        If set to `true`, the tenant will be extracted from the record's tenant attribute
-        when building trigger jobs. This allows using a multitenancy `:allow_global`
-        read action for the scheduler and a regular read for the worker_read_action.
+        Default value for `use_tenant_from_record?` for all triggers in this resource.
+        When set to `true`, tenants will be extracted from each record's tenant attribute
+        and used when workers process those records. This allows schedulers to use
+        multitenancy `:allow_global` read actions to find records across all tenants,
+        while worker actions still run with the correct tenant context for each record.
 
-        When `false`, only the explicit `:tenant` option passed to `build_trigger` will be used.
         Can be overridden per trigger.
         """
       ]
