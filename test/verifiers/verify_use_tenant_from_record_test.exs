@@ -4,8 +4,6 @@
 
 defmodule AshOban.Verifiers.VerifyUseTenantFromRecordTest do
   use ExUnit.Case, async: true
-  @moduletag :capture_log
-  @moduletag :capture_io
 
   test "no warnings if both parse_attribute and tenant_from_attribute use defaults" do
     log =
