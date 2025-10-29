@@ -45,7 +45,8 @@ defmodule AshOban do
             __identifier__: atom,
             on_error: atom,
             on_error_fails_job?: boolean(),
-            shared_context?: boolean()
+            shared_context?: boolean(),
+            use_tenant_from_record?: boolean()
           }
 
     defstruct [
@@ -86,6 +87,7 @@ defmodule AshOban do
       :log_final_error?,
       :log_errors?,
       :shared_context?,
+      :use_tenant_from_record?,
       :__identifier__,
       :__spark_metadata__
     ]
@@ -310,6 +312,17 @@ defmodule AshOban do
         Shared context propagates to related actions called via `manage_relationship` and can be passed to other
         action invocations using the context as scope, making it easier to detect AshOban execution in nested actions.
         If not specified, inherits the global `shared_context?` setting from the `oban` section.
+        """
+      ],
+      use_tenant_from_record?: [
+        type: :boolean,
+        default: false,
+        doc: """
+        If set to `true`, the tenant will be extracted from the record's tenant attribute
+        when building the trigger job. This allows using a multitenancy `:allow_global`
+        read action for the scheduler and a regular read for the worker_read_action.
+
+        When `false`, only the explicit `:tenant` option passed to `build_trigger` will be used.
         """
       ],
       worker_opts: [
@@ -584,7 +597,8 @@ defmodule AshOban do
     sections: @sections,
     imports: [AshOban.Changes.BuiltinChanges],
     verifiers: [
-      AshOban.Verifiers.VerifyModuleNames
+      AshOban.Verifiers.VerifyModuleNames,
+      AshOban.Verifiers.VerifyUseTenantFromRecord
     ],
     transformers: [
       AshOban.Transformers.SetDefaults,
@@ -755,18 +769,20 @@ defmodule AshOban do
       if opts[:tenant] do
         opts[:tenant]
       else
-        tenant_attribute = Ash.Resource.Info.multitenancy_attribute(resource)
+        if trigger.use_tenant_from_record? do
+          tenant_attribute = Ash.Resource.Info.multitenancy_attribute(resource)
 
-        if tenant_attribute do
-          case Map.get(record, tenant_attribute) do
-            %Ash.NotLoaded{} ->
-              nil
+          if tenant_attribute do
+            case Map.get(record, tenant_attribute) do
+              %Ash.NotLoaded{} ->
+                nil
 
-            %Ash.ForbiddenField{} ->
-              nil
+              %Ash.ForbiddenField{} ->
+                nil
 
-            tenant ->
-              tenant
+              tenant ->
+                tenant
+            end
           end
         end
       end
