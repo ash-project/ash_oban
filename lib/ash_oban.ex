@@ -795,7 +795,8 @@ defmodule AshOban do
                 nil
 
               tenant ->
-                tenant
+                {m, f, a} = Ash.Resource.Info.multitenancy_tenant_from_attribute(resource)
+                apply(m, f, [tenant | a])
             end
           end
         end
