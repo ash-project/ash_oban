@@ -38,6 +38,7 @@ spark_locals_without_parens = [
   trigger: 1,
   trigger: 2,
   trigger_once?: 1,
+  use_tenant_from_record?: 1,
   where: 1,
   worker_module_name: 1,
   worker_opts: 1,

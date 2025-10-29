@@ -22,6 +22,7 @@ defmodule AshOban.TenantExtractionTest.TestResource do
         read_action :read_global
         worker_read_action :read_with_tenant
         queue :default
+        use_tenant_from_record? true
 
         worker_module_name AshOban.TenantExtractionTest.TestResource.AshOban.Worker.ProcessWithTenant
 
