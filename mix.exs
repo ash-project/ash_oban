@@ -132,7 +132,7 @@ defmodule AshOban.MixProject do
 
     oban_dep ++
       [
-        {:ash, ash_version("~> 3.0")},
+        {:ash, github: "ash-project/ash", override: true},
         {:oban, "~> 2.15"},
         {:postgrex, "~> 0.18"},
         # dev/test dependencies
