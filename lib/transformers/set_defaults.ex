@@ -178,7 +178,10 @@ defmodule AshOban.Transformers.SetDefaults do
           scheduler_queue: trigger.scheduler_queue || queue,
           action: trigger.action || trigger.name,
           shared_context?:
-            trigger.shared_context? || AshOban.Info.oban_shared_context?(dsl) || false
+            trigger.shared_context? || AshOban.Info.oban_shared_context?(dsl) || false,
+          use_tenant_from_record?:
+            trigger.use_tenant_from_record? || AshOban.Info.oban_use_tenant_from_record?(dsl) ||
+              false
       })
     end)
   end

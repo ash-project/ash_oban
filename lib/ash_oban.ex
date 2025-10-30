@@ -45,7 +45,8 @@ defmodule AshOban do
             __identifier__: atom,
             on_error: atom,
             on_error_fails_job?: boolean(),
-            shared_context?: boolean()
+            shared_context?: boolean(),
+            use_tenant_from_record?: boolean()
           }
 
     defstruct [
@@ -86,6 +87,7 @@ defmodule AshOban do
       :log_final_error?,
       :log_errors?,
       :shared_context?,
+      :use_tenant_from_record?,
       :__identifier__,
       :__spark_metadata__
     ]
@@ -310,6 +312,18 @@ defmodule AshOban do
         Shared context propagates to related actions called via `manage_relationship` and can be passed to other
         action invocations using the context as scope, making it easier to detect AshOban execution in nested actions.
         If not specified, inherits the global `shared_context?` setting from the `oban` section.
+        """
+      ],
+      use_tenant_from_record?: [
+        type: :boolean,
+        default: false,
+        doc: """
+        If set to `true`, the tenant will be extracted from each record's tenant attribute
+        and used when the worker processes that record. This allows the scheduler to use a
+        multitenancy `:allow_global` read action to find records across all tenants, while
+        the worker action still runs with the correct tenant context for each individual record.
+
+        If not specified, inherits the global `use_tenant_from_record?` setting from the `oban` section.
         """
       ],
       worker_opts: [
@@ -551,6 +565,19 @@ defmodule AshOban do
         action invocations using the context as scope, making it easier to detect AshOban execution in nested actions.
         Can be overridden per trigger or scheduled action.
         """
+      ],
+      use_tenant_from_record?: [
+        type: :boolean,
+        default: false,
+        doc: """
+        Default value for `use_tenant_from_record?` for all triggers in this resource.
+        When set to `true`, tenants will be extracted from each record's tenant attribute
+        and used when workers process those records. This allows schedulers to use
+        multitenancy `:allow_global` read actions to find records across all tenants,
+        while worker actions still run with the correct tenant context for each record.
+
+        Can be overridden per trigger.
+        """
       ]
     ],
     sections: [@triggers, @scheduled_actions]
@@ -584,7 +611,8 @@ defmodule AshOban do
     sections: @sections,
     imports: [AshOban.Changes.BuiltinChanges],
     verifiers: [
-      AshOban.Verifiers.VerifyModuleNames
+      AshOban.Verifiers.VerifyModuleNames,
+      AshOban.Verifiers.VerifyUseTenantFromRecord
     ],
     transformers: [
       AshOban.Transformers.SetDefaults,
@@ -751,6 +779,29 @@ defmodule AshOban do
 
     primary_key = Ash.Resource.Info.primary_key(resource)
 
+    tenant =
+      if opts[:tenant] do
+        opts[:tenant]
+      else
+        if trigger.use_tenant_from_record? do
+          tenant_attribute = Ash.Resource.Info.multitenancy_attribute(resource)
+
+          if tenant_attribute do
+            case Map.get(record, tenant_attribute) do
+              %Ash.NotLoaded{} ->
+                nil
+
+              %Ash.ForbiddenField{} ->
+                nil
+
+              tenant ->
+                {m, f, a} = Ash.Resource.Info.multitenancy_tenant_from_attribute(resource)
+                apply(m, f, [tenant | a])
+            end
+          end
+        end
+      end
+
     metadata =
       case trigger do
         %{read_metadata: read_metadata} when is_function(read_metadata) ->
@@ -776,7 +827,7 @@ defmodule AshOban do
       primary_key: validate_primary_key(Map.take(record, primary_key), resource),
       metadata: metadata,
       action_arguments: opts[:action_arguments] || %{},
-      tenant: opts[:tenant]
+      tenant: tenant
     }
     |> AshOban.store_actor(opts[:actor], trigger.actor_persister)
     |> then(&Map.merge(extra_args, &1))

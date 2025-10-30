@@ -9,5 +9,6 @@ defmodule AshOban.Test.Domain do
 
   resources do
     resource AshOban.Test.Triggered
+    allow_unregistered? true
   end
 end
