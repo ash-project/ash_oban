@@ -4,10 +4,11 @@
 
 defmodule AshOban.Verifiers.VerifyUseTenantFromRecordTest do
   use ExUnit.Case, async: true
+  import ExUnit.CaptureIO
 
-  test "no warnings if both parse_attribute and tenant_from_attribute use defaults" do
-    log =
-      ExUnit.CaptureIO.capture_io(fn ->
+  test "no errors if both parse_attribute and tenant_from_attribute use defaults" do
+    output =
+      capture_io(:stderr, fn ->
         defmodule DefaultResource do
           @moduledoc false
           use Ash.Resource,
@@ -49,12 +50,12 @@ defmodule AshOban.Verifiers.VerifyUseTenantFromRecordTest do
         end
       end)
 
-    refute log == "warning"
+    assert output == ""
   end
 
-  test "warns when parse_attribute is customized but tenant_from_attribute is at default" do
-    log =
-      ExUnit.CaptureIO.capture_io(fn ->
+  test "raises error when parse_attribute is customized but tenant_from_attribute is at default" do
+    output =
+      capture_io(:stderr, fn ->
         defmodule ParseCustomizedOnlyResource do
           @moduledoc false
           use Ash.Resource,
@@ -97,18 +98,15 @@ defmodule AshOban.Verifiers.VerifyUseTenantFromRecordTest do
         end
       end)
 
-    assert log =~ "When `use_tenant_from_record?` is true"
-
-    assert log =~
-             "parse_attribute: {AshOban.Verifiers.VerifyUseTenantFromRecordTest.ParseCustomizedOnlyResource, :custom_parse, []} (customized)"
-
-    assert log =~ "tenant_from_attribute: {Ash.Resource.Dsl, :identity, []} (default)"
-    assert log =~ "These options are inverses of each other"
+    assert output =~ "When `use_tenant_from_record?` is true"
+    assert output =~ ~r/parse_attribute:.*\(customized\)/
+    assert output =~ ~r/tenant_from_attribute:.*\(default\)/
+    assert output =~ "These options are inverses of each other"
   end
 
-  test "warns when tenant_from_attribute is customized but parse_attribute is at default" do
-    log =
-      ExUnit.CaptureIO.capture_io(fn ->
+  test "raises error when tenant_from_attribute is customized but parse_attribute is at default" do
+    output =
+      capture_io(:stderr, fn ->
         defmodule TenantFromCustomizedOnlyResource do
           @moduledoc false
           use Ash.Resource,
@@ -151,18 +149,15 @@ defmodule AshOban.Verifiers.VerifyUseTenantFromRecordTest do
         end
       end)
 
-    assert log =~ "When `use_tenant_from_record?` is true"
-    assert log =~ "parse_attribute: {Ash.Resource.Dsl, :identity, []} (default)"
-
-    assert log =~
-             "tenant_from_attribute: {AshOban.Verifiers.VerifyUseTenantFromRecordTest.TenantFromCustomizedOnlyResource, :custom_tenant_from, []} (customized)"
-
-    assert log =~ "These options are inverses of each other"
+    assert output =~ "When `use_tenant_from_record?` is true"
+    assert output =~ ~r/parse_attribute:.*\(default\)/
+    assert output =~ ~r/tenant_from_attribute:.*\(customized\)/
+    assert output =~ "These options are inverses of each other"
   end
 
-  test "no warnings if both parse_attribute and tenant_from_attribute are customized" do
-    log =
-      ExUnit.CaptureIO.capture_io(fn ->
+  test "no errors if both parse_attribute and tenant_from_attribute are customized" do
+    output =
+      capture_io(:stderr, fn ->
         defmodule BothCustomizedResource do
           @moduledoc false
           use Ash.Resource,
@@ -207,12 +202,12 @@ defmodule AshOban.Verifiers.VerifyUseTenantFromRecordTest do
         end
       end)
 
-    refute log =~ "warning"
+    assert output == ""
   end
 
-  test "no warnings when use_tenant_from_record? is false regardless of configuration" do
-    log =
-      ExUnit.CaptureIO.capture_io(fn ->
+  test "no errors when use_tenant_from_record? is false regardless of configuration" do
+    output =
+      capture_io(:stderr, fn ->
         defmodule UseTenantFromRecordFalseResource do
           @moduledoc false
           use Ash.Resource,
@@ -256,6 +251,6 @@ defmodule AshOban.Verifiers.VerifyUseTenantFromRecordTest do
         end
       end)
 
-    refute log =~ "warning"
+    assert output == ""
   end
 end
