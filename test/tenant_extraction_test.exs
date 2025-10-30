@@ -175,9 +175,9 @@ defmodule AshOban.TenantExtractionTest do
   end
 
   setup do
-    Oban.drain_queue(queue: :default)
-    Oban.drain_queue(queue: :custom)
-    :ok
+    on_exit(fn ->
+      AshOban.Test.Repo.delete_all(Oban.Job, prefix: "private")
+    end)
   end
 
   describe "tenant extraction from records" do
