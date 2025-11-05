@@ -28,7 +28,7 @@ defmodule AshOban.Verifiers.VerifyUseTenantFromRecordTest do
                 use_tenant_from_record? true
                 scheduler_cron false
 
-                worker_module_name __MODULE__.Worker
+                worker_module_name __MODULE__.TestTrigger.Worker
               end
             end
           end
@@ -76,7 +76,7 @@ defmodule AshOban.Verifiers.VerifyUseTenantFromRecordTest do
                 use_tenant_from_record? true
                 scheduler_cron false
 
-                worker_module_name __MODULE__.Worker
+                worker_module_name __MODULE__.TestTrigger.Worker
               end
             end
           end
@@ -127,7 +127,7 @@ defmodule AshOban.Verifiers.VerifyUseTenantFromRecordTest do
                 use_tenant_from_record? true
                 scheduler_cron false
 
-                worker_module_name __MODULE__.Worker
+                worker_module_name __MODULE__.TestTrigger.Worker
               end
             end
           end
@@ -179,7 +179,7 @@ defmodule AshOban.Verifiers.VerifyUseTenantFromRecordTest do
                 use_tenant_from_record? true
                 scheduler_cron false
 
-                worker_module_name __MODULE__.Worker
+                worker_module_name __MODULE__.TestTrigger.Worker
               end
             end
           end
@@ -229,7 +229,7 @@ defmodule AshOban.Verifiers.VerifyUseTenantFromRecordTest do
                 use_tenant_from_record? false
                 scheduler_cron false
 
-                worker_module_name AshOban.Verifiers.VerifyUseTenantFromRecordTest.UseTenantFromRecordFalseResource.Worker
+                worker_module_name __MODULE__.TestTrigger.Worker
               end
             end
           end

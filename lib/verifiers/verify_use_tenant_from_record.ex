@@ -20,8 +20,8 @@ defmodule AshOban.Verifiers.VerifyUseTenantFromRecord do
       parse_attribute = Ash.Resource.Info.multitenancy_parse_attribute(module)
       tenant_from_attribute = Ash.Resource.Info.multitenancy_tenant_from_attribute(module)
 
-      parse_at_default? = is_identity_mfa?(parse_attribute)
-      tenant_from_at_default? = is_identity_mfa?(tenant_from_attribute)
+      parse_at_default? = identity_mfa?(parse_attribute)
+      tenant_from_at_default? = identity_mfa?(tenant_from_attribute)
 
       if parse_at_default? != tenant_from_at_default? do
         {:halt,
@@ -48,6 +48,6 @@ defmodule AshOban.Verifiers.VerifyUseTenantFromRecord do
     end)
   end
 
-  defp is_identity_mfa?({Ash.Resource.Dsl, :identity, []}), do: true
-  defp is_identity_mfa?(_), do: false
+  defp identity_mfa?({Ash.Resource.Dsl, :identity, []}), do: true
+  defp identity_mfa?(_), do: false
 end

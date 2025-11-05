@@ -24,9 +24,9 @@ defmodule AshOban.TenantExtractionTest.TestResource do
         queue :default
         use_tenant_from_record? true
 
-        worker_module_name AshOban.TenantExtractionTest.TestResource.AshOban.Worker.ProcessWithTenant
+        worker_module_name __MODULE__.AshOban.Worker.ProcessWithTenant
 
-        scheduler_module_name AshOban.TenantExtractionTest.TestResource.AshOban.Scheduler.ProcessWithTenant
+        scheduler_module_name __MODULE__.AshOban.Scheduler.ProcessWithTenant
       end
     end
   end
@@ -91,9 +91,9 @@ defmodule AshOban.TenantExtractionTest.TestResourceWithCustomTenantFunctions do
         queue :custom
         use_tenant_from_record? true
 
-        worker_module_name AshOban.TenantExtractionTest.TestResourceWithCustomTenantFunctions.AshOban.Worker.ProcessWithCustomTenant
+        worker_module_name __MODULE__.AshOban.Worker.ProcessWithCustomTenant
 
-        scheduler_module_name AshOban.TenantExtractionTest.TestResourceWithCustomTenantFunctions.AshOban.Scheduler.ProcessWithCustomTenant
+        scheduler_module_name __MODULE__.AshOban.Scheduler.ProcessWithCustomTenant
       end
     end
   end
