@@ -114,7 +114,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           tenant_attribute = Ash.Resource.Info.multitenancy_attribute(unquote(resource))
 
           if tenant_attribute do
-            Ash.Query.select(query, tenant_attribute)
+            Ash.Query.ensure_selected(query, tenant_attribute)
           else
             query
           end
