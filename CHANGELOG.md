@@ -11,6 +11,29 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.6.0](https://github.com/ash-project/ash_oban/compare/v0.5.1...v0.6.0) (2025-11-14)
+
+
+
+
+### Features:
+
+* set tenant from record in case of attribute multitenancy (#195) by Barnabas Jovanovics
+
+* add use_tenant_from_record? DSL flag by Barnabas Jovanovics
+
+* add verifier for use_tenant_from_record? consistency by Barnabas Jovanovics
+
+* add oban-level use_tenant_from_record? default by Barnabas Jovanovics
+
+### Bug Fixes:
+
+* ensure transformers are properly ordered by Zach Daniel
+
+### Improvements:
+
+* use cancel & oban's native batch inserting by Zach Daniel
+
 ## [v0.5.1](https://github.com/ash-project/ash_oban/compare/v0.5.0...v0.5.1) (2025-10-28)
 
 
