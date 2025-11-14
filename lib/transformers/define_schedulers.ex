@@ -178,12 +178,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
           defp insert(stream) do
             count =
               stream
-              |> Stream.chunk_every(100)
-              |> Stream.map(fn batch ->
-                Oban.insert_all(batch)
-                Enum.count(batch)
-              end)
-              |> Enum.sum()
+              |> Oban.insert_all()
+              |> Enum.count()
 
             AshOban.debug(
               "Scheduled #{count} jobs for trigger #{unquote(inspect(resource))}.#{unquote(trigger.name)}",
@@ -246,7 +242,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
         @impl unquote(worker)
         if unquote(trigger.state != :active) do
           def unquote(function_name)(%Oban.Job{}) do
-            {:discard, unquote(trigger.state)}
+            {:cancel, unquote(trigger.state)}
           end
         else
           def unquote(function_name)(%Oban.Job{args: args}) do
@@ -806,7 +802,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                       unquote(trigger.debug?)
                     )
 
-                    {:discard, :trigger_no_longer_applies}
+                    {:cancel, :trigger_no_longer_applies}
 
                   {:ok, record} ->
                     unquote(log_final_error)
@@ -908,7 +904,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
       quote location: :keep do
         @impl unquote(worker)
         def unquote(function_name)(_) do
-          {:discard, unquote(trigger.state)}
+          {:cancel, unquote(trigger.state)}
         end
       end
     else
@@ -986,7 +982,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
       quote location: :keep do
         @impl unquote(worker)
         def unquote(function_name)(_) do
-          {:discard, unquote(trigger.state)}
+          {:cancel, unquote(trigger.state)}
         end
       end
     else
@@ -1143,7 +1139,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                       unquote(trigger.debug?)
                     )
 
-                    {:discard, :trigger_no_longer_applies}
+                    {:cancel, :trigger_no_longer_applies}
 
                   {:ok, record} ->
                     args =
@@ -1187,7 +1183,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                           unquote(trigger.debug?)
                         )
 
-                        {:discard, :trigger_no_longer_applies}
+                        {:cancel, :trigger_no_longer_applies}
 
                       {:error,
                        %Ash.Error.Invalid{errors: [%AshOban.Errors.TriggerNoLongerApplies{}]}} ->
@@ -1196,7 +1192,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                           unquote(trigger.debug?)
                         )
 
-                        {:discard, :trigger_no_longer_applies}
+                        {:cancel, :trigger_no_longer_applies}
 
                       {:error, error} ->
                         raise Ash.Error.to_error_class(error)
