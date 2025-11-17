@@ -9,6 +9,9 @@ defmodule AshOban.Transformers.SetDefaults do
   use Spark.Dsl.Transformer
   alias Spark.Dsl.Transformer
 
+  def after?(Ash.Resource.Transformers.SetPrimaryActions), do: true
+  def after?(_), do: false
+
   def before?(AshOban.Transformers.DefineSchedulers), do: true
   def before?(_), do: false
 
