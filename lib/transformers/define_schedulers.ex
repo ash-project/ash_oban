@@ -228,12 +228,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           queue: unquote(trigger.scheduler_queue),
           unique: [
             period: :infinity,
-            states: [
-              :available,
-              :executing,
-              :retryable,
-              :scheduled
-            ]
+            states: :incomplete
           ],
           max_attempts: unquote(trigger.max_scheduler_attempts)
 
@@ -519,19 +514,12 @@ defmodule AshOban.Transformers.DefineSchedulers do
           end
       end
 
-    states =
-      [
-        :available,
-        :executing,
-        :retryable,
-        :scheduled,
-        if trigger.trigger_once? do
-          :completed
-        else
-          nil
-        end
-      ]
-      |> Enum.filter(&(not is_nil(&1)))
+    state_group =
+      if trigger.trigger_once? do
+        :successful
+      else
+        :incomplete
+      end
 
     worker_opts =
       Keyword.merge(
@@ -541,7 +529,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           queue: trigger.queue,
           unique: [
             period: :infinity,
-            states: states
+            states: state_group
           ]
         ],
         trigger.worker_opts
