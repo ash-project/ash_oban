@@ -133,7 +133,7 @@ defmodule AshOban.MixProject do
     oban_dep ++
       [
         {:ash, ash_version("~> 3.0 and >=3.8.0")},
-        {:oban, "~> 2.15"},
+        {:oban, "~> 2.20"},
         {:postgrex, "~> 0.18"},
         # dev/test dependencies
         {:igniter, "~> 0.6.1", only: [:dev, :test]},

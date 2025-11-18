@@ -67,12 +67,7 @@ defmodule AshOban.Transformers.DefineActionWorkers do
           queue: unquote(scheduled_action.queue),
           unique: [
             period: :infinity,
-            states: [
-              :available,
-              :executing,
-              :retryable,
-              :scheduled
-            ]
+            states: :incomplete
           ]
 
         require Logger
