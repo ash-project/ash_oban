@@ -887,17 +887,13 @@ defmodule AshOban do
 
     pro_dynamic_cron_plugin? =
       base
-      |> Keyword.get(:plugins, [])
-      |> Enum.any?(fn
-        {plugin, _opts} -> plugin == Oban.Pro.Plugins.DynamicCron
-      end)
+      |> Keyword.fetch!(:plugins)
+      |> Enum.any?(&match?({Oban.Pro.Plugins.DynamicCron, _}, &1))
 
     pro_dynamic_queues_plugin? =
       base
-      |> Keyword.get(:plugins, [])
-      |> Enum.any?(fn
-        {plugin, _opts} -> plugin == Oban.Pro.Plugins.DynamicQueues
-      end)
+      |> Keyword.fetch!(:plugins)
+      |> Enum.any?(&match?({Oban.Pro.Plugins.DynamicQueues, _}, &1))
 
     cron_plugin =
       if pro_dynamic_cron_plugin? do
@@ -915,10 +911,7 @@ defmodule AshOban do
     end
 
     domains
-    |> Enum.flat_map(fn domain ->
-      domain
-      |> Ash.Domain.Info.resources()
-    end)
+    |> Enum.flat_map(&Ash.Domain.Info.resources/1)
     |> Enum.uniq()
     |> Enum.flat_map(fn resource ->
       resource
@@ -967,13 +960,7 @@ defmodule AshOban do
         end
 
         resources_and_triggers
-        |> Enum.reject(fn
-          %{scheduler_cron: false} ->
-            true
-
-          _ ->
-            false
-        end)
+        |> Enum.reject(&match?(%{scheduler_cron: false}, &1))
         |> Enum.reduce(base, fn {resource, trigger}, config ->
           add_job(config, cron_plugin, resource, trigger)
         end)
