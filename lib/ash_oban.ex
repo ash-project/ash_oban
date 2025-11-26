@@ -871,19 +871,23 @@ defmodule AshOban do
   #{Spark.Options.docs(@config_schema)}
   """
   def config(domains, base, opts \\ []) do
-    domains = List.wrap(domains)
     opts = Spark.Options.validate!(opts, @config_schema)
 
     base =
-      Keyword.update(base, :plugins, [], fn plugins ->
-        Enum.map(plugins || [], fn item ->
-          if is_atom(item) do
-            {item, []}
-          else
-            item
-          end
-        end)
-      end)
+      case Keyword.get(base, :plugins, []) do
+        [_ | _] = plugins ->
+          normalized =
+            Enum.map(plugins, fn item ->
+              if is_atom(item), do: {item, []}, else: item
+            end)
+
+          Keyword.put(base, :plugins, normalized)
+
+        _ ->
+          base
+          |> Keyword.put(:peer, false)
+          |> Keyword.put(:plugins, [])
+      end
 
     pro_dynamic_cron_plugin? =
       base
@@ -911,6 +915,7 @@ defmodule AshOban do
     end
 
     domains
+    |> List.wrap()
     |> Enum.flat_map(&Ash.Domain.Info.resources/1)
     |> Enum.uniq()
     |> Enum.flat_map(fn resource ->

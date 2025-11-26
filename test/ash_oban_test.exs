@@ -291,6 +291,16 @@ defmodule AshObanTest do
                ]
              ] = config
     end
+
+    test "disabling peer mode when plugins are disabled" do
+      config = AshOban.config([Domain], [plugins: []], require?: false)
+      assert config[:peer] == false
+      assert config[:plugins] == []
+
+      config = AshOban.config([Domain], [plugins: false], require?: false)
+      assert config[:peer] == false
+      assert config[:plugins] == []
+    end
   end
 
   describe "oban pro tier" do
