@@ -338,7 +338,6 @@ defmodule AshObanTest do
         )
 
       assert [
-               engine: Oban.Pro.Engines.Smart,
                plugins: [
                  {Oban.Pro.Plugins.DynamicCron,
                   [
@@ -354,6 +353,7 @@ defmodule AshObanTest do
                     triggered_pro_process_with_state: 10
                   ]}
                ],
+               engine: Oban.Pro.Engines.Smart,
                queues: false
              ] = config
     end
