@@ -1271,16 +1271,16 @@ defmodule AshOban do
   defp drain_queue(opts) do
     oban = opts[:oban] || Oban
 
-    config = Oban.config(oban)
+    case Oban.config(oban) do
+      %{testing: :disabled} ->
+        raise ArgumentError, """
+        Cannot use the `drain_queues?: true` option outside of the test environment, unless you are also using oban pro.
 
-    if config.testing == :disabled do
-      raise ArgumentError, """
-      Cannot use the `drain_queues?: true` option outside of the test environment, unless you are also using oban pro.
+        For more information, see this github issue: https://github.com/sorentwo/oban/issues/1037#issuecomment-1962928460
+        """
 
-      For more information, see this github issue: https://github.com/sorentwo/oban/issues/1037#issuecomment-1962928460
-      """
-    else
-      Oban.drain_queue(opts)
+      _ ->
+        Oban.drain_queue(oban, opts)
     end
   end
 
