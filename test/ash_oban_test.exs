@@ -25,17 +25,9 @@ defmodule AshObanTest do
     @describetag pro?: false
 
     setup do
-      Enum.each(
-        [
-          :triggered_process,
-          :triggered_process_2,
-          :triggered_say_hello,
-          :triggered_tenant_aware,
-          :triggered_process_generic,
-          :triggered_fail_oban_job
-        ],
-        &Oban.drain_queue(queue: &1)
-      )
+      Oban.delete_all_jobs(Oban.Job)
+
+      :ok
     end
 
     test "all triggers has a default `stream_with` attribute" do
@@ -307,12 +299,9 @@ defmodule AshObanTest do
     setup [:ash_oban_pro]
 
     setup do
-      Enum.each(
-        [
-          :triggered_pro_process_with_state
-        ],
-        &Oban.drain_queue(queue: &1)
-      )
+      Oban.delete_all_jobs(Oban.Job)
+
+      :ok
     end
 
     @tag pro?: true
@@ -338,7 +327,6 @@ defmodule AshObanTest do
         )
 
       assert [
-               engine: Oban.Pro.Engines.Smart,
                plugins: [
                  {Oban.Pro.Plugins.DynamicCron,
                   [
@@ -354,6 +342,7 @@ defmodule AshObanTest do
                     triggered_pro_process_with_state: 10
                   ]}
                ],
+               engine: Oban.Pro.Engines.Smart,
                queues: false
              ] = config
     end
