@@ -105,6 +105,35 @@ Error handling is done by adding an `on_error` to your trigger. This is an updat
 
 This is _not_ foolproof. You want to be sure that your `on_error` action is as simple as possible, because if an exception is raised during the `on_error` action, the oban job will fail. If you are relying on your `on_error` logic to alter the resource to make it no longer apply to a trigger, consider making your action do _only that_. Then you can add another trigger watching for things in an errored state to do more rich error handling behavior.
 
+## Triggering on action
+
+Often you would need the trigger to activate when certain actions are performed, e.g. to expedite processing of new and updated records. 
+
+For that you can use `AshOban.Changes.BuiltinChanges.run_oban_trigger`
+
+For example:
+```elixir
+defmodule MyApp.Resource do
+  use Ash.Resource, domain: MyDomain, extensions: [AshOban]
+
+  ...
+
+  oban do
+    triggers do
+      trigger :process do
+        action :process
+        where expr(processed != true)
+      end
+    end
+  end
+
+  create :create do
+    accept :*
+    change run_oban_trigger(:process)
+  end
+end
+```
+
 ## Changing Triggers when using Oban Pro
 
 To remove or disable triggers, _do not just remove them from your resource_. Due to the way that Oban Pro implements cron jobs, if you just remove them from your resource, the cron will attempt to continue scheduling jobs. Instead, set `state :paused` or `state :deleted` on the trigger. See the oban docs for more: https://getoban.pro/docs/pro/0.14.1/Oban.Pro.Plugins.DynamicCron.html#module-using-and-configuring
