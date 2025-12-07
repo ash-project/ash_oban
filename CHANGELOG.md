@@ -11,6 +11,21 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.7.0](https://github.com/ash-project/ash_oban/compare/v0.6.0...v0.7.0) (2025-12-07)
+
+
+
+
+### Features:
+
+* use new oban 2.20 state groups (#201) by Barnabas Jovanovics
+
+* use new oban 2.20 state groups by Barnabas Jovanovics
+
+### Improvements:
+
+* Disable peer leadership when plugins are disabled (#202) by Parker Selbert
+
 ## [v0.6.0](https://github.com/ash-project/ash_oban/compare/v0.5.1...v0.6.0) (2025-11-14)
 
 
