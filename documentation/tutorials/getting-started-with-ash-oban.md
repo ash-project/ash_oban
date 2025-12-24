@@ -63,6 +63,9 @@ Next, allow AshOban to alter your configuration in your Application module:
 
 ## Usage
 
+> #### Warning {: .warning}
+> Currently, even without `scheduler_cron` specified, the triggers will run every minute. To disable this behavior, add `scheduler_cron false`. This will change with the next major release.
+
 Finally, configure your triggers in your resources.
 
 Add the `AshOban` extension and define a trigger.
