@@ -565,7 +565,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
           Error occurred on action: #{unquote(trigger.action)}.
 
-          #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
+          #{Exception.format(:error, error, AshOban.stacktrace(error))}
           """)
         end
       else
@@ -583,7 +583,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
           Error occurred on action: #{unquote(trigger.action)}.
 
-          #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
+          #{Exception.format(:error, error, AshOban.stacktrace(error))}
           """)
         end
       else
@@ -829,7 +829,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                             Logger.error("""
                             Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!!
 
-                            #{inspect(Exception.format(:error, error, AshOban.stacktrace(error)))}
+                            #{Exception.format(:error, error, AshOban.stacktrace(error))}
                             """)
 
                             reraise error, stacktrace
