@@ -73,50 +73,65 @@ defmodule AshOban.Transformers.DefineActionWorkers do
         require Logger
         @impl unquote(worker)
         def unquote(function_name)(%Oban.Job{args: args} = job) do
-          case AshOban.lookup_actor(args["actor"], unquote(scheduled_action.actor_persister)) do
-            {:ok, actor} ->
-              authorize? = AshOban.authorize?()
+          scheduled_action =
+            AshOban.Info.oban_scheduled_action(unquote(resource), unquote(scheduled_action.name))
 
-              AshOban.debug(
-                "Scheduled action #{unquote(inspect(resource))}.#{unquote(scheduled_action.name)} triggered.",
-                unquote(scheduled_action.debug?)
-              )
+          (scheduled_action.list_tenants ||
+             AshOban.Info.oban_list_tenants!(unquote(resource)))
+          |> then(fn
+            {module, o} ->
+              module.list_tenants(o)
 
-              input =
-                (args["action_arguments"] || %{})
-                |> Map.merge(unquote(Macro.escape(scheduled_action.action_input || %{})))
+            list_tenants ->
+              list_tenants
+          end)
+          |> Enum.each(fn tenant ->
+            case AshOban.lookup_actor(args["actor"], unquote(scheduled_action.actor_persister)) do
+              {:ok, actor} ->
+                authorize? = AshOban.authorize?()
 
-              input =
-                if job.max_attempts == job.attempt do
-                  Map.put(input, :last_oban_attempt?, true)
-                else
-                  Map.put(input, :last_oban_attempt?, false)
-                end
+                AshOban.debug(
+                  "Scheduled action #{unquote(inspect(resource))}.#{unquote(scheduled_action.name)} triggered.",
+                  unquote(scheduled_action.debug?)
+                )
 
-              unquote(resource)
-              |> Ash.ActionInput.new()
-              |> Ash.ActionInput.set_context(
-                if unquote(scheduled_action.shared_context?) do
-                  %{shared: %{private: %{ash_oban?: true}}}
-                else
-                  %{private: %{ash_oban?: true}}
-                end
-              )
-              |> Ash.ActionInput.for_action(
-                unquote(scheduled_action.action),
-                input,
-                authorize?: authorize?,
-                actor: actor,
-                domain: unquote(domain),
-                skip_unknown_inputs: Map.keys(input)
-              )
-              |> Ash.run_action!()
+                input =
+                  (args["action_arguments"] || %{})
+                  |> Map.merge(unquote(Macro.escape(scheduled_action.action_input || %{})))
 
-              :ok
+                input =
+                  if job.max_attempts == job.attempt do
+                    Map.put(input, :last_oban_attempt?, true)
+                  else
+                    Map.put(input, :last_oban_attempt?, false)
+                  end
 
-            {:error, error} ->
-              raise Ash.Error.to_ash_error(error)
-          end
+                unquote(resource)
+                |> Ash.ActionInput.new()
+                |> Ash.ActionInput.set_tenant(tenant)
+                |> Ash.ActionInput.set_context(
+                  if unquote(scheduled_action.shared_context?) do
+                    %{shared: %{private: %{ash_oban?: true}}}
+                  else
+                    %{private: %{ash_oban?: true}}
+                  end
+                )
+                |> Ash.ActionInput.for_action(
+                  unquote(scheduled_action.action),
+                  input,
+                  authorize?: authorize?,
+                  actor: actor,
+                  domain: unquote(domain),
+                  skip_unknown_inputs: Map.keys(input)
+                )
+                |> Ash.run_action!()
+
+              {:error, error} ->
+                raise Ash.Error.to_ash_error(error)
+            end
+          end)
+
+          :ok
         end
       end,
       Macro.Env.location(__ENV__)

@@ -386,6 +386,7 @@ defmodule AshOban do
             action: atom,
             cron: String.t(),
             action_input: map(),
+            list_tenants: term(),
             worker: module(),
             worker_module_name: module() | nil,
             max_attempts: non_neg_integer(),
@@ -406,6 +407,7 @@ defmodule AshOban do
       :actor_persister,
       :worker_module_name,
       :action_input,
+      :list_tenants,
       :max_attempts,
       :queue,
       :worker,
@@ -434,6 +436,18 @@ defmodule AshOban do
       action_input: [
         type: :map,
         doc: "Inputs to supply to the action when it is called."
+      ],
+      list_tenants: [
+        type:
+          {:or,
+           [
+             {:list, :any},
+             {:spark_function_behaviour, AshOban.ListTenants, {AshOban.ListTenants.Function, 0}}
+           ]},
+        doc: """
+        A list of tenants or a function behaviour that returns a list of tenants this scheduled action should be run for.
+        The action will be called once for each tenant. Falls back to the global `list_tenants` setting in the `oban` section if not set.
+        """
       ],
       action: [
         type: :atom,
