@@ -11,6 +11,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.7.1](https://github.com/ash-project/ash_oban/compare/v0.7.0...v0.7.1) (2026-02-10)
+
+
+
+
+### Improvements:
+
+* support `list_tenants` for scheduled actions by Zach Daniel
+
+* Better formatting for error messages (#208) by DVSLabs
+
 ## [v0.7.0](https://github.com/ash-project/ash_oban/compare/v0.6.0...v0.7.0) (2025-12-07)
 
 
