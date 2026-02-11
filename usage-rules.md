@@ -10,31 +10,6 @@ SPDX-License-Identifier: MIT
 
 AshOban is a package that integrates the Ash Framework with Oban, a robust job processing system for Elixir. It enables you to define triggers that can execute background jobs based on specific conditions in your Ash resources, as well as schedule periodic actions. AshOban is particularly useful for handling asynchronous tasks, background processing, and scheduled operations in your Ash application.
 
-## Triggering Jobs Programmatically
-
-You can trigger jobs programmatically using `run_oban_trigger` in your actions:
-
-```elixir
-update :process_item do
-  accept [:item_id]
-  change set_attribute(:processing, true)
-  change run_oban_trigger(:process_data)
-end
-```
-
-Or directly using the AshOban API:
-
-```elixir
-# Run a trigger for a specific record
-AshOban.run_trigger(record, :process_data)
-
-# Run a trigger for multiple records
-AshOban.run_triggers(records, :process_data)
-
-# Schedule a trigger or scheduled action
-AshOban.schedule(MyApp.Resource, :process_data, actor: current_user)
-```
-
 ## Working with Actors
 
 AshOban can persist the actor that triggered a job, making it available when the job runs:
