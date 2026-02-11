@@ -10,25 +10,6 @@ SPDX-License-Identifier: MIT
 
 AshOban is a package that integrates the Ash Framework with Oban, a robust job processing system for Elixir. It enables you to define triggers that can execute background jobs based on specific conditions in your Ash resources, as well as schedule periodic actions. AshOban is particularly useful for handling asynchronous tasks, background processing, and scheduled operations in your Ash application.
 
-## Multi-tenancy Support
-
-AshOban supports multi-tenancy in your Ash application:
-
-```elixir
-oban do
-  # Global tenant configuration
-  list_tenants [1, 2, 3]  # or a function that returns tenants
-
-  triggers do
-    trigger :process do
-      # Override tenants for a specific trigger
-      list_tenants fn -> [2] end
-      action :process
-    end
-  end
-end
-```
-
 ## Debugging and Error Handling
 
 AshOban provides options for debugging and handling errors:
