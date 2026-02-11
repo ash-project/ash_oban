@@ -10,30 +10,6 @@ SPDX-License-Identifier: MIT
 
 AshOban is a package that integrates the Ash Framework with Oban, a robust job processing system for Elixir. It enables you to define triggers that can execute background jobs based on specific conditions in your Ash resources, as well as schedule periodic actions. AshOban is particularly useful for handling asynchronous tasks, background processing, and scheduled operations in your Ash application.
 
-## Scheduled Actions
-
-Scheduled actions allow you to run periodic tasks according to a cron schedule:
-
-```elixir
-oban do
-  scheduled_actions do
-    schedule :daily_report, "0 8 * * *" do
-      action :generate_report
-      worker_module_name MyApp.Workers.DailyReport
-    end
-  end
-end
-```
-
-### Scheduled Action Configuration Options
-
-- `cron` - The schedule in crontab notation
-- `action` - The generic or create action to call when the schedule is triggered
-- `action_input` - Inputs to supply to the action when it is called
-- `worker_module_name` - The module name for the generated worker
-- `queue` - The queue to place the job in
-- `max_attempts` - How many times to attempt the job (default: 1)
-
 ## Triggering Jobs Programmatically
 
 You can trigger jobs programmatically using `run_oban_trigger` in your actions:
