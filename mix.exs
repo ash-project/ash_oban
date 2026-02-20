@@ -77,6 +77,7 @@ defmodule AshOban.MixProject do
         {"README.md", title: "Home"},
         "documentation/tutorials/getting-started-with-ash-oban.md",
         "documentation/topics/triggers-and-scheduled-actions.md",
+        "documentation/topics/testing.md",
         {"documentation/dsls/DSL-AshOban.md", search_data: Spark.Docs.search_data_for(AshOban)},
         "CHANGELOG.md"
       ],
