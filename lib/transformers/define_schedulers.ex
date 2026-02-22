@@ -297,6 +297,140 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
   # sobelow_skip ["SQL.Query"]
   defp define_worker(resource, worker_module_name, trigger, dsl) do
+    if trigger.chunks do
+      define_chunk_worker(resource, worker_module_name, trigger, dsl)
+    else
+      define_standard_worker(resource, worker_module_name, trigger, dsl)
+    end
+  end
+
+  defp define_chunk_worker(resource, worker_module_name, trigger, dsl) do
+    domain = AshOban.Info.oban_domain!(dsl)
+    worker = Oban.Pro.Workers.Chunk
+
+    trigger_action = Ash.Resource.Info.action(dsl, trigger.action)
+
+    read_action =
+      trigger.worker_read_action || trigger.read_action ||
+        Map.get(trigger_action, :atomic_upgrade_with) ||
+        Ash.Resource.Info.primary_action!(resource, :read).name
+
+    query = query(trigger, resource)
+
+    multitenant? = Ash.Resource.Info.multitenancy_strategy(dsl) != nil
+
+    # Build the list of args keys (atoms) for chunk partitioning.
+    # Oban Pro requires atom keys in by: [{:args, key_or_keys}] format.
+    args_keys =
+      [:actor]
+      |> then(fn keys -> if multitenant?, do: [:tenant | keys], else: keys end)
+      |> then(fn keys ->
+        if trigger.chunks.by do
+          List.wrap(trigger.chunks.by) ++ keys
+        else
+          keys
+        end
+      end)
+
+    by_value =
+      case args_keys do
+        [single_key] -> [{:args, single_key}]
+        keys -> [{:args, keys}]
+      end
+
+    chunk_opts = [
+      size: trigger.chunks.size,
+      timeout: trigger.chunks.timeout,
+      by: by_value
+    ]
+
+    state_group =
+      if trigger.trigger_once? do
+        :successful
+      else
+        :incomplete
+      end
+
+    worker_opts =
+      chunk_opts
+      |> Keyword.merge(
+        priority: trigger.scheduler_priority,
+        max_attempts: trigger.max_attempts,
+        queue: trigger.queue,
+        unique: [
+          period: :infinity,
+          states: state_group
+        ]
+      )
+      |> Keyword.merge(trigger.worker_opts)
+
+    primary_key = Ash.Resource.Info.primary_key(dsl)
+
+    work =
+      work_chunk(trigger, worker, trigger_action.type, read_action, resource, domain, primary_key)
+
+    backoff =
+      case trigger.backoff do
+        :exponential ->
+          nil
+
+        fun when is_function(fun) ->
+          quote location: :keep do
+            @impl Oban.Worker
+            def backoff(job) do
+              unquote(fun).(job)
+            end
+          end
+
+        backoff ->
+          quote location: :keep do
+            @impl Oban.Worker
+            def backoff(_job) do
+              unquote(backoff)
+            end
+          end
+      end
+
+    timeout =
+      case trigger.timeout do
+        :infinity ->
+          nil
+
+        fun when is_function(fun) ->
+          quote location: :keep do
+            @impl Oban.Worker
+            def timeout(job) do
+              unquote(fun).(job)
+            end
+          end
+
+        timeout ->
+          quote location: :keep do
+            @impl Oban.Worker
+            def timeout(_job) do
+              unquote(timeout)
+            end
+          end
+      end
+
+    Module.create(
+      worker_module_name,
+      quote location: :keep do
+        use unquote(worker), unquote(worker_opts)
+
+        require Logger
+
+        unquote(work)
+        unquote(query)
+        unquote(backoff)
+        unquote(timeout)
+      end,
+      Macro.Env.location(__ENV__)
+    )
+  end
+
+  # sobelow_skip ["SQL.Query"]
+  defp define_standard_worker(resource, worker_module_name, trigger, dsl) do
     domain = AshOban.Info.oban_domain!(dsl)
     pro? = AshOban.Info.pro?()
 
@@ -477,7 +611,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
         fun when is_function(fun) ->
           quote location: :keep do
-            @impl unquote(worker)
+            @impl Oban.Worker
             def backoff(job) do
               unquote(fun).(job)
             end
@@ -485,7 +619,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
         backoff ->
           quote location: :keep do
-            @impl unquote(worker)
+            @impl Oban.Worker
             def backoff(_job) do
               unquote(backoff)
             end
@@ -499,7 +633,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
         fun when is_function(fun) ->
           quote location: :keep do
-            @impl unquote(worker)
+            @impl Oban.Worker
             def timeout(job) do
               unquote(fun).(job)
             end
@@ -507,7 +641,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
         timeout ->
           quote location: :keep do
-            @impl unquote(worker)
+            @impl Oban.Worker
             def timeout(_job) do
               unquote(timeout)
             end
@@ -1210,6 +1344,335 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 __STACKTRACE__
               )
           end
+        end
+      end
+    end
+  end
+
+  defp work_chunk(trigger, _worker, trigger_action_type, read_action, resource, domain, primary_key) do
+    if trigger.state != :active do
+      quote location: :keep do
+        def process(_jobs) do
+          {:cancel, unquote(trigger.state)}
+        end
+      end
+    else
+      bulk_op =
+        if trigger_action_type == :update do
+          :bulk_update
+        else
+          :bulk_destroy
+        end
+
+      pkey_filter_code =
+        if length(primary_key) == 1 do
+          field = hd(primary_key)
+
+          quote do
+            values = Enum.map(jobs, fn job -> job.args["primary_key"][unquote(to_string(field))] end)
+            Ash.Query.do_filter(query(), [{unquote(field), [in: values]}])
+          end
+        else
+          quote do
+            pkey_maps = Enum.map(jobs, fn job -> Map.new(job.args["primary_key"]) end)
+            Ash.Query.do_filter(query(), or: pkey_maps)
+          end
+        end
+
+      on_error_pkey_filter_code =
+        if length(primary_key) == 1 do
+          field = hd(primary_key)
+
+          quote do
+            values =
+              Enum.map(jobs, fn job ->
+                job.args["primary_key"][unquote(to_string(field))]
+              end)
+
+            [{unquote(field), [in: values]}]
+          end
+        else
+          quote do
+            pkey_maps = Enum.map(jobs, fn job -> Map.new(job.args["primary_key"]) end)
+            [or: pkey_maps]
+          end
+        end
+
+      quote location: :keep, generated: true do
+        def process(jobs) do
+          AshOban.debug(
+            "Chunk trigger #{unquote(inspect(resource))}.#{unquote(trigger.name)} processing #{length(jobs)} jobs",
+            unquote(trigger.debug?)
+          )
+
+          authorize? = AshOban.authorize?()
+
+          # All jobs share the same actor and tenant (enforced by ChunkWorker partitioning)
+          first = hd(jobs)
+          tenant = first.args["tenant"]
+
+          case AshOban.lookup_actor(first.args["actor"], unquote(trigger.actor_persister)) do
+            {:ok, actor} ->
+              process_chunk(jobs, actor, authorize?, tenant)
+
+            {:error, error} ->
+              Logger.error("""
+              Could not lookup actor for chunk trigger \
+              #{unquote(inspect(resource))}.#{unquote(trigger.name)}: \
+              #{Exception.format(:error, error, AshOban.stacktrace(error))}
+              """)
+
+              {:error, :actor_lookup_failed, jobs}
+          end
+        end
+
+        defp process_chunk(jobs, actor, authorize?, tenant) do
+          query =
+            unquote(pkey_filter_code)
+            |> Ash.Query.set_context(
+              if unquote(trigger.shared_context?) do
+                %{shared: %{private: %{ash_oban?: true}}}
+              else
+                %{private: %{ash_oban?: true}}
+              end
+            )
+            |> Ash.Query.set_tenant(tenant)
+            |> Ash.Query.for_read(unquote(read_action), %{},
+              authorize?: authorize?,
+              actor: actor,
+              domain: unquote(domain)
+            )
+
+          input = unquote(Macro.escape(trigger.action_input || %{}))
+
+          bulk_result =
+            apply(Ash, unquote(bulk_op), [
+              query,
+              unquote(trigger.action),
+              input,
+              [
+                authorize?: authorize?,
+                actor: actor,
+                tenant: tenant,
+                domain: unquote(domain),
+                context:
+                  if unquote(trigger.shared_context?) do
+                    %{shared: %{private: %{ash_oban?: true}}}
+                  else
+                    %{private: %{ash_oban?: true}}
+                  end,
+                skip_unknown_inputs: [:metadata],
+                strategy: [:atomic, :atomic_batches, :stream],
+                stop_on_error?: false,
+                return_errors?: true,
+                notify?: true,
+                return_records?: true,
+                select: unquote(primary_key)
+              ]
+            ])
+
+          map_chunk_results(jobs, bulk_result, actor, authorize?, tenant)
+        end
+
+        defp map_chunk_results(jobs, bulk_result, actor, authorize?, tenant) do
+          primary_key_fields = unquote(primary_key)
+
+          success_pkeys =
+            bulk_result
+            |> Map.get(:records, [])
+            |> List.wrap()
+            |> Enum.map(fn record ->
+              record |> Map.take(primary_key_fields) |> stringify_keys()
+            end)
+            |> MapSet.new()
+
+          # Best-effort extraction of error PKs from changeset data.
+          # For atomic failures, errors may not have per-record changeset data.
+          error_pkeys =
+            bulk_result
+            |> Map.get(:errors, [])
+            |> List.wrap()
+            |> Enum.flat_map(fn
+              %{errors: errors} when is_list(errors) -> errors
+              error -> [error]
+            end)
+            |> Enum.flat_map(fn
+              %{changeset: %Ash.Changeset{data: data}} when not is_nil(data) ->
+                [data |> Map.take(primary_key_fields) |> stringify_keys()]
+
+              _ ->
+                []
+            end)
+            |> MapSet.new()
+
+          # If we have errors but couldn't extract any PKs from them (e.g. atomic failure),
+          # treat all non-success jobs as errors (retry) rather than discards.
+          has_unmapped_errors? =
+            (bulk_result.error_count || 0) > 0 and MapSet.size(error_pkeys) == 0
+
+          result =
+            Enum.reduce(jobs, %{error: [], discard: []}, fn job, acc ->
+              job_pkey = Map.new(job.args["primary_key"])
+
+              cond do
+                MapSet.member?(success_pkeys, job_pkey) ->
+                  acc
+
+                MapSet.member?(error_pkeys, job_pkey) ->
+                  %{acc | error: [job | acc.error]}
+
+                has_unmapped_errors? ->
+                  # Can't tell if this job failed or wasn't found; safer to retry
+                  %{acc | error: [job | acc.error]}
+
+                true ->
+                  # No errors unaccounted for — record wasn't found by query
+                  %{acc | discard: [job | acc.discard]}
+              end
+            end)
+
+          handle_chunk_results(result, actor, authorize?, tenant)
+        end
+
+        defp handle_chunk_results(%{error: [], discard: []}, _actor, _authorize?, _tenant) do
+          :ok
+        end
+
+        defp handle_chunk_results(result, actor, authorize?, tenant) do
+          error_jobs = result.error
+          discard_jobs = result.discard
+
+          {final_attempt_jobs, retriable_jobs} =
+            Enum.split_with(error_jobs, fn job ->
+              job.attempt >= job.max_attempts
+            end)
+
+          if final_attempt_jobs != [] do
+            handle_chunk_on_error(final_attempt_jobs, actor, authorize?, tenant)
+          end
+
+          response = []
+
+          response =
+            if retriable_jobs != [] do
+              [{:error, {:chunk_processing_failed, retriable_jobs}} | response]
+            else
+              response
+            end
+
+          response =
+            if discard_jobs != [] do
+              [{:discard, {:trigger_no_longer_applies, discard_jobs}} | response]
+            else
+              response
+            end
+
+          response =
+            if final_attempt_jobs != [] do
+              [{:discard, {:max_attempts_reached, final_attempt_jobs}} | response]
+            else
+              response
+            end
+
+          case response do
+            [] -> :ok
+            results -> results
+          end
+        end
+
+        if unquote(trigger.on_error) do
+          defp handle_chunk_on_error(jobs, actor, authorize?, tenant) do
+            pkey_filter = unquote(on_error_pkey_filter_code)
+
+            query =
+              query()
+              |> Ash.Query.do_filter(pkey_filter)
+              |> Ash.Query.set_context(
+                if unquote(trigger.shared_context?) do
+                  %{shared: %{private: %{ash_oban?: true}}}
+                else
+                  %{private: %{ash_oban?: true}}
+                end
+              )
+              |> Ash.Query.set_tenant(tenant)
+              |> Ash.Query.for_read(unquote(read_action), %{},
+                authorize?: authorize?,
+                actor: actor,
+                domain: unquote(domain)
+              )
+
+            if unquote(trigger_action_type) == :update do
+              Ash.bulk_update!(
+                query,
+                unquote(trigger.on_error),
+                %{error: "chunk processing failed"},
+                authorize?: authorize?,
+                actor: actor,
+                tenant: tenant,
+                domain: unquote(domain),
+                context:
+                  if unquote(trigger.shared_context?) do
+                    %{shared: %{private: %{ash_oban?: true}}}
+                  else
+                    %{private: %{ash_oban?: true}}
+                  end,
+                strategy: [:atomic, :atomic_batches, :stream],
+                stop_on_error?: false,
+                return_errors?: true,
+                skip_unknown_inputs: [:error],
+                notify?: true
+              )
+            else
+              Ash.bulk_destroy!(
+                query,
+                unquote(trigger.on_error),
+                %{error: "chunk processing failed"},
+                authorize?: authorize?,
+                actor: actor,
+                tenant: tenant,
+                domain: unquote(domain),
+                context:
+                  if unquote(trigger.shared_context?) do
+                    %{shared: %{private: %{ash_oban?: true}}}
+                  else
+                    %{private: %{ash_oban?: true}}
+                  end,
+                strategy: [:atomic, :atomic_batches, :stream],
+                stop_on_error?: false,
+                return_errors?: true,
+                skip_unknown_inputs: [:error],
+                notify?: true
+              )
+            end
+
+            :ok
+          rescue
+            error ->
+              Logger.error("""
+              Error handler failed for chunk trigger \
+              #{unquote(inspect(resource))}.#{unquote(trigger.name)}: \
+              #{Exception.format(:error, error, __STACKTRACE__)}
+              """)
+
+              :ok
+          end
+        else
+          defp handle_chunk_on_error(jobs, _actor, _authorize?, _tenant) do
+            if unquote(trigger.log_final_error?) || unquote(trigger.log_errors?) do
+              Enum.each(jobs, fn job ->
+                Logger.error("""
+                Final attempt failed for #{inspect(unquote(resource))}: \
+                #{inspect(job.args["primary_key"])} in chunk trigger #{unquote(trigger.name)}
+                """)
+              end)
+            end
+
+            :ok
+          end
+        end
+
+        defp stringify_keys(map) do
+          Map.new(map, fn {k, v} -> {to_string(k), v} end)
         end
       end
     end

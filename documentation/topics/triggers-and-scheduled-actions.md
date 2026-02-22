@@ -103,6 +103,52 @@ goes wrong with the job on the first day (maybe our email provider is unavailabl
 call to `send_subscription_expiration_notification` gets its own oban job, meaning that if one fails, the others are unaffected. If someone says
 "Hey, I never got my email", you can look at their subscription state to see why, and potentially retrigger it by setting `last_subscription_expiration_notification_sent_at` to `nil`.
 
+### Chunk Processing (Oban Pro)
+
+By default, each matching record gets its own Oban job. This is safe and simple, but can be inefficient at scale — if 10,000 records match a trigger, that means 10,000 individual `Ash.update/2` calls, each with its own database round-trip and Oban overhead.
+
+If you have [Oban Pro](https://getoban.pro), you can use **chunk processing** to batch records together. With chunks configured, the scheduler still creates one job per record, but Oban's `ChunkWorker` collects them into batches and delivers the batch to a single `Ash.bulk_update/4` or `Ash.bulk_destroy/4` call.
+
+```elixir
+trigger :process do
+  action :process
+  where expr(processed != true)
+  read_action :read
+
+  chunks do
+    size 100      # collect up to 100 jobs per batch
+    timeout 5_000 # wait up to 5 seconds for the batch to fill before processing
+  end
+end
+```
+
+#### How it works
+
+1. The scheduler runs as usual, inserting one Oban job per matching record.
+2. Oban's `ChunkWorker` accumulates jobs until either `size` is reached or `timeout` milliseconds have elapsed.
+3. The collected batch is delivered to a single bulk operation — one `Ash.bulk_update!/4` or `Ash.bulk_destroy!/4` call covering all records in the batch.
+
+#### Partitioning
+
+Batches are automatically partitioned by `:actor` (and `:tenant` for multitenant resources), so every record in a batch shares the same actor and tenant context. You can add further partitioning with the `by` option:
+
+```elixir
+chunks do
+  size 50
+  by [:shard_id]  # also partition by shard_id, supplied via extra_args
+end
+```
+
+#### Concurrency and rate limits
+
+A chunk counts as **one** job execution against Oban's queue concurrency and rate limits, regardless of how many records it contains. A queue configured with `triggered_process: 10` will run at most 10 concurrent chunk batches — not 10 individual records. This makes chunk processing well-suited for high-throughput scenarios: you get the throughput of processing hundreds of records while consuming only a single concurrency slot per batch.
+
+#### Limitations
+
+- Requires Oban Pro (`config :ash_oban, pro?: true`).
+- Only works with `update` and `destroy` actions (not generic or create actions).
+- Atomic actions are recommended for efficient bulk execution, though non-atomic actions are supported via the `:stream` strategy.
+
 ### Scheduled Actions
 
 Scheduled actions are a much simpler concept than triggers. They are used to perform a generic action on a specified schedule. For example, lets say

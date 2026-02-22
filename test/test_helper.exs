@@ -2,4 +2,11 @@
 #
 # SPDX-License-Identifier: MIT
 
-ExUnit.start()
+excluded =
+  if Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
+    []
+  else
+    [:oban_pro]
+  end
+
+ExUnit.start(exclude: excluded)
