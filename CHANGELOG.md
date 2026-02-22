@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.8.0-rc.0](https://github.com/ash-project/ash_oban/compare/v0.7.2...v0.8.0-rc.0) (2026-02-22)
+
+
+
+
+### Features:
+
+* experiment with new chunk worker logic by Zach Daniel
+
 ## [v0.7.2](https://github.com/ash-project/ash_oban/compare/v0.7.1...v0.7.2) (2026-02-20)
 
 
