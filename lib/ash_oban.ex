@@ -10,6 +10,12 @@ defmodule AshOban do
     Configuration for chunk-based batch processing using Oban Pro's ChunkWorker.
     """
 
+    @type t :: %__MODULE__{
+            size: pos_integer(),
+            timeout: pos_integer(),
+            by: [atom()] | nil
+          }
+
     defstruct [:size, :timeout, :by, :__spark_metadata__]
   end
 

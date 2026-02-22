@@ -251,7 +251,8 @@ defmodule AshObanTest do
             triggered_say_hello: 10,
             triggered_tenant_aware: 10,
             triggered_process_generic: 10,
-            triggered_fail_oban_job: 10
+            triggered_fail_oban_job: 10,
+            triggered_notify_each_tenant: 10
           ]
         )
 
@@ -260,6 +261,8 @@ defmodule AshObanTest do
                  {Oban.Plugins.Cron,
                   [
                     crontab: [
+                      {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.NotifyEachTenant,
+                       []},
                       {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello, []},
                       {"* * * * *",
                        AshOban.Test.Triggered.AshOban.Scheduler.FailObanJobWithCustomBackoff, []},
@@ -279,9 +282,28 @@ defmodule AshObanTest do
                  triggered_say_hello: 10,
                  triggered_tenant_aware: 10,
                  triggered_process_generic: 10,
-                 triggered_fail_oban_job: 10
+                 triggered_fail_oban_job: 10,
+                 triggered_notify_each_tenant: 10
                ]
              ] = config
+    end
+
+    test "scheduled action with multiple list_tenants dispatches per-tenant jobs" do
+      AshOban.Test.schedule_and_run_triggers({Triggered, :notify_each_tenant},
+        scheduled_actions?: true
+      )
+
+      assert_receive {:tenant, 1}
+      assert_receive {:tenant, 2}
+      assert_receive {:tenant, 3}
+    end
+
+    test "scheduled action with single tenant runs directly without dispatching" do
+      AshOban.Test.schedule_and_run_triggers({Triggered, :say_hello},
+        scheduled_actions?: true
+      )
+
+      refute_receive {:tenant, _}
     end
 
     test "disabling peer mode when plugins are disabled" do

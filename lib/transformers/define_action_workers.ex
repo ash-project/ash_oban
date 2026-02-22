@@ -76,16 +76,28 @@ defmodule AshOban.Transformers.DefineActionWorkers do
           scheduled_action =
             AshOban.Info.oban_scheduled_action(unquote(resource), unquote(scheduled_action.name))
 
-          (scheduled_action.list_tenants ||
-             AshOban.Info.oban_list_tenants!(unquote(resource)))
-          |> then(fn
-            {module, o} ->
-              module.list_tenants(o)
+          tenants =
+            (scheduled_action.list_tenants ||
+               AshOban.Info.oban_list_tenants!(unquote(resource)))
+            |> then(fn
+              {module, o} ->
+                module.list_tenants(o)
 
-            list_tenants ->
-              list_tenants
-          end)
-          |> Enum.each(fn tenant ->
+              list_tenants ->
+                list_tenants
+            end)
+
+          if !Map.has_key?(args, "tenant") && Enum.count_until(tenants, 2) == 2 do
+            Enum.each(tenants, fn tenant ->
+              args
+              |> Map.put("tenant", tenant)
+              |> __MODULE__.new()
+              |> Oban.insert!()
+            end)
+          else
+            tenant =
+              if Map.has_key?(args, "tenant"), do: args["tenant"], else: List.first(tenants)
+
             case AshOban.lookup_actor(args["actor"], unquote(scheduled_action.actor_persister)) do
               {:ok, actor} ->
                 authorize? = AshOban.authorize?()
@@ -129,7 +141,7 @@ defmodule AshOban.Transformers.DefineActionWorkers do
               {:error, error} ->
                 raise Ash.Error.to_ash_error(error)
             end
-          end)
+          end
 
           :ok
         end

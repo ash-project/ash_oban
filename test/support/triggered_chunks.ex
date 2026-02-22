@@ -61,7 +61,7 @@ if Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
           scheduler_module_name AshOban.Test.TriggeredChunks.AshOban.Scheduler.Process
 
           chunks do
-            size 10
+            size(10)
             timeout 100
           end
         end
@@ -76,7 +76,7 @@ if Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
           scheduler_module_name AshOban.Test.TriggeredChunks.AshOban.Scheduler.ProcessWithOnError
 
           chunks do
-            size 10
+            size(10)
             timeout 100
           end
         end

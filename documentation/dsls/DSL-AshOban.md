@@ -30,6 +30,7 @@ their appropriate default values.
 ### Nested DSLs
  * [triggers](#oban-triggers)
    * trigger
+     * chunks
  * [scheduled_actions](#oban-scheduled_actions)
    * schedule
 
@@ -66,6 +67,7 @@ end
 
 ### Nested DSLs
  * [trigger](#oban-triggers-trigger)
+   * chunks
 
 
 ### Examples
@@ -91,6 +93,8 @@ trigger name
 
 
 
+### Nested DSLs
+ * [chunks](#oban-triggers-trigger-chunks)
 
 
 ### Examples
@@ -150,6 +154,62 @@ end
 | [`backoff`](#oban-triggers-trigger-backoff){: #oban-triggers-trigger-backoff } | `pos_integer \| (any -> any) \| :exponential` | `:exponential` | Configure after how much time job should (in seconds) be retried in case of error if more retries available. Can be a number of seconds or a function that takes the job and returns a number of seconds. Will not be executed if default max_attempts value of 1 will be used. See [Oban.Worker](https://hexdocs.pm/oban/Oban.Worker.html#module-customizing-backoff) for more about backoff.   backoff 10   backoff fn _job -> 10 end   backoff fn %Oban.Job{attempt: attempt} -> 10 * attempt end   backoff fn %Oban.Job{attempt: attempt, unsaved_error: unsaved_error} ->     %{kind: _, reason: reason, stacktrace: _} = unsaved_error     case reason do       %MyApp.ApiError{status: 429} -> 300       _ -> trunc(:math.pow(attempt, 4))     end   end |
 | [`timeout`](#oban-triggers-trigger-timeout){: #oban-triggers-trigger-timeout } | `pos_integer \| (any -> any) \| :infinity` | `:infinity` | Configure timeout for the job in milliseconds. See [Oban.Worker timeout](https://hexdocs.pm/oban/Oban.Worker.html#module-customizing-timeout) for more about timeout.   timeout 30_000   timeout fn _job -> :timer.seconds(30) end |
 
+
+### oban.triggers.trigger.chunks
+
+
+Configures the trigger to use Oban Pro's ChunkWorker for batch processing.
+
+Instead of processing one record per job, the ChunkWorker collects jobs into
+batches and delivers them together to a single `Ash.bulk_update/4` or
+`Ash.bulk_destroy/4` call. This enables efficient bulk database operations
+with fewer round-trips and reduced Oban overhead.
+
+Jobs are automatically partitioned by `:actor` (and `:tenant` for multitenant
+resources), so each batch is guaranteed to share the same actor and tenant context.
+
+Requires Oban Pro (`config :ash_oban, pro?: true`).
+
+
+
+
+### Examples
+```
+chunks do
+  size 100
+  timeout 5_000
+end
+
+```
+
+```
+# Partition by actor and a custom shard_id field
+chunks do
+  size 50
+  timeout 2_000
+  by [:shard_id]
+end
+
+```
+
+
+
+
+### Options
+
+| Name | Type | Default | Docs |
+|------|------|---------|------|
+| [`size`](#oban-triggers-trigger-chunks-size){: #oban-triggers-trigger-chunks-size .spark-required} | `pos_integer` |  | The number of jobs to collect before processing as a batch. |
+| [`timeout`](#oban-triggers-trigger-chunks-timeout){: #oban-triggers-trigger-chunks-timeout } | `pos_integer` | `1000` | The maximum time in milliseconds to wait for more jobs before processing the available batch. Defaults to 1000. |
+| [`by`](#oban-triggers-trigger-chunks-by){: #oban-triggers-trigger-chunks-by } | `list(atom)` |  | Additional args key(s) to partition by, in addition to the automatic `:actor` partitioning (and `:tenant` for multitenant resources). Must be atom keys corresponding to fields present in the job's `args` map. For example, to also partition by a `:shard_id` field that you include via `extra_args`:     by [:shard_id] |
+
+
+
+
+
+### Introspection
+
+Target: `AshOban.Chunks`
 
 
 

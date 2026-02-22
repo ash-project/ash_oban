@@ -1349,7 +1349,15 @@ defmodule AshOban.Transformers.DefineSchedulers do
     end
   end
 
-  defp work_chunk(trigger, _worker, trigger_action_type, read_action, resource, domain, primary_key) do
+  defp work_chunk(
+         trigger,
+         _worker,
+         trigger_action_type,
+         read_action,
+         resource,
+         domain,
+         primary_key
+       ) do
     if trigger.state != :active do
       quote location: :keep do
         def process(_jobs) do
@@ -1369,7 +1377,9 @@ defmodule AshOban.Transformers.DefineSchedulers do
           field = hd(primary_key)
 
           quote do
-            values = Enum.map(jobs, fn job -> job.args["primary_key"][unquote(to_string(field))] end)
+            values =
+              Enum.map(jobs, fn job -> job.args["primary_key"][unquote(to_string(field))] end)
+
             Ash.Query.do_filter(query(), [{unquote(field), [in: values]}])
           end
         else

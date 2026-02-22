@@ -118,6 +118,16 @@ defmodule AshOban.Test.Triggered do
       schedule :say_hello, "0 0 1 1 *" do
         worker_module_name AshOban.Test.Triggered.AshOban.ActionWorker.SayHello
       end
+
+      schedule :notify_each_tenant, "0 0 1 1 *" do
+        action :notify_tenant
+
+        list_tenants fn ->
+          [1, 2, 3]
+        end
+
+        worker_module_name AshOban.Test.Triggered.AshOban.ActionWorker.NotifyEachTenant
+      end
     end
   end
 
@@ -187,6 +197,13 @@ defmodule AshOban.Test.Triggered do
           _ ->
             {:ok, "Hello"}
         end
+      end
+    end
+
+    action :notify_tenant, :string do
+      run fn input, _ ->
+        send(self(), {:tenant, input.tenant})
+        {:ok, "notified"}
       end
     end
   end
