@@ -5,6 +5,14 @@
 defmodule AshOban do
   require Logger
 
+  defmodule Chunks do
+    @moduledoc """
+    Configuration for chunk-based batch processing using Oban Pro's ChunkWorker.
+    """
+
+    defstruct [:size, :timeout, :by, :__spark_metadata__]
+  end
+
   defmodule Trigger do
     @moduledoc """
     A configured trigger.
@@ -46,7 +54,8 @@ defmodule AshOban do
             on_error: atom,
             on_error_fails_job?: boolean(),
             shared_context?: boolean(),
-            use_tenant_from_record?: boolean()
+            use_tenant_from_record?: boolean(),
+            chunks: AshOban.Chunks.t() | nil
           }
 
     defstruct [
@@ -88,6 +97,7 @@ defmodule AshOban do
       :log_errors?,
       :shared_context?,
       :use_tenant_from_record?,
+      :chunks,
       :__identifier__,
       :__spark_metadata__
     ]
@@ -99,6 +109,66 @@ defmodule AshOban do
     def transform(other), do: {:ok, other}
   end
 
+  @chunks %Spark.Dsl.Entity{
+    name: :chunks,
+    target: Chunks,
+    schema: [
+      size: [
+        type: :pos_integer,
+        required: true,
+        doc: "The number of jobs to collect before processing as a batch."
+      ],
+      timeout: [
+        type: :pos_integer,
+        default: 1000,
+        doc:
+          "The maximum time in milliseconds to wait for more jobs before processing the available batch. Defaults to 1000."
+      ],
+      by: [
+        type: {:list, :atom},
+        doc: """
+        Additional args key(s) to partition by, in addition to the automatic `:actor`
+        partitioning (and `:tenant` for multitenant resources). Must be atom keys
+        corresponding to fields present in the job's `args` map.
+
+        For example, to also partition by a `:shard_id` field that you include via
+        `extra_args`:
+
+            by [:shard_id]
+        """
+      ]
+    ],
+    describe: """
+    Configures the trigger to use Oban Pro's ChunkWorker for batch processing.
+
+    Instead of processing one record per job, the ChunkWorker collects jobs into
+    batches and delivers them together to a single `Ash.bulk_update/4` or
+    `Ash.bulk_destroy/4` call. This enables efficient bulk database operations
+    with fewer round-trips and reduced Oban overhead.
+
+    Jobs are automatically partitioned by `:actor` (and `:tenant` for multitenant
+    resources), so each batch is guaranteed to share the same actor and tenant context.
+
+    Requires Oban Pro (`config :ash_oban, pro?: true`).
+    """,
+    examples: [
+      """
+      chunks do
+        size 100
+        timeout 5_000
+      end
+      """,
+      """
+      # Partition by actor and a custom shard_id field
+      chunks do
+        size 50
+        timeout 2_000
+        by [:shard_id]
+      end
+      """
+    ]
+  }
+
   @trigger %Spark.Dsl.Entity{
     name: :trigger,
     target: Trigger,
@@ -106,6 +176,10 @@ defmodule AshOban do
     identifier: :name,
     imports: [Ash.Expr],
     transform: {Trigger, :transform, []},
+    entities: [
+      chunks: [@chunks]
+    ],
+    singleton_entity_keys: [:chunks],
     examples: [
       """
       trigger :process do
@@ -626,7 +700,8 @@ defmodule AshOban do
     imports: [AshOban.Changes.BuiltinChanges],
     verifiers: [
       AshOban.Verifiers.VerifyModuleNames,
-      AshOban.Verifiers.VerifyUseTenantFromRecord
+      AshOban.Verifiers.VerifyUseTenantFromRecord,
+      AshOban.Verifiers.VerifyChunks
     ],
     transformers: [
       AshOban.Transformers.SetDefaults,

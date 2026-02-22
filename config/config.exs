@@ -16,6 +16,10 @@ config :ash_oban, ecto_repos: [AshOban.Test.Repo]
 config :logger, level: :warning
 
 if Mix.env() == :test do
+  if System.get_env("OBAN_PRO_LICENSE_KEY") do
+    config :ash_oban, pro?: true
+  end
+
   config :ash_oban, :oban,
     testing: :manual,
     repo: AshOban.Test.Repo,
@@ -41,7 +45,9 @@ if Mix.env() == :test do
       {Oban.Plugins.Cron, []}
     ],
     queues: [
-      triggered_pro_process_with_state: 10
+      triggered_pro_process_with_state: 10,
+      triggered_chunks_process: 10,
+      triggered_chunks_process_with_on_error: 10
     ]
 
   config :ash_oban, actor_persister: AshOban.Test.ActorPersister

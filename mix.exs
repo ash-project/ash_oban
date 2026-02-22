@@ -123,11 +123,9 @@ defmodule AshOban.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     oban_dep =
-      if System.get_env("ASH_OBAN_CI_OBAN_PRO") == "false" do
-        []
+      if System.get_env("OBAN_PRO_LICENSE_KEY") do
+        [{:oban_pro, "~> 1.0", repo: "oban", only: [:dev, :test]}]
       else
-        # We can't currently use this as we don't have a license for oban_pro that we can use
-        # [{:oban_pro, "~> 1.0", repo: "oban", only: [:dev,]}]
         []
       end
 
