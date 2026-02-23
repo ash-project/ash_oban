@@ -123,9 +123,9 @@ defmodule AshOban.Transformers.DefineActionWorkers do
                 |> Ash.ActionInput.set_tenant(tenant)
                 |> Ash.ActionInput.set_context(
                   if unquote(scheduled_action.shared_context?) do
-                    %{shared: %{private: %{ash_oban?: true}}}
+                    %{shared: %{private: %{ash_oban?: true}, ash_oban: %{job: job}}}
                   else
-                    %{private: %{ash_oban?: true}}
+                    %{private: %{ash_oban?: true}, ash_oban: %{job: job}}
                   end
                 )
                 |> Ash.ActionInput.for_action(

@@ -149,6 +149,28 @@ A chunk counts as **one** job execution against Oban's queue concurrency and rat
 - Only works with `update` and `destroy` actions (not generic or create actions).
 - Atomic actions are recommended for efficient bulk execution, though non-atomic actions are supported via the `:stream` strategy.
 
+### Accessing the Oban Job
+
+The underlying `%Oban.Job{}` struct is available in the context of any action run by a trigger or scheduled action. Access it via `context.ash_oban.job`:
+
+```elixir
+# In a change module
+def change(changeset, _opts, context) do
+  job = context.ash_oban.job
+  Ash.Changeset.put_context(changeset, :oban_tags, job.tags)
+end
+
+# In a generic action implementation
+def run(input, _opts, context) do
+  job = context.ash_oban.job
+  Logger.info("Attempt #{job.attempt} of #{job.max_attempts}")
+  :ok
+end
+```
+
+> ### Chunk processing {: .info}
+> The `oban_job` is not available in chunk worker contexts, since those process a batch of jobs rather than a single one.
+
 ### Scheduled Actions
 
 Scheduled actions are a much simpler concept than triggers. They are used to perform a generic action on a specified schedule. For example, lets say
