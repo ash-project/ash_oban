@@ -449,6 +449,15 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
     on_error = Ash.Resource.Info.action(dsl, trigger.on_error)
 
+    if trigger.on_error && is_nil(on_error) do
+      raise Spark.Error.DslError,
+        module: Spark.Dsl.Transformer.get_persisted(dsl, :module),
+        path: [:oban, :triggers, trigger.name, :on_error],
+        message: """
+        The `on_error` action #{inspect(trigger.on_error)} does not exist on the resource.
+        """
+    end
+
     on_error_transaction? =
       can_transact? && trigger.on_error &&
         on_error.transaction? && trigger.lock_for_update?
