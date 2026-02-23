@@ -122,7 +122,7 @@
         {Credo.Check.Refactor.CondStatements, []},
         {Credo.Check.Refactor.CyclomaticComplexity, false},
         {Credo.Check.Refactor.FunctionArity, []},
-        {Credo.Check.Refactor.LongQuoteBlocks, []},
+        {Credo.Check.Refactor.LongQuoteBlocks, false},
         {Credo.Check.Refactor.MapInto, false},
         {Credo.Check.Refactor.MatchInCondition, []},
         {Credo.Check.Refactor.NegatedConditionsInUnless, []},
@@ -153,7 +153,7 @@
         {Credo.Check.Warning.UnusedStringOperation, []},
         {Credo.Check.Warning.UnusedTupleOperation, []},
         {Credo.Check.Warning.UnsafeExec, []},
-        {Credo.Check.Warning.StructFieldAmount, []},
+        {Credo.Check.Warning.StructFieldAmount, false},
 
         #
         # Checks scheduled for next check update (opt-in for now, just replace `false` with `[]`)

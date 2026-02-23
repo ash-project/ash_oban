@@ -149,6 +149,25 @@ A chunk counts as **one** job execution against Oban's queue concurrency and rat
 - Only works with `update` and `destroy` actions (not generic or create actions).
 - Atomic actions are recommended for efficient bulk execution, though non-atomic actions are supported via the `:stream` strategy.
 
+### Tagging Jobs
+
+You can attach tags to jobs for filtering and grouping in telemetry, notifications, and the Oban dashboard:
+
+```elixir
+trigger :process do
+  action :process
+  where expr(processed != true)
+  tags ["processing", "intense"]
+end
+
+schedule :import_from_github, "0 */6 * * *" do
+  action :import_from_github
+  tags ["import", "external"]
+end
+```
+
+Tags set via `tags` are merged with any tags you also set in `worker_opts`, so both lists are combined.
+
 ### Accessing the Oban Job
 
 The underlying `%Oban.Job{}` struct is available in the context of any action run by a trigger or scheduled action. Access it via `context.ash_oban.job`:

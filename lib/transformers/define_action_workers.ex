@@ -65,6 +65,7 @@ defmodule AshOban.Transformers.DefineActionWorkers do
           priority: unquote(scheduled_action.priority),
           max_attempts: unquote(scheduled_action.max_attempts),
           queue: unquote(scheduled_action.queue),
+          tags: unquote(scheduled_action.tags || []),
           unique: [
             period: :infinity,
             states: :incomplete

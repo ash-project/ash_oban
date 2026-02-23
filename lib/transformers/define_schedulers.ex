@@ -304,6 +304,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     end
   end
 
+  # sobelow_skip ["SQL.Query"]
   defp define_chunk_worker(resource, worker_module_name, trigger, dsl) do
     domain = AshOban.Info.oban_domain!(dsl)
     worker = Oban.Pro.Workers.Chunk
@@ -363,6 +364,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
         ]
       )
       |> Keyword.merge(trigger.worker_opts)
+      |> Keyword.update(:tags, List.wrap(trigger.tags), &(List.wrap(trigger.tags) ++ &1))
 
     primary_key = Ash.Resource.Info.primary_key(dsl)
 
@@ -668,6 +670,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
         ],
         trigger.worker_opts
       )
+      |> Keyword.update(:tags, List.wrap(trigger.tags), &(List.wrap(trigger.tags) ++ &1))
 
     Module.create(
       worker_module_name,

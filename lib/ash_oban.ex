@@ -61,7 +61,8 @@ defmodule AshOban do
             on_error_fails_job?: boolean(),
             shared_context?: boolean(),
             use_tenant_from_record?: boolean(),
-            chunks: AshOban.Chunks.t() | nil
+            chunks: AshOban.Chunks.t() | nil,
+            tags: [String.t()]
           }
 
     defstruct [
@@ -104,6 +105,7 @@ defmodule AshOban do
       :shared_context?,
       :use_tenant_from_record?,
       :chunks,
+      :tags,
       :__identifier__,
       :__spark_metadata__
     ]
@@ -406,6 +408,13 @@ defmodule AshOban do
         If not specified, inherits the global `use_tenant_from_record?` setting from the `oban` section.
         """
       ],
+      tags: [
+        type: {:list, :string},
+        default: [],
+        doc: """
+        A list of tags to add to the Oban job. Tags are merged with any tags set in `worker_opts`.
+        """
+      ],
       worker_opts: [
         type: :keyword_list,
         default: [],
@@ -475,7 +484,8 @@ defmodule AshOban do
             actor_persister: module() | :none | nil,
             state: :active | :paused | :deleted,
             priority: non_neg_integer(),
-            shared_context?: boolean()
+            shared_context?: boolean(),
+            tags: [String.t()]
           }
 
     defstruct [
@@ -494,6 +504,7 @@ defmodule AshOban do
       :debug?,
       :state,
       :shared_context?,
+      :tags,
       :__identifier__,
       :__spark_metadata__
     ]
@@ -567,6 +578,11 @@ defmodule AshOban do
         type: :non_neg_integer,
         doc: "A number from 0 to 3, where 0 is the highest priority and 3 is the lowest.",
         default: 3
+      ],
+      tags: [
+        type: {:list, :string},
+        default: [],
+        doc: "A list of tags to add to the Oban job."
       ],
       debug?: [
         type: :boolean,

@@ -35,7 +35,10 @@ if Mix.env() == :test do
       triggered_tenant_aware: 10,
       triggered_process_generic: 10,
       triggered_fail_oban_job: 10,
-      triggered_notify_each_tenant: 10
+      triggered_notify_each_tenant: 10,
+      triggered_tags_tagged: 10,
+      triggered_tags_merged_tags: 10,
+      triggered_tags_tagged_action: 10
     ]
 
   config :ash_oban, :oban_pro,
