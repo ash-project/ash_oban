@@ -112,6 +112,18 @@ defmodule AshOban.Test.Triggered do
 
         scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.FailObanJobWithCustomBackoff
       end
+
+      trigger :snooze_oban_job do
+        action :process_snooze
+        scheduler_cron false
+        worker_module_name AshOban.Test.Triggered.AshOban.Worker.SnoozeObanJob
+      end
+
+      trigger :cancel_oban_job do
+        action :process_cancel
+        scheduler_cron false
+        worker_module_name AshOban.Test.Triggered.AshOban.Worker.CancelObanJob
+      end
     end
 
     scheduled_actions do
@@ -184,6 +196,28 @@ defmodule AshOban.Test.Triggered do
       change after_action(fn changeset, record, _context ->
                1 / 0
              end)
+    end
+
+    update :process_snooze do
+      require_atomic? false
+
+      change fn changeset, _context ->
+        Ash.Changeset.add_error(
+          changeset,
+          AshOban.Errors.SnoozeJob.exception(snooze_for: 60)
+        )
+      end
+    end
+
+    update :process_cancel do
+      require_atomic? false
+
+      change fn changeset, _context ->
+        Ash.Changeset.add_error(
+          changeset,
+          AshOban.Errors.CancelJob.exception(reason: :cancelled)
+        )
+      end
     end
 
     action :say_hello, :string do

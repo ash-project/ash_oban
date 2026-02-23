@@ -145,6 +145,14 @@ defmodule AshOban.Transformers.DefineActionWorkers do
           end
 
           :ok
+        rescue
+          error ->
+            ash_error = Ash.Error.to_ash_error(error, __STACKTRACE__)
+
+            case AshOban.check_for_oban_return(ash_error) do
+              nil -> reraise error, __STACKTRACE__
+              result -> result
+            end
         end
       end,
       Macro.Env.location(__ENV__)

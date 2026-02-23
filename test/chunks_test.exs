@@ -94,6 +94,7 @@ if Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
       assert trigger.chunks != nil
       assert trigger.chunks.size == 10
       assert trigger.chunks.timeout == 100
+      Code.ensure_loaded!(trigger.worker)
       assert function_exported?(trigger.worker, :process, 1)
     end
   end

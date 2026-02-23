@@ -1216,6 +1216,29 @@ defmodule AshOban do
     end
   end
 
+  @doc """
+  Checks if an error represents a snooze or cancel instruction for the Oban job.
+
+  Returns `{:snooze, seconds}`, `{:cancel, reason}`, or `nil`.
+  """
+  def check_for_oban_return(%AshOban.Errors.SnoozeJob{snooze_for: snooze_for}) do
+    {:snooze, snooze_for}
+  end
+
+  def check_for_oban_return(%AshOban.Errors.CancelJob{reason: reason}) do
+    {:cancel, reason}
+  end
+
+  def check_for_oban_return([error]) do
+    check_for_oban_return(error)
+  end
+
+  def check_for_oban_return(%{errors: errors}) do
+    check_for_oban_return(errors)
+  end
+
+  def check_for_oban_return(_), do: nil
+
   @doc false
   def update_or_destroy(changeset) do
     if changeset.action.type == :update do

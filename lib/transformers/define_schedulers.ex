@@ -857,12 +857,12 @@ defmodule AshOban.Transformers.DefineSchedulers do
             end
           rescue
             error ->
-              handle_error(
-                job,
-                Ash.Error.to_ash_error(error, __STACKTRACE__),
-                primary_key,
-                __STACKTRACE__
-              )
+              ash_error = Ash.Error.to_ash_error(error, __STACKTRACE__)
+
+              case AshOban.check_for_oban_return(ash_error) do
+                nil -> handle_error(job, ash_error, primary_key, __STACKTRACE__)
+                result -> result
+              end
           end
         end
       else
@@ -972,13 +972,19 @@ defmodule AshOban.Transformers.DefineSchedulers do
                           {:error, error} ->
                             error = Ash.Error.to_ash_error(error, stacktrace)
 
-                            Logger.error("""
-                            Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!!
+                            case AshOban.check_for_oban_return(error) do
+                              nil ->
+                                Logger.error("""
+                                Error handler failed for #{inspect(unquote(resource))}: #{inspect(primary_key)}!!
 
-                            #{Exception.format(:error, error, AshOban.stacktrace(error))}
-                            """)
+                                #{Exception.format(:error, error, AshOban.stacktrace(error))}
+                                """)
 
-                            reraise error, stacktrace
+                                reraise error, stacktrace
+
+                              result ->
+                                result
+                            end
                         end
                     end
                 end
@@ -1003,8 +1009,14 @@ defmodule AshOban.Transformers.DefineSchedulers do
     else
       quote location: :keep do
         def handle_error(_job, error, primary_key, stacktrace) do
-          unquote(log_final_error)
-          reraise error, stacktrace
+          case AshOban.check_for_oban_return(error) do
+            nil ->
+              unquote(log_final_error)
+              reraise error, stacktrace
+
+            result ->
+              result
+          end
         end
       end
     end
@@ -1088,6 +1100,14 @@ defmodule AshOban.Transformers.DefineSchedulers do
             {:error, error} ->
               raise Ash.Error.to_ash_error(error)
           end
+        rescue
+          error ->
+            ash_error = Ash.Error.to_ash_error(error, __STACKTRACE__)
+
+            case AshOban.check_for_oban_return(ash_error) do
+              nil -> reraise error, __STACKTRACE__
+              result -> result
+            end
         end
 
         defp build_input(args, action_input, read_metadata) do
@@ -1224,12 +1244,12 @@ defmodule AshOban.Transformers.DefineSchedulers do
             end
           rescue
             error ->
-              handle_error(
-                job,
-                Ash.Error.to_ash_error(error, __STACKTRACE__),
-                primary_key,
-                __STACKTRACE__
-              )
+              ash_error = Ash.Error.to_ash_error(error, __STACKTRACE__)
+
+              case AshOban.check_for_oban_return(ash_error) do
+                nil -> handle_error(job, ash_error, primary_key, __STACKTRACE__)
+                result -> result
+              end
           end
         end
       else
@@ -1349,12 +1369,12 @@ defmodule AshOban.Transformers.DefineSchedulers do
             end
           rescue
             error ->
-              handle_error(
-                job,
-                Ash.Error.to_ash_error(error, __STACKTRACE__),
-                primary_key,
-                __STACKTRACE__
-              )
+              ash_error = Ash.Error.to_ash_error(error, __STACKTRACE__)
+
+              case AshOban.check_for_oban_return(ash_error) do
+                nil -> handle_error(job, ash_error, primary_key, __STACKTRACE__)
+                result -> result
+              end
           end
         end
       end

@@ -39,7 +39,9 @@ defmodule AshObanTest do
                %AshOban.Trigger{name: :tenant_aware, stream_with: :keyset},
                %AshOban.Trigger{name: :fail_oban_job, stream_with: :keyset},
                %AshOban.Trigger{name: :dont_fail_oban_job, stream_with: :keyset},
-               %AshOban.Trigger{name: :fail_oban_job_custom_backoff, stream_with: :keyset}
+               %AshOban.Trigger{name: :fail_oban_job_custom_backoff, stream_with: :keyset},
+               %AshOban.Trigger{name: :snooze_oban_job, stream_with: :keyset},
+               %AshOban.Trigger{name: :cancel_oban_job, stream_with: :keyset}
              ] = AshOban.Info.oban_triggers(Triggered)
     end
 
@@ -235,7 +237,9 @@ defmodule AshObanTest do
                %AshOban.Trigger{name: :tenant_aware},
                %AshOban.Trigger{name: :fail_oban_job},
                %AshOban.Trigger{name: :dont_fail_oban_job},
-               %AshOban.Trigger{name: :fail_oban_job_custom_backoff}
+               %AshOban.Trigger{name: :fail_oban_job_custom_backoff},
+               %AshOban.Trigger{name: :snooze_oban_job},
+               %AshOban.Trigger{name: :cancel_oban_job}
              ] = AshOban.Info.oban_triggers(Triggered)
     end
 
@@ -252,7 +256,9 @@ defmodule AshObanTest do
             triggered_tenant_aware: 10,
             triggered_process_generic: 10,
             triggered_fail_oban_job: 10,
-            triggered_notify_each_tenant: 10
+            triggered_notify_each_tenant: 10,
+            triggered_snooze_oban_job: 10,
+            triggered_cancel_oban_job: 10
           ]
         )
 
@@ -283,7 +289,9 @@ defmodule AshObanTest do
                  triggered_tenant_aware: 10,
                  triggered_process_generic: 10,
                  triggered_fail_oban_job: 10,
-                 triggered_notify_each_tenant: 10
+                 triggered_notify_each_tenant: 10,
+                 triggered_snooze_oban_job: 10,
+                 triggered_cancel_oban_job: 10
                ]
              ] = config
     end
@@ -314,6 +322,28 @@ defmodule AshObanTest do
       config = AshOban.config([Domain], [plugins: false], require?: false)
       assert config[:peer] == false
       assert config[:plugins] == []
+    end
+
+    test "raising SnoozeJob from an action snoozes the oban job" do
+      record =
+        Triggered
+        |> Ash.Changeset.for_create(:create, %{})
+        |> Ash.create!()
+
+      AshOban.run_trigger(record, :snooze_oban_job)
+
+      assert %{snoozed: 1} = Oban.drain_queue(queue: :triggered_snooze_oban_job)
+    end
+
+    test "raising CancelJob from an action cancels the oban job" do
+      record =
+        Triggered
+        |> Ash.Changeset.for_create(:create, %{})
+        |> Ash.create!()
+
+      AshOban.run_trigger(record, :cancel_oban_job)
+
+      assert %{cancelled: 1} = Oban.drain_queue(queue: :triggered_cancel_oban_job)
     end
   end
 

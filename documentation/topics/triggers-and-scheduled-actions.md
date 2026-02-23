@@ -190,6 +190,83 @@ end
 > ### Chunk processing {: .info}
 > The `oban_job` is not available in chunk worker contexts, since those process a batch of jobs rather than a single one.
 
+### Controlling Job Behavior (Snooze and Cancel)
+
+From within any action run by a trigger or scheduled action, you can snooze or cancel the Oban job by raising (or returning as an error) `AshOban.Errors.SnoozeJob` or `AshOban.Errors.CancelJob`. These work from both the main action and the `on_error` action.
+
+#### Snoozing a job
+
+Snoozing re-schedules the job to run again after a delay without consuming an attempt. Use this for transient conditions like rate limits or temporary unavailability:
+
+```elixir
+update :sync_with_external_api do
+  change fn changeset, _context ->
+    case ExternalAPI.rate_limit_remaining() do
+      0 ->
+        Ash.Changeset.add_error(
+          changeset,
+          AshOban.Errors.SnoozeJob.exception(snooze_for: 60)
+        )
+      _ ->
+        do_sync(changeset)
+    end
+  end
+end
+```
+
+Or via `raise`:
+
+```elixir
+raise AshOban.Errors.SnoozeJob, snooze_for: 60
+```
+
+The `snooze_for` field is an integer number of seconds.
+
+#### Cancelling a job
+
+Cancelling stops all retries and marks the job as cancelled. Use this when you determine that further processing is permanently invalid:
+
+```elixir
+update :process do
+  change fn changeset, _context ->
+    record = changeset.data
+
+    if record.deleted_at do
+      Ash.Changeset.add_error(
+        changeset,
+        AshOban.Errors.CancelJob.exception(reason: :record_deleted)
+      )
+    else
+      do_process(changeset)
+    end
+  end
+end
+```
+
+Or via `raise`:
+
+```elixir
+raise AshOban.Errors.CancelJob, reason: :permanently_invalid
+```
+
+The `reason` field accepts any term.
+
+#### From the on_error action
+
+Both errors also work from the `on_error` action. For example, to cancel the job from your error handler rather than failing it:
+
+```elixir
+update :handle_failure do
+  change fn changeset, _context ->
+    # Log the failure, then cancel the job instead of failing it
+    Ash.Changeset.add_error(
+      changeset,
+      AshOban.Errors.CancelJob.exception(reason: :handled)
+    )
+  end
+end
+```
+
 ### Scheduled Actions
 
 Scheduled actions are a much simpler concept than triggers. They are used to perform a generic action on a specified schedule. For example, lets say
