@@ -10,7 +10,7 @@ defmodule AshObanTest do
   alias AshOban.Test.DomainPro
   alias AshOban.Test.Triggered
 
-  use Oban.Testing, repo: AshOban.Test.Repo, prefix: "private"
+  use AshOban.Test, repo: AshOban.Test.Repo, prefix: "private"
 
   require Ash.Query
 
@@ -50,20 +50,28 @@ defmodule AshObanTest do
     end
 
     test "if a record exists, it is processed" do
-      Triggered
-      |> Ash.Changeset.for_create(:create, %{})
-      |> Ash.create!()
+      record =
+        Triggered
+        |> Ash.Changeset.for_create(:create, %{})
+        |> Ash.create!()
+
+      AshOban.Test.assert_would_schedule(record, :process)
 
       assert %{success: 2} =
                AshOban.Test.schedule_and_run_triggers({Triggered, :process},
                  actor: %AshOban.Test.ActorPersister.FakeActor{id: 1}
                )
+
+      AshOban.Test.refute_would_schedule(Ash.reload!(record), :process)
     end
 
     test "extra args are set on a job" do
-      Triggered
-      |> Ash.Changeset.for_create(:create, %{})
-      |> Ash.create!()
+      record =
+        Triggered
+        |> Ash.Changeset.for_create(:create, %{})
+        |> Ash.create!()
+
+      AshOban.Test.assert_would_schedule(record, :process)
 
       AshOban.schedule(Triggered, :process)
 
@@ -73,9 +81,7 @@ defmodule AshObanTest do
       # run scheduler
       Oban.drain_queue(queue: :triggered_process)
 
-      assert [job] =
-               all_enqueued(worker: Triggered.AshOban.Worker.Process)
-
+      [job] = AshOban.Test.assert_triggered(record, :process)
       assert job.args["extra_arg"] == 1
     end
 
@@ -121,14 +127,18 @@ defmodule AshObanTest do
     end
 
     test "actions done atomically will be done atomically" do
-      Triggered
-      |> Ash.Changeset.for_create(:create, %{})
-      |> Ash.create!()
+      record =
+        Triggered
+        |> Ash.Changeset.for_create(:create, %{})
+        |> Ash.create!()
+
+      AshOban.Test.assert_would_schedule(record, :process_atomically)
 
       assert %{success: 2} =
                AshOban.Test.schedule_and_run_triggers({Triggered, :process_atomically})
 
       assert Ash.read_first!(Triggered).processed
+      AshOban.Test.refute_would_schedule(Ash.reload!(record), :process_atomically)
     end
 
     test "only jobs for the specified tenant are queued" do
@@ -186,13 +196,18 @@ defmodule AshObanTest do
 
     @tag :focus
     test "bulk create triggers after_batch change" do
-      [
-        %{number: 1},
-        %{number: 2},
-        %{number: 3},
-        %{number: 4}
-      ]
-      |> Ash.bulk_create!(Triggered, :bulk_create)
+      %{records: records} =
+        [
+          %{number: 1},
+          %{number: 2},
+          %{number: 3},
+          %{number: 4}
+        ]
+        |> Ash.bulk_create!(Triggered, :bulk_create, return_records?: true)
+
+      for record <- records do
+        AshOban.Test.assert_triggered(record, :process_atomically)
+      end
 
       jobs =
         all_enqueued(worker: Triggered.AshOban.Worker.ProcessAtomically) |> Enum.sort_by(& &1.id)
@@ -332,6 +347,8 @@ defmodule AshObanTest do
 
       AshOban.run_trigger(record, :snooze_oban_job)
 
+      AshOban.Test.assert_triggered(record, :snooze_oban_job)
+
       assert %{snoozed: 1} = Oban.drain_queue(queue: :triggered_snooze_oban_job)
     end
 
@@ -342,6 +359,8 @@ defmodule AshObanTest do
         |> Ash.create!()
 
       AshOban.run_trigger(record, :cancel_oban_job)
+
+      AshOban.Test.assert_triggered(record, :cancel_oban_job)
 
       assert %{cancelled: 1} = Oban.drain_queue(queue: :triggered_cancel_oban_job)
     end

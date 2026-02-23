@@ -5,7 +5,7 @@
 defmodule AshOban.SharedContextTest do
   use ExUnit.Case, async: false
 
-  use Oban.Testing, repo: AshOban.Test.Repo, prefix: "private"
+  use AshOban.Test, repo: AshOban.Test.Repo, prefix: "private"
 
   require Ash.Query
 
@@ -185,9 +185,13 @@ defmodule AshOban.SharedContextTest do
         |> Ash.Changeset.for_create(:create, %{name: "parent_with_shared"})
         |> Ash.create!()
 
+      AshOban.Test.assert_would_schedule(parent, :process_with_shared_context)
+
       AshOban.run_trigger(parent, :process_with_shared_context,
         action_arguments: %{targets: [%{name: "child_target"}]}
       )
+
+      assert_triggered(parent, :process_with_shared_context)
 
       assert %{success: 1} =
                Oban.drain_queue(queue: :default)

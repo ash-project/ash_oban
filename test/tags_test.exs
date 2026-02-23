@@ -5,7 +5,7 @@
 defmodule AshOban.TagsTest do
   use ExUnit.Case, async: false
 
-  use Oban.Testing, repo: AshOban.Test.Repo, prefix: "private"
+  use AshOban.Test, repo: AshOban.Test.Repo, prefix: "private"
 
   defmodule TestDomain do
     use Ash.Domain, validate_config_inclusion?: false
@@ -96,9 +96,11 @@ defmodule AshOban.TagsTest do
       |> Ash.Changeset.for_create(:create, %{})
       |> Ash.create!()
 
+    AshOban.Test.assert_would_schedule(record, :tagged)
+
     AshOban.run_trigger(record, :tagged)
 
-    assert [job] = all_enqueued(worker: AshOban.TagsTest.TaggedResource.Worker.Tagged)
+    [job] = assert_triggered(record, :tagged)
     assert job.tags == ["trigger-tag"]
   end
 
@@ -108,9 +110,11 @@ defmodule AshOban.TagsTest do
       |> Ash.Changeset.for_create(:create, %{})
       |> Ash.create!()
 
+    AshOban.Test.assert_would_schedule(record, :merged_tags)
+
     AshOban.run_trigger(record, :merged_tags)
 
-    assert [job] = all_enqueued(worker: AshOban.TagsTest.TaggedResource.Worker.MergedTags)
+    [job] = assert_triggered(record, :merged_tags)
     assert "base-tag" in job.tags
     assert "extra-tag" in job.tags
   end

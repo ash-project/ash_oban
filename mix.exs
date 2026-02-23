@@ -21,7 +21,7 @@ defmodule AshOban.MixProject do
       aliases: aliases(),
       deps: deps(),
       elixirc_paths: elixirc_paths(Mix.env()),
-      dialyzer: [plt_add_apps: [:ash, :mix]],
+      dialyzer: [plt_add_apps: [:ash, :mix, :ex_unit]],
       consolidate_protocols: Mix.env() == :prod,
       docs: &docs/0,
       description: @description,
