@@ -11,6 +11,23 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.8.0-rc.1](https://github.com/ash-project/ash_oban/compare/v0.8.0-rc.0...v0.8.0-rc.1) (2026-02-23)
+
+
+
+
+### Improvements:
+
+* add new test helpers for triggers & schedulers by Zach Daniel
+
+* add support for snoozing and cancelling Oban jobs from actions by Zach Daniel
+
+* validate that `on_error` action exists by Zach Daniel
+
+* support setting tags in DSL by Zach Daniel
+
+* set job into context to allow for better logging and error handling by Zach Daniel
+
 ## [v0.8.0-rc.0](https://github.com/ash-project/ash_oban/compare/v0.7.2...v0.8.0-rc.0) (2026-02-22)
 
 
