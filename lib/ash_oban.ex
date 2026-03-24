@@ -60,7 +60,7 @@ defmodule AshOban do
             on_error: atom,
             on_error_fails_job?: boolean(),
             shared_context?: boolean(),
-            shared_context: :all | [:ash_oban? | :job],
+            shared_context: nil | :all | [:ash_oban? | :job],
             use_tenant_from_record?: boolean(),
             chunks: AshOban.Chunks.t() | nil,
             tags: [String.t()]
@@ -616,7 +616,7 @@ defmodule AshOban do
         """
       ],
       shared_context: [
-        type: {:or, [{:in, [:all]}, {:list, {:in, [:ash_oban?, :job]}}]},
+        type: {:or, [{:in, [nil, :all]}, {:list, {:in, [:ash_oban?, :job]}}]},
         doc: """
         Determines which context keys are placed in shared context instead of regular context.
         See the trigger-level `shared_context` option for details.
