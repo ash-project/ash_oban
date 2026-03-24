@@ -410,7 +410,8 @@ defmodule AshOban do
 
         We recommend `shared_context [:job]` for most use cases.
 
-        If not specified, inherits the global `shared_context` setting from the `oban` section.
+        If not specified, inherits the global `shared_context` setting from the `oban` section,
+        then falls back to `Application.get_env(:ash_oban, :shared_context)`.
         """
       ],
       use_tenant_from_record?: [
@@ -620,7 +621,8 @@ defmodule AshOban do
         doc: """
         Determines which context keys are placed in shared context instead of regular context.
         See the trigger-level `shared_context` option for details.
-        If not specified, inherits the global `shared_context` setting from the `oban` section.
+        If not specified, inherits the global `shared_context` setting from the `oban` section,
+        then falls back to `Application.get_env(:ash_oban, :shared_context)`.
         """
       ]
     ]
@@ -713,6 +715,8 @@ defmodule AshOban do
         We recommend `shared_context [:job]` for most use cases.
 
         Can be overridden per trigger or scheduled action.
+
+        If not specified at any level, falls back to `Application.get_env(:ash_oban, :shared_context)`.
         """
       ],
       use_tenant_from_record?: [

@@ -191,6 +191,33 @@ policies do
 end
 ```
 
+## Shared Context
+
+By default, context set by AshOban (like `ash_oban?: true` and the `%Oban.Job{}` struct) is placed in the regular action context. This means it is **not** propagated to nested actions called via `manage_relationship` or other nested action invocations.
+
+If you need AshOban context to propagate to nested actions (e.g. so that policy bypasses work in related actions), use the `shared_context` option. This places the specified keys into Ash's shared context, which is automatically propagated to all nested actions.
+
+```elixir
+# Recommended: share only the job
+shared_context [:job]
+
+# Share all AshOban context keys (ash_oban? and job)
+shared_context :all
+```
+
+`shared_context` can be set at three levels, with each inheriting from the next if not specified:
+
+1. **Per trigger or scheduled action** — set `shared_context` directly on the trigger/schedule
+2. **Per resource** — set `shared_context` in the `oban` section of the resource DSL
+3. **Application config** — set `config :ash_oban, shared_context: [:job]` in your app config
+
+This makes it easy to configure shared context globally:
+
+```elixir
+# in config.exs
+config :ash_oban, shared_context: [:job]
+```
+
 ## Persisting the actor along with a job
 
 Create a module that is responsible for translating the current user to a value that will be JSON encoded, and for turning that encoded value back into an actor.

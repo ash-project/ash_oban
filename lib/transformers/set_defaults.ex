@@ -209,7 +209,7 @@ defmodule AshOban.Transformers.SetDefaults do
         :all
 
       true ->
-        nil
+        Application.get_env(:ash_oban, :shared_context)
     end
   end
 
