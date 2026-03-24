@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2023 ash_oban contributors <https://github.com/ash-project/ash_oban/graphs/contributors>
+
+SPDX-License-Identifier: MIT
+-->
+
 # Testing
 
 AshOban provides the `AshOban.Test` module for testing triggers and scheduled actions. The core idea is simple: schedule and drain Oban queues synchronously in your test so you can assert on the side effects.

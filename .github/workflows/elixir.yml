@@ -18,8 +18,10 @@ jobs:
     uses: ash-project/ash/.github/workflows/ash-ci.yml@main
     secrets:
       HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+      OBAN_PRO_LICENSE_KEY: ${{ secrets.OBAN_PRO_LICENSE_KEY }}
     with:
       postgres: true
       ecto_postgres: true
       ash_postgres: false
       reuse: true
+      oban-pro: true
