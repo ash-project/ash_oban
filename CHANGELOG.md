@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.8.2](https://github.com/ash-project/ash_oban/compare/v0.8.1...v0.8.2) (2026-03-24)
+
+
+
+
+### Bug Fixes:
+
+* support configuring global shared job context by Zach Daniel
+
 ## [v0.8.1](https://github.com/ash-project/ash_oban/compare/v0.8.0-rc.1...v0.8.1) (2026-03-24)
 
 
