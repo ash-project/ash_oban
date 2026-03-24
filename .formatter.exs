@@ -32,6 +32,7 @@ spark_locals_without_parens = [
   scheduler_module_name: 1,
   scheduler_priority: 1,
   scheduler_queue: 1,
+  shared_context: 1,
   shared_context?: 1,
   size: 1,
   sort: 1,

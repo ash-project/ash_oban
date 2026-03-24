@@ -123,16 +123,11 @@ defmodule AshOban.Transformers.DefineSchedulers do
       end
 
     pipeline =
-      if trigger.shared_context? do
-        quote do
-          unquote(pipeline)
-          |> Ash.Query.set_context(%{shared: %{private: %{ash_oban?: true}}})
-        end
-      else
-        quote do
-          unquote(pipeline)
-          |> Ash.Query.set_context(%{private: %{ash_oban?: true}})
-        end
+      quote do
+        unquote(pipeline)
+        |> Ash.Query.set_context(
+          AshOban.build_context(unquote(Macro.escape(trigger.shared_context)))
+        )
       end
 
     pipeline =
@@ -516,11 +511,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             |> Ash.Query.do_filter(primary_key)
             |> Ash.Query.set_tenant(tenant)
             |> Ash.Query.set_context(
-              if unquote(trigger.shared_context?) do
-                %{shared: %{private: %{ash_oban?: true}, ash_oban: %{job: job}}}
-              else
-                %{private: %{ash_oban?: true}, ash_oban: %{job: job}}
-              end
+              AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job)
             )
             |> Ash.Query.for_read(unquote(read_action), %{},
               authorize?: authorize?,
@@ -782,11 +773,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   query()
                   |> Ash.Query.do_filter(primary_key)
                   |> Ash.Query.set_context(
-                    if unquote(trigger.shared_context?) do
-                      %{shared: %{private: %{ash_oban?: true}, ash_oban: %{job: job}}}
-                    else
-                      %{private: %{ash_oban?: true}, ash_oban: %{job: job}}
-                    end
+                    AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job)
                   )
                   |> Ash.Query.set_tenant(tenant)
                   |> Ash.Query.for_read(unquote(read_action), %{},
@@ -805,11 +792,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     tenant: tenant,
                     domain: unquote(domain),
                     context:
-                      if unquote(trigger.shared_context?) do
-                        %{shared: %{private: %{ash_oban?: true}, ash_oban: %{job: job}}}
-                      else
-                        %{private: %{ash_oban?: true}, ash_oban: %{job: job}}
-                      end,
+                      AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job),
                     strategy: [:atomic, :atomic_batches, :stream],
                     return_errors?: true,
                     skip_unknown_inputs: [:error],
@@ -827,11 +810,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     domain: unquote(domain),
                     domain: unquote(domain),
                     context:
-                      if unquote(trigger.shared_context?) do
-                        %{shared: %{private: %{ash_oban?: true}, ash_oban: %{job: job}}}
-                      else
-                        %{private: %{ash_oban?: true}, ash_oban: %{job: job}}
-                      end,
+                      AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job),
                     strategy: [:atomic, :atomic_batches, :stream],
                     return_errors?: true,
                     skip_unknown_inputs: [:error],
@@ -904,11 +883,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 query()
                 |> Ash.Query.do_filter(primary_key)
                 |> Ash.Query.set_context(
-                  if unquote(trigger.shared_context?) do
-                    %{shared: %{private: %{ash_oban?: true}, ash_oban: %{job: job}}}
-                  else
-                    %{private: %{ash_oban?: true}, ash_oban: %{job: job}}
-                  end
+                  AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job)
                 )
                 |> Ash.Query.set_tenant(tenant)
                 |> Ash.Query.for_read(unquote(read_action), %{},
@@ -949,11 +924,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
                         changeset
                         |> Ash.Changeset.set_tenant(tenant)
                         |> Ash.Changeset.set_context(
-                          if unquote(trigger.shared_context?) do
-                            %{shared: %{private: %{ash_oban?: true}, ash_oban: %{job: job}}}
-                          else
-                            %{private: %{ash_oban?: true}, ash_oban: %{job: job}}
-                          end
+                          AshOban.build_context(
+                            unquote(Macro.escape(trigger.shared_context)),
+                            job
+                          )
                         )
                         |> Ash.Changeset.for_action(unquote(trigger.on_error), %{error: error},
                           authorize?: authorize?,
@@ -1079,11 +1053,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
               |> Ash.ActionInput.new()
               |> Ash.ActionInput.set_tenant(tenant)
               |> Ash.ActionInput.set_context(
-                if unquote(trigger.shared_context?) do
-                  %{shared: %{private: %{ash_oban?: true}, ash_oban: %{job: job}}}
-                else
-                  %{private: %{ash_oban?: true}, ash_oban: %{job: job}}
-                end
+                AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job)
               )
               |> Ash.ActionInput.for_action(
                 unquote(trigger.action),
@@ -1169,11 +1139,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   query()
                   |> Ash.Query.do_filter(primary_key)
                   |> Ash.Query.set_context(
-                    if unquote(trigger.shared_context?) do
-                      %{shared: %{private: %{ash_oban?: true}, ash_oban: %{job: job}}}
-                    else
-                      %{private: %{ash_oban?: true}, ash_oban: %{job: job}}
-                    end
+                    AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job)
                   )
                   |> Ash.Query.set_tenant(tenant)
                   |> Ash.Query.for_read(unquote(read_action), %{},
@@ -1192,11 +1158,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     tenant: tenant,
                     domain: unquote(domain),
                     context:
-                      if unquote(trigger.shared_context?) do
-                        %{shared: %{private: %{ash_oban?: true}, ash_oban: %{job: job}}}
-                      else
-                        %{private: %{ash_oban?: true}, ash_oban: %{job: job}}
-                      end,
+                      AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job),
                     skip_unknown_inputs: [:metadata],
                     strategy: [:atomic, :atomic_batches, :stream],
                     return_errors?: true,
@@ -1214,11 +1176,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     domain: unquote(domain),
                     domain: unquote(domain),
                     context:
-                      if unquote(trigger.shared_context?) do
-                        %{shared: %{private: %{ash_oban?: true}, ash_oban: %{job: job}}}
-                      else
-                        %{private: %{ash_oban?: true}, ash_oban: %{job: job}}
-                      end,
+                      AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job),
                     skip_unknown_inputs: [:metadata],
                     strategy: [:atomic, :atomic_batches, :stream],
                     return_errors?: true,
@@ -1273,11 +1231,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 |> Ash.Query.do_filter(primary_key)
                 |> Ash.Query.set_tenant(tenant)
                 |> Ash.Query.set_context(
-                  if unquote(trigger.shared_context?) do
-                    %{shared: %{private: %{ash_oban?: true}, ash_oban: %{job: job}}}
-                  else
-                    %{private: %{ash_oban?: true}, ash_oban: %{job: job}}
-                  end
+                  AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job)
                 )
                 |> lock_on_read()
                 |> Ash.Query.for_read(unquote(read_action), %{},
@@ -1309,11 +1263,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     |> prepare(primary_key, authorize?, actor, tenant, job)
                     |> Ash.Changeset.set_tenant(tenant)
                     |> Ash.Changeset.set_context(
-                      if unquote(trigger.shared_context?) do
-                        %{shared: %{private: %{ash_oban?: true}, ash_oban: %{job: job}}}
-                      else
-                        %{private: %{ash_oban?: true}, ash_oban: %{job: job}}
-                      end
+                      AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job)
                     )
                     |> Ash.Changeset.for_action(
                       unquote(trigger.action),
@@ -1472,11 +1422,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           query =
             unquote(pkey_filter_code)
             |> Ash.Query.set_context(
-              if unquote(trigger.shared_context?) do
-                %{shared: %{private: %{ash_oban?: true}}}
-              else
-                %{private: %{ash_oban?: true}}
-              end
+              AshOban.build_context(unquote(Macro.escape(trigger.shared_context)))
             )
             |> Ash.Query.set_tenant(tenant)
             |> Ash.Query.for_read(unquote(read_action), %{},
@@ -1497,12 +1443,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 actor: actor,
                 tenant: tenant,
                 domain: unquote(domain),
-                context:
-                  if unquote(trigger.shared_context?) do
-                    %{shared: %{private: %{ash_oban?: true}}}
-                  else
-                    %{private: %{ash_oban?: true}}
-                  end,
+                context: AshOban.build_context(unquote(Macro.escape(trigger.shared_context))),
                 skip_unknown_inputs: [:metadata],
                 strategy: [:atomic, :atomic_batches, :stream],
                 stop_on_error?: false,
@@ -1630,11 +1571,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
               query()
               |> Ash.Query.do_filter(pkey_filter)
               |> Ash.Query.set_context(
-                if unquote(trigger.shared_context?) do
-                  %{shared: %{private: %{ash_oban?: true}}}
-                else
-                  %{private: %{ash_oban?: true}}
-                end
+                AshOban.build_context(unquote(Macro.escape(trigger.shared_context)))
               )
               |> Ash.Query.set_tenant(tenant)
               |> Ash.Query.for_read(unquote(read_action), %{},
@@ -1652,12 +1589,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 actor: actor,
                 tenant: tenant,
                 domain: unquote(domain),
-                context:
-                  if unquote(trigger.shared_context?) do
-                    %{shared: %{private: %{ash_oban?: true}}}
-                  else
-                    %{private: %{ash_oban?: true}}
-                  end,
+                context: AshOban.build_context(unquote(Macro.escape(trigger.shared_context))),
                 strategy: [:atomic, :atomic_batches, :stream],
                 stop_on_error?: false,
                 return_errors?: true,
@@ -1673,12 +1605,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 actor: actor,
                 tenant: tenant,
                 domain: unquote(domain),
-                context:
-                  if unquote(trigger.shared_context?) do
-                    %{shared: %{private: %{ash_oban?: true}}}
-                  else
-                    %{private: %{ash_oban?: true}}
-                  end,
+                context: AshOban.build_context(unquote(Macro.escape(trigger.shared_context))),
                 strategy: [:atomic, :atomic_batches, :stream],
                 stop_on_error?: false,
                 return_errors?: true,

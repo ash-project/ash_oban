@@ -112,8 +112,7 @@ defmodule AshOban.Transformers.SetDefaults do
         scheduled_action
         | action: action_name,
           queue: queue,
-          shared_context?:
-            scheduled_action.shared_context? || AshOban.Info.oban_shared_context?(dsl) || false
+          shared_context: resolve_shared_context(scheduled_action, dsl, module)
       })
     end)
   end
@@ -178,13 +177,40 @@ defmodule AshOban.Transformers.SetDefaults do
           queue: queue,
           scheduler_queue: trigger.scheduler_queue || queue,
           action: trigger.action || trigger.name,
-          shared_context?:
-            trigger.shared_context? || AshOban.Info.oban_shared_context?(dsl) || false,
+          shared_context: resolve_shared_context(trigger, dsl, module),
           use_tenant_from_record?:
             trigger.use_tenant_from_record? || AshOban.Info.oban_use_tenant_from_record?(dsl) ||
               false
       })
     end)
+  end
+
+  defp resolve_shared_context(entity, dsl, module) do
+    cond do
+      entity.shared_context != nil ->
+        entity.shared_context
+
+      entity.shared_context? == true ->
+        IO.warn(
+          "#{inspect(module)}: `shared_context? true` is deprecated. Use `shared_context :all` instead (or preferably `shared_context [:job]`)."
+        )
+
+        :all
+
+      match?({:ok, value} when not is_nil(value), AshOban.Info.oban_shared_context(dsl)) ->
+        {:ok, value} = AshOban.Info.oban_shared_context(dsl)
+        value
+
+      AshOban.Info.oban_shared_context?(dsl) ->
+        IO.warn(
+          "#{inspect(module)}: `shared_context? true` in the oban section is deprecated. Use `shared_context :all` instead (or preferably `shared_context [:job]`)."
+        )
+
+        :all
+
+      true ->
+        nil
+    end
   end
 
   # sobelow_skip ["DOS.BinToAtom"]

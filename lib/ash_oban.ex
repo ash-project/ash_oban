@@ -60,6 +60,7 @@ defmodule AshOban do
             on_error: atom,
             on_error_fails_job?: boolean(),
             shared_context?: boolean(),
+            shared_context: :all | [:ash_oban? | :job],
             use_tenant_from_record?: boolean(),
             chunks: AshOban.Chunks.t() | nil,
             tags: [String.t()]
@@ -103,6 +104,7 @@ defmodule AshOban do
       :log_final_error?,
       :log_errors?,
       :shared_context?,
+      :shared_context,
       :use_tenant_from_record?,
       :chunks,
       :tags,
@@ -390,10 +392,25 @@ defmodule AshOban do
       shared_context?: [
         type: :boolean,
         doc: """
-        If set to `true`, the `ash_oban?: true` flag will be placed in shared context instead of regular context.
+        Deprecated: Use `shared_context` instead. `shared_context? true` is equivalent to `shared_context :all`.
+        """
+      ],
+      shared_context: [
+        type: {:or, [{:in, [:all]}, {:list, {:in, [:ash_oban?, :job]}}]},
+        doc: """
+        Determines which context keys are placed in shared context instead of regular context.
         Shared context propagates to related actions called via `manage_relationship` and can be passed to other
         action invocations using the context as scope, making it easier to detect AshOban execution in nested actions.
-        If not specified, inherits the global `shared_context?` setting from the `oban` section.
+
+        Valid keys:
+        - `:ash_oban?` - the `ash_oban?: true` private flag
+        - `:job` - the `ash_oban: %{job: job}` context data
+
+        Use `:all` to share all keys (equivalent to the old `shared_context? true`).
+
+        We recommend `shared_context [:job]` for most use cases.
+
+        If not specified, inherits the global `shared_context` setting from the `oban` section.
         """
       ],
       use_tenant_from_record?: [
@@ -485,6 +502,7 @@ defmodule AshOban do
             state: :active | :paused | :deleted,
             priority: non_neg_integer(),
             shared_context?: boolean(),
+            shared_context: :all | [:ash_oban? | :job],
             tags: [String.t()]
           }
 
@@ -504,6 +522,7 @@ defmodule AshOban do
       :debug?,
       :state,
       :shared_context?,
+      :shared_context,
       :tags,
       :__identifier__,
       :__spark_metadata__
@@ -593,10 +612,15 @@ defmodule AshOban do
       shared_context?: [
         type: :boolean,
         doc: """
-        If set to `true`, the `ash_oban?: true` flag will be placed in shared context instead of regular context.
-        Shared context propagates to related actions called via `manage_relationship` and can be passed to other
-        action invocations using the context as scope, making it easier to detect AshOban execution in nested actions.
-        If not specified, inherits the global `shared_context?` setting from the `oban` section.
+        Deprecated: Use `shared_context` instead. `shared_context? true` is equivalent to `shared_context :all`.
+        """
+      ],
+      shared_context: [
+        type: {:or, [{:in, [:all]}, {:list, {:in, [:ash_oban?, :job]}}]},
+        doc: """
+        Determines which context keys are placed in shared context instead of regular context.
+        See the trigger-level `shared_context` option for details.
+        If not specified, inherits the global `shared_context` setting from the `oban` section.
         """
       ]
     ]
@@ -670,9 +694,24 @@ defmodule AshOban do
         type: :boolean,
         default: false,
         doc: """
-        If set to `true`, the `ash_oban?: true` flag will be placed in shared context instead of regular context.
+        Deprecated: Use `shared_context` instead. `shared_context? true` is equivalent to `shared_context :all`.
+        """
+      ],
+      shared_context: [
+        type: {:or, [{:in, [:all]}, {:list, {:in, [:ash_oban?, :job]}}]},
+        doc: """
+        Determines which context keys are placed in shared context instead of regular context.
         Shared context propagates to related actions called via `manage_relationship` and can be passed to other
         action invocations using the context as scope, making it easier to detect AshOban execution in nested actions.
+
+        Valid keys:
+        - `:ash_oban?` - the `ash_oban?: true` private flag
+        - `:job` - the `ash_oban: %{job: job}` context data
+
+        Use `:all` to share all keys (equivalent to the old `shared_context? true`).
+
+        We recommend `shared_context [:job]` for most use cases.
+
         Can be overridden per trigger or scheduled action.
         """
       ],
@@ -730,6 +769,46 @@ defmodule AshOban do
       AshOban.Transformers.DefineSchedulers,
       AshOban.Transformers.DefineActionWorkers
     ]
+
+  @doc """
+  Builds the context map for an AshOban operation based on the `shared_context` configuration.
+
+  `shared_context` can be `:all`, a list of keys (`:ash_oban?`, `:job`), or `nil`/`false`.
+  When a key is in the shared context list, it is placed under the `:shared` key in the context map,
+  which propagates to related actions called via `manage_relationship`.
+  """
+  @spec build_context(:all | [atom()] | nil | false, Oban.Job.t() | nil) :: map()
+  def build_context(shared_context, job \\ nil) do
+    shared_keys = normalize_shared_context(shared_context)
+
+    {shared, regular} =
+      if :ash_oban? in shared_keys do
+        {%{private: %{ash_oban?: true}}, %{}}
+      else
+        {%{}, %{private: %{ash_oban?: true}}}
+      end
+
+    {shared, regular} =
+      if job do
+        if :job in shared_keys do
+          {Map.put(shared, :ash_oban, %{job: job}), regular}
+        else
+          {shared, Map.put(regular, :ash_oban, %{job: job})}
+        end
+      else
+        {shared, regular}
+      end
+
+    if shared == %{} do
+      regular
+    else
+      Map.put(regular, :shared, shared)
+    end
+  end
+
+  defp normalize_shared_context(:all), do: [:ash_oban?, :job]
+  defp normalize_shared_context(list) when is_list(list), do: list
+  defp normalize_shared_context(_), do: []
 
   @type triggerable :: Ash.Resource.t() | {Ash.Resource.t(), atom()} | Ash.Domain.t() | atom()
   @type result :: %{

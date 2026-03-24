@@ -78,7 +78,7 @@ defmodule AshOban.SharedContextTest do
     oban do
       triggers do
         trigger :process_with_shared_context do
-          shared_context? true
+          shared_context :all
           queue :default
           action :process_relationship
           action_input %{targets: [%{name: "default_name_from_input"}]}

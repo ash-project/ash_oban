@@ -123,11 +123,10 @@ defmodule AshOban.Transformers.DefineActionWorkers do
                 |> Ash.ActionInput.new()
                 |> Ash.ActionInput.set_tenant(tenant)
                 |> Ash.ActionInput.set_context(
-                  if unquote(scheduled_action.shared_context?) do
-                    %{shared: %{private: %{ash_oban?: true}, ash_oban: %{job: job}}}
-                  else
-                    %{private: %{ash_oban?: true}, ash_oban: %{job: job}}
-                  end
+                  AshOban.build_context(
+                    unquote(Macro.escape(scheduled_action.shared_context)),
+                    job
+                  )
                 )
                 |> Ash.ActionInput.for_action(
                   unquote(scheduled_action.action),
