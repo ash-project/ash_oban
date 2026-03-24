@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.8.1](https://github.com/ash-project/ash_oban/compare/v0.8.0-rc.1...v0.8.1) (2026-03-24)
+
+
+
+
+### Improvements:
+
+* deprecate `shared_context?` in favor of `shared_context` by Zach Daniel
+
 ## [v0.8.0-rc.1](https://github.com/ash-project/ash_oban/compare/v0.8.0-rc.0...v0.8.0-rc.1) (2026-02-23)
 
 
