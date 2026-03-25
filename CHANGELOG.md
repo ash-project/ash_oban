@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.8.5](https://github.com/ash-project/ash_oban/compare/v0.8.4...v0.8.5) (2026-03-25)
+
+
+
+
+### Bug Fixes:
+
+* workers are only unique across primary_key, action_arguments, and tenant by Zach Daniel
+
 ## [v0.8.4](https://github.com/ash-project/ash_oban/compare/v0.8.3...v0.8.4) (2026-03-25)
 
 
