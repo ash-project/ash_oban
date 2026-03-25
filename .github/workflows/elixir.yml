@@ -24,5 +24,6 @@ jobs:
       postgres: true
       ecto_postgres: true
       ash_postgres: false
+      unused-deps: false
       reuse: true
       oban-pro: true
