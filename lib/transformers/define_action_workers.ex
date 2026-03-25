@@ -67,6 +67,7 @@ defmodule AshOban.Transformers.DefineActionWorkers do
           queue: unquote(scheduled_action.queue),
           tags: unquote(scheduled_action.tags || []),
           unique: [
+            keys: [:primary_key, :action_arguments, :tenant],
             period: :infinity,
             states: :incomplete
           ]
