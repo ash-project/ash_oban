@@ -949,6 +949,7 @@ defmodule AshOban do
 
   ## Options
 
+  - `:scope` - a scope to extract actor, tenant, and context from. See `Ash.Scope.to_opts/2`.
   - `:actor` - the actor to set on the job. Requires configuring an actor persister.
   - `:tenant` - the tenant to set on the job.
   - `:action_arguments` - additional arguments to merge into the action invocation's arguments map.
@@ -960,6 +961,15 @@ defmodule AshOban do
   All other options are passed through to `c:Oban.Worker.new/2`
   """
   def build_trigger(%resource{} = record, trigger, opts \\ []) do
+    {scope, opts} = Keyword.pop(opts, :scope)
+
+    opts =
+      if scope do
+        Ash.Scope.to_opts(scope, opts)
+      else
+        opts
+      end
+
     {opts, oban_job_opts} = Keyword.split(opts, [:actor, :tenant, :args, :action_arguments])
 
     trigger =
