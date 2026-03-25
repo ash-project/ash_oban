@@ -970,7 +970,16 @@ defmodule AshOban do
         opts
       end
 
-    {opts, oban_job_opts} = Keyword.split(opts, [:actor, :tenant, :args, :action_arguments])
+    {opts, oban_job_opts} =
+      Keyword.split(opts, [
+        :actor,
+        :tenant,
+        :args,
+        :action_arguments,
+        :authorize?,
+        :context,
+        :tracer
+      ])
 
     trigger =
       case trigger do
