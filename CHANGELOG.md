@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.8.4](https://github.com/ash-project/ash_oban/compare/v0.8.3...v0.8.4) (2026-03-25)
+
+
+
+
+### Bug Fixes:
+
+* split all opts out of oban opts properly by Zach Daniel
+
 ## [v0.8.3](https://github.com/ash-project/ash_oban/compare/v0.8.2...v0.8.3) (2026-03-25)
 
 
