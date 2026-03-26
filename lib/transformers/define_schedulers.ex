@@ -229,7 +229,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
         require Logger
 
-        @impl unquote(worker)
         if unquote(trigger.state != :active) do
           def unquote(function_name)(%Oban.Job{}) do
             {:cancel, unquote(trigger.state)}
@@ -373,7 +372,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
         fun when is_function(fun) ->
           quote location: :keep do
-            @impl Oban.Worker
             def backoff(job) do
               unquote(fun).(job)
             end
@@ -381,7 +379,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
         backoff ->
           quote location: :keep do
-            @impl Oban.Worker
             def backoff(_job) do
               unquote(backoff)
             end
@@ -395,7 +392,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
         fun when is_function(fun) ->
           quote location: :keep do
-            @impl Oban.Worker
             def timeout(job) do
               unquote(fun).(job)
             end
@@ -403,7 +399,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
         timeout ->
           quote location: :keep do
-            @impl Oban.Worker
             def timeout(_job) do
               unquote(timeout)
             end
@@ -613,7 +608,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
         fun when is_function(fun) ->
           quote location: :keep do
-            @impl Oban.Worker
             def backoff(job) do
               unquote(fun).(job)
             end
@@ -621,7 +615,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
         backoff ->
           quote location: :keep do
-            @impl Oban.Worker
             def backoff(_job) do
               unquote(backoff)
             end
@@ -635,7 +628,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
         fun when is_function(fun) ->
           quote location: :keep do
-            @impl Oban.Worker
             def timeout(job) do
               unquote(fun).(job)
             end
@@ -643,7 +635,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
         timeout ->
           quote location: :keep do
-            @impl Oban.Worker
             def timeout(_job) do
               unquote(timeout)
             end
@@ -1022,14 +1013,12 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
     if trigger.state != :active do
       quote location: :keep do
-        @impl unquote(worker)
         def unquote(function_name)(_) do
           {:cancel, unquote(trigger.state)}
         end
       end
     else
       quote location: :keep, generated: true do
-        @impl unquote(worker)
         def unquote(function_name)(%Oban.Job{args: %{"primary_key" => primary_key} = args} = job) do
           case AshOban.lookup_actor(args["actor"], unquote(trigger.actor_persister)) do
             {:ok, actor} ->
@@ -1104,7 +1093,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
     if trigger.state != :active do
       quote location: :keep do
-        @impl unquote(worker)
         def unquote(function_name)(_) do
           {:cancel, unquote(trigger.state)}
         end
@@ -1112,7 +1100,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
     else
       if atomic? do
         quote location: :keep, generated: true do
-          @impl unquote(worker)
           def unquote(function_name)(
                 %Oban.Job{args: %{"primary_key" => primary_key} = args} = job
               ) do
@@ -1212,7 +1199,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
         end
       else
         quote location: :keep, generated: true do
-          @impl unquote(worker)
           def unquote(function_name)(
                 %Oban.Job{args: %{"primary_key" => primary_key} = args} = job
               ) do
