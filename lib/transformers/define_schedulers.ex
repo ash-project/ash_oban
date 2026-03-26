@@ -1003,7 +1003,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     end
   end
 
-  defp work(trigger, worker, _atomic?, :action, pro?, _read_action, resource, domain) do
+  defp work(trigger, _worker, _atomic?, :action, pro?, _read_action, resource, domain) do
     function_name =
       if pro? do
         :process
@@ -1083,7 +1083,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
     end
   end
 
-  defp work(trigger, worker, atomic?, trigger_action_type, pro?, read_action, resource, domain) do
+  defp work(trigger, _worker, atomic?, trigger_action_type, pro?, read_action, resource, domain) do
     function_name =
       if pro? do
         :process
