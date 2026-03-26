@@ -217,7 +217,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
       end
 
     quoted =
-      quote location: :keep do
+      quote location: :keep, generated: true do
         use unquote(worker),
           priority: unquote(trigger.worker_priority),
           queue: unquote(trigger.scheduler_queue),
@@ -411,7 +411,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
     Module.create(
       worker_module_name,
-      quote location: :keep do
+      quote location: :keep, generated: true do
         use unquote(worker), unquote(worker_opts)
 
         require Logger
@@ -575,26 +575,26 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
     prepare_error =
       if on_error_transaction? do
-        quote location: :keep do
+        quote location: :keep, generated: true do
           defp prepare_error(changeset, primary_key, authorize?, actor, tenant, job) do
             unquote(on_error_get_and_lock)
           end
         end
       else
-        quote location: :keep do
+        quote location: :keep, generated: true do
           defp prepare_error(changeset, _, _, _, _, _job), do: changeset
         end
       end
 
     prepare =
       if work_transaction? do
-        quote location: :keep do
+        quote location: :keep, generated: true do
           defp prepare(changeset, primary_key, authorize?, actor, tenant, job) do
             unquote(get_and_lock)
           end
         end
       else
-        quote location: :keep do
+        quote location: :keep, generated: true do
           defp prepare(changeset, _, _, _, _, _job), do: changeset
         end
       end
@@ -611,7 +611,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           nil
 
         fun when is_function(fun) ->
-          quote location: :keep do
+          quote location: :keep, generated: true do
             @impl Oban.Worker
             def backoff(job) do
               unquote(fun).(job)
@@ -619,7 +619,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           end
 
         backoff ->
-          quote location: :keep do
+          quote location: :keep, generated: true do
             @impl Oban.Worker
             def backoff(_job) do
               unquote(backoff)
@@ -633,7 +633,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           nil
 
         fun when is_function(fun) ->
-          quote location: :keep do
+          quote location: :keep, generated: true do
             @impl Oban.Worker
             def timeout(job) do
               unquote(fun).(job)
@@ -641,7 +641,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           end
 
         timeout ->
-          quote location: :keep do
+          quote location: :keep, generated: true do
             @impl Oban.Worker
             def timeout(_job) do
               unquote(timeout)
@@ -673,7 +673,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
     Module.create(
       worker_module_name,
-      quote location: :keep do
+      quote location: :keep, generated: true do
         use unquote(worker), unquote(worker_opts)
 
         require Logger
