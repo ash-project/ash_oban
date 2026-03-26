@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.8.7](https://github.com/ash-project/ash_oban/compare/v0.8.6...v0.8.7) (2026-03-26)
+
+
+
+
+### Bug Fixes:
+
+* add back in `@impl` by Zach Daniel
+
 ## [v0.8.6](https://github.com/ash-project/ash_oban/compare/v0.8.5...v0.8.6) (2026-03-26)
 
 
