@@ -46,7 +46,7 @@ defmodule AshOban.MixProject do
         "Zach Daniel <zach@zachdaniel.dev>"
       ],
       licenses: ["MIT"],
-      files: ~w(lib .formatter.exs mix.exs README* LICENSE* usage-rules.md
+      files: ~w(lib .formatter.exs mix.exs README* LICENSE* usage-rules.md usage-rules
       CHANGELOG* documentation),
       links: %{
         "GitHub" => "https://github.com/ash-project/ash_oban",
