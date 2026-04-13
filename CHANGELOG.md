@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.8.8](https://github.com/ash-project/ash_oban/compare/v0.8.7...v0.8.8) (2026-04-13)
+
+
+
+
+### Bug Fixes:
+
+* Add missing usage_rules files to hex package (#215) by Philip Munksgaard
+
 ## [v0.8.7](https://github.com/ash-project/ash_oban/compare/v0.8.6...v0.8.7) (2026-03-26)
 
 
