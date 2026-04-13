@@ -84,7 +84,12 @@ defmodule AshOban.Test do
   """
   defmacro __using__(opts) do
     quote do
-      use Oban.Testing, unquote(opts)
+      if Application.compile_env(:ash_oban, :pro?) do
+        use Oban.Pro.Testing, unquote(opts)
+      else
+        use Oban.Testing, unquote(opts)
+      end
+
       import AshOban.Test
     end
   end
