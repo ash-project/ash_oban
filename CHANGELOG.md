@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.8.10](https://github.com/ash-project/ash_oban/compare/v0.8.9...v0.8.10) (2026-04-14)
+
+
+
+
+### Bug Fixes:
+
+* ensure `use Oban.Pro.Testing` does not appear w/o pro by Zach Daniel
+
 ## [v0.8.9](https://github.com/ash-project/ash_oban/compare/v0.8.8...v0.8.9) (2026-04-13)
 
 
