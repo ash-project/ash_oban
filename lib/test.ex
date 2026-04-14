@@ -67,6 +67,8 @@ defmodule AshOban.Test do
       refute_would_schedule(processed, :process)
   """
 
+  @pro Application.compile_env(:ash_oban, :pro?)
+
   @doc """
   Sets up AshOban test helpers.
 
@@ -83,12 +85,15 @@ defmodule AshOban.Test do
       use AshOban.Test, repo: MyApp.Repo, prefix: "private"
   """
   defmacro __using__(opts) do
-    quote do
-      if Application.compile_env(:ash_oban, :pro?) do
-        use Oban.Pro.Testing, unquote(opts)
+    module =
+      if @pro do
+        Oban.Pro.Testing
       else
-        use Oban.Testing, unquote(opts)
+        Oban.Testing
       end
+
+    quote do
+      use unquote(module), unquote(opts)
 
       import AshOban.Test
     end
