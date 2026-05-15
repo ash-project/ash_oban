@@ -262,6 +262,40 @@ trigger :name do
 end
 ```
 
+### Using a default actor without a persister
+
+If your trigger or scheduled action should always run as a fixed system actor
+(for example, on a cron schedule that has no real user behind it), you can set
+a `default_actor` directly in the DSL. No actor persister is required.
+
+```elixir
+trigger :nightly_cleanup do
+  action :cleanup
+  default_actor %MyApp.SystemActor{id: "system"}
+end
+
+scheduled_actions do
+  schedule :daily_report, "0 0 * * *" do
+    action :generate_report
+    default_actor %MyApp.SystemActor{id: "system"}
+  end
+end
+```
+
+The `default_actor` is a literal value (a map or struct), evaluated at the
+resource's compile time. If you use a struct, make sure its module is compiled
+before the resource that references it. It is only used when no actor is
+supplied via job args. The precedence is:
+
+1. Actor supplied at schedule time (via `AshOban.schedule/3`, `AshOban.run_trigger/3`,
+   or a changeset context) and round-tripped through the configured `actor_persister`
+2. The `default_actor` configured on the trigger / scheduled action
+3. `nil`
+
+This is useful for system-actor flows where the actor is constant and there is
+nothing to serialize. If you need a fresh database record on each run, configure
+an `actor_persister` and use its `lookup(nil)` callback instead.
+
 
 ### Considerations
 

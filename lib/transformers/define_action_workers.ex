@@ -100,7 +100,11 @@ defmodule AshOban.Transformers.DefineActionWorkers do
             tenant =
               if Map.has_key?(args, "tenant"), do: args["tenant"], else: List.first(tenants)
 
-            case AshOban.lookup_actor(args["actor"], unquote(scheduled_action.actor_persister)) do
+            case AshOban.lookup_actor(
+                   args["actor"],
+                   unquote(scheduled_action.actor_persister),
+                   unquote(Macro.escape(scheduled_action.default_actor))
+                 ) do
               {:ok, actor} ->
                 authorize? = AshOban.authorize?()
 

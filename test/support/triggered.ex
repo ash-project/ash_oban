@@ -124,6 +124,31 @@ defmodule AshOban.Test.Triggered do
         scheduler_cron false
         worker_module_name AshOban.Test.Triggered.AshOban.Worker.CancelObanJob
       end
+
+      trigger :process_with_default_actor do
+        action :process
+        queue :triggered_process
+        where expr(processed != true)
+        max_attempts 1
+        scheduler_cron false
+        actor_persister :none
+        default_actor %AshOban.Test.ActorPersister.FakeActor{id: 99}
+        worker_read_action :read
+        worker_module_name AshOban.Test.Triggered.AshOban.Worker.ProcessWithStaticActor
+        scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.ProcessWithStaticActor
+      end
+
+      trigger :scheduler_default_actor do
+        action :process
+        queue :triggered_process
+        where expr(number == 999 and processed != true)
+        max_attempts 1
+        scheduler_cron "* * * * *"
+        default_actor %AshOban.Test.ActorPersister.FakeActor{id: 42}
+        worker_read_action :read
+        worker_module_name AshOban.Test.Triggered.AshOban.Worker.SchedulerStaticActor
+        scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.SchedulerStaticActor
+      end
     end
 
     scheduled_actions do
@@ -140,6 +165,14 @@ defmodule AshOban.Test.Triggered do
 
         worker_module_name AshOban.Test.Triggered.AshOban.ActionWorker.NotifyEachTenant
       end
+
+      schedule :send_default_actor, "0 0 1 1 *" do
+        action :send_actor
+        queue :triggered_say_hello
+        actor_persister :none
+        default_actor %AshOban.Test.ActorPersister.FakeActor{id: 77}
+        worker_module_name AshOban.Test.Triggered.AshOban.ActionWorker.SendStaticActor
+      end
     end
   end
 
@@ -154,7 +187,7 @@ defmodule AshOban.Test.Triggered do
   end
 
   actions do
-    defaults create: [:tenant_id]
+    defaults create: [:tenant_id, :number]
 
     read :read do
       primary? true
@@ -238,6 +271,13 @@ defmodule AshOban.Test.Triggered do
       run fn input, _ ->
         send(self(), {:tenant, input.tenant})
         {:ok, "notified"}
+      end
+    end
+
+    action :send_actor, :string do
+      run fn _input, context ->
+        send(self(), {:actor, context.actor})
+        {:ok, "sent"}
       end
     end
   end
