@@ -43,6 +43,7 @@ defmodule AshOban do
             log_errors?: boolean(),
             debug?: boolean(),
             actor_persister: module() | :none | nil,
+            default_actor: any(),
             max_scheduler_attempts: pos_integer(),
             read_metadata: (Ash.Resource.record() -> map),
             stream_batch_size: pos_integer(),
@@ -85,6 +86,7 @@ defmodule AshOban do
       :scheduler_priority,
       :worker_priority,
       :actor_persister,
+      :default_actor,
       :max_attempts,
       :trigger_once?,
       :stream_batch_size,
@@ -219,6 +221,16 @@ defmodule AshOban do
         type: {:or, [{:literal, :none}, {:behaviour, AshOban.PersistActor}]},
         doc:
           "An `AshOban.PersistActor` to use to store the actor. Defaults to to the configured `config :ash_oban, :actor_persister`. Set to `:none` to override the configured default."
+      ],
+      default_actor: [
+        type: :any,
+        doc: """
+        A default actor (literal value) used when no actor is supplied via job args.
+
+        Useful for system-actor flows that don't need an `actor_persister`. Cron-fired schedulers run with this actor, and worker jobs fall back to it when nothing was stored.
+
+        Applied when no actor was supplied to `AshOban.schedule/3` or `AshOban.run_trigger/3`, or when the configured persister resolves the stored actor to `nil`.
+        """
       ],
       list_tenants: [
         type:
@@ -500,6 +512,7 @@ defmodule AshOban do
             queue: atom,
             debug?: boolean,
             actor_persister: module() | :none | nil,
+            default_actor: any(),
             state: :active | :paused | :deleted,
             priority: non_neg_integer(),
             shared_context?: boolean(),
@@ -514,6 +527,7 @@ defmodule AshOban do
       :debug,
       :priority,
       :actor_persister,
+      :default_actor,
       :worker_module_name,
       :action_input,
       :list_tenants,
@@ -568,6 +582,14 @@ defmodule AshOban do
         type: {:or, [{:literal, :none}, {:behaviour, AshOban.PersistActor}]},
         doc:
           "An `AshOban.PersistActor` to use to store the actor. Defaults to to the configured `config :ash_oban, :actor_persister`. Set to `:none` to override the configured default."
+      ],
+      default_actor: [
+        type: :any,
+        doc: """
+        A default actor (literal value) used when no actor is supplied via job args. Useful for system-actor flows that don't need an `actor_persister`.
+
+        Applied when no actor was supplied to `AshOban.schedule/3`, or when the configured persister resolves the stored actor to `nil`.
+        """
       ],
       worker_module_name: [
         type: :module,
@@ -894,17 +916,20 @@ defmodule AshOban do
     end
   end
 
-  @spec lookup_actor(actor_json :: any, actor_persister :: module() | :none | nil) :: any
-  def lookup_actor(actor_json, actor_persister \\ nil) do
-    case actor_persister || Application.get_env(:ash_oban, :actor_persister) do
-      :none ->
-        {:ok, nil}
+  @spec lookup_actor(
+          actor_json :: any,
+          actor_persister :: module() | :none | nil,
+          default_actor :: any
+        ) :: {:ok, any} | {:error, Ash.Error.t()}
+  def lookup_actor(actor_json, actor_persister \\ nil, default_actor \\ nil) do
+    persister = actor_persister || Application.get_env(:ash_oban, :actor_persister)
 
-      nil ->
-        {:ok, nil}
-
-      persister ->
-        persister.lookup(actor_json)
+    with persister when persister not in [nil, :none] <- persister,
+         {:ok, actor} when not is_nil(actor) <- persister.lookup(actor_json) do
+      {:ok, actor}
+    else
+      {:error, _} = error -> error
+      _ -> {:ok, default_actor}
     end
   end
 

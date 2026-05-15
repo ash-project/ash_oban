@@ -41,12 +41,14 @@ defmodule AshObanTest do
                %AshOban.Trigger{name: :dont_fail_oban_job, stream_with: :keyset},
                %AshOban.Trigger{name: :fail_oban_job_custom_backoff, stream_with: :keyset},
                %AshOban.Trigger{name: :snooze_oban_job, stream_with: :keyset},
-               %AshOban.Trigger{name: :cancel_oban_job, stream_with: :keyset}
+               %AshOban.Trigger{name: :cancel_oban_job, stream_with: :keyset},
+               %AshOban.Trigger{name: :process_with_default_actor, stream_with: :keyset},
+               %AshOban.Trigger{name: :scheduler_default_actor, stream_with: :keyset}
              ] = AshOban.Info.oban_triggers(Triggered)
     end
 
     test "nothing happens if no records exist" do
-      assert %{success: 7} = AshOban.Test.schedule_and_run_triggers(Triggered)
+      assert %{success: 8} = AshOban.Test.schedule_and_run_triggers(Triggered)
     end
 
     test "if a record exists, it is processed" do
@@ -220,7 +222,7 @@ defmodule AshObanTest do
       |> Ash.Changeset.for_create(:create)
       |> Ash.create!()
 
-      assert %{success: 9, failure: 1} =
+      assert %{success: 10, failure: 1} =
                AshOban.Test.schedule_and_run_triggers(Triggered)
     end
 
@@ -239,7 +241,7 @@ defmodule AshObanTest do
       |> Ash.Changeset.for_update(:update_triggered)
       |> Ash.update!()
 
-      assert %{success: 10, failure: 0} =
+      assert %{success: 11, failure: 0} =
                AshOban.Test.schedule_and_run_triggers(Triggered)
     end
 
@@ -254,7 +256,9 @@ defmodule AshObanTest do
                %AshOban.Trigger{name: :dont_fail_oban_job},
                %AshOban.Trigger{name: :fail_oban_job_custom_backoff},
                %AshOban.Trigger{name: :snooze_oban_job},
-               %AshOban.Trigger{name: :cancel_oban_job}
+               %AshOban.Trigger{name: :cancel_oban_job},
+               %AshOban.Trigger{name: :process_with_default_actor},
+               %AshOban.Trigger{name: :scheduler_default_actor}
              ] = AshOban.Info.oban_triggers(Triggered)
     end
 
@@ -282,9 +286,13 @@ defmodule AshObanTest do
                  {Oban.Plugins.Cron,
                   [
                     crontab: [
+                      {"0 0 1 1 *",
+                       AshOban.Test.Triggered.AshOban.ActionWorker.SendStaticActor, []},
                       {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.NotifyEachTenant,
                        []},
                       {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello, []},
+                      {"* * * * *",
+                       AshOban.Test.Triggered.AshOban.Scheduler.SchedulerStaticActor, []},
                       {"* * * * *",
                        AshOban.Test.Triggered.AshOban.Scheduler.FailObanJobWithCustomBackoff, []},
                       {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.DontFailObanJob, []},
@@ -363,6 +371,76 @@ defmodule AshObanTest do
       AshOban.Test.assert_triggered(record, :cancel_oban_job)
 
       assert %{cancelled: 1} = Oban.drain_queue(queue: :triggered_cancel_oban_job)
+    end
+
+    test "trigger with default_actor uses it when no actor is supplied (no persister required)" do
+      record =
+        Triggered
+        |> Ash.Changeset.for_create(:create, %{})
+        |> Ash.create!()
+
+      AshOban.run_trigger(record, :process_with_default_actor)
+
+      assert %{success: 1} = Oban.drain_queue(queue: :triggered_process)
+
+      assert_receive {:actor, %AshOban.Test.ActorPersister.FakeActor{id: 99}}
+    end
+
+    test "scheduled action with default_actor uses it when no actor is supplied (no persister required)" do
+      AshOban.Test.schedule_and_run_triggers({Triggered, :send_default_actor},
+        scheduled_actions?: true
+      )
+
+      assert_receive {:actor, %AshOban.Test.ActorPersister.FakeActor{id: 77}}
+    end
+
+    test "scheduler-fired trigger uses default_actor for record stream and worker action" do
+      Triggered
+      |> Ash.Changeset.for_create(:create, %{number: 999})
+      |> Ash.create!()
+
+      assert %{success: 2} =
+               AshOban.Test.schedule_and_run_triggers({Triggered, :scheduler_default_actor})
+
+      assert_receive {:actor, %AshOban.Test.ActorPersister.FakeActor{id: 42}}
+    end
+
+    test "explicit actor in schedule_and_run_triggers overrides default_actor" do
+      Triggered
+      |> Ash.Changeset.for_create(:create, %{number: 999})
+      |> Ash.create!()
+
+      assert %{success: 2} =
+               AshOban.Test.schedule_and_run_triggers({Triggered, :scheduler_default_actor},
+                 actor: %AshOban.Test.ActorPersister.FakeActor{id: 1}
+               )
+
+      assert_receive {:actor, %AshOban.Test.ActorPersister.FakeActor{id: 1}}
+    end
+
+    test "lookup_actor falls back to default_actor when persister returns {:ok, nil}" do
+      assert {:ok, %AshOban.Test.ActorPersister.FakeActor{id: 5}} =
+               AshOban.lookup_actor(
+                 nil,
+                 AshOban.Test.ActorPersister,
+                 %AshOban.Test.ActorPersister.FakeActor{id: 5}
+               )
+    end
+
+    test "lookup_actor returns persister-resolved actor when stored, ignoring default_actor" do
+      stored = AshOban.Test.ActorPersister.store(%AshOban.Test.ActorPersister.FakeActor{id: 1})
+
+      assert {:ok, %AshOban.Test.ActorPersister.FakeActor{id: 1}} =
+               AshOban.lookup_actor(
+                 stored,
+                 AshOban.Test.ActorPersister,
+                 %AshOban.Test.ActorPersister.FakeActor{id: 99}
+               )
+    end
+
+    test "lookup_actor returns default_actor when no persister is configured" do
+      assert {:ok, %AshOban.Test.ActorPersister.FakeActor{id: 5}} =
+               AshOban.lookup_actor(nil, :none, %AshOban.Test.ActorPersister.FakeActor{id: 5})
     end
   end
 
