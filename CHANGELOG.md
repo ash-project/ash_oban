@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.8.11](https://github.com/ash-project/ash_oban/compare/v0.8.10...v0.8.11) (2026-07-24)
+
+
+
+
+### Improvements:
+
+* support `default_actor` on triggers and scheduled actions by Conor Sinclair
+
 ## [v0.8.10](https://github.com/ash-project/ash_oban/compare/v0.8.9...v0.8.10) (2026-04-14)
 
 
