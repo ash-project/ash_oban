@@ -47,6 +47,11 @@ defmodule AshObanTest do
              ] = AshOban.Info.oban_triggers(Triggered)
     end
 
+    test "worker and scheduler jobs use their configured priorities" do
+      assert %{changes: %{priority: 1}} = Triggered.AshOban.Worker.Process.new(%{})
+      assert %{changes: %{priority: 0}} = Triggered.AshOban.Scheduler.Process.new(%{})
+    end
+
     test "nothing happens if no records exist" do
       assert %{success: 8} = AshOban.Test.schedule_and_run_triggers(Triggered)
     end
@@ -286,13 +291,13 @@ defmodule AshObanTest do
                  {Oban.Plugins.Cron,
                   [
                     crontab: [
-                      {"0 0 1 1 *",
-                       AshOban.Test.Triggered.AshOban.ActionWorker.SendStaticActor, []},
+                      {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SendStaticActor,
+                       []},
                       {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.NotifyEachTenant,
                        []},
                       {"0 0 1 1 *", AshOban.Test.Triggered.AshOban.ActionWorker.SayHello, []},
-                      {"* * * * *",
-                       AshOban.Test.Triggered.AshOban.Scheduler.SchedulerStaticActor, []},
+                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.SchedulerStaticActor,
+                       []},
                       {"* * * * *",
                        AshOban.Test.Triggered.AshOban.Scheduler.FailObanJobWithCustomBackoff, []},
                       {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.DontFailObanJob, []},

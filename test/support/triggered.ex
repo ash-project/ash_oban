@@ -24,6 +24,8 @@ defmodule AshOban.Test.Triggered do
         where expr(processed != true)
         sort inserted_at: :asc
         max_attempts 2
+        worker_priority 1
+        scheduler_priority 0
 
         extra_args(fn _record ->
           %{extra_arg: 1}
@@ -132,7 +134,7 @@ defmodule AshOban.Test.Triggered do
         max_attempts 1
         scheduler_cron false
         actor_persister :none
-        default_actor %AshOban.Test.ActorPersister.FakeActor{id: 99}
+        default_actor(%AshOban.Test.ActorPersister.FakeActor{id: 99})
         worker_read_action :read
         worker_module_name AshOban.Test.Triggered.AshOban.Worker.ProcessWithStaticActor
         scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.ProcessWithStaticActor
@@ -144,7 +146,7 @@ defmodule AshOban.Test.Triggered do
         where expr(number == 999 and processed != true)
         max_attempts 1
         scheduler_cron "* * * * *"
-        default_actor %AshOban.Test.ActorPersister.FakeActor{id: 42}
+        default_actor(%AshOban.Test.ActorPersister.FakeActor{id: 42})
         worker_read_action :read
         worker_module_name AshOban.Test.Triggered.AshOban.Worker.SchedulerStaticActor
         scheduler_module_name AshOban.Test.Triggered.AshOban.Scheduler.SchedulerStaticActor
@@ -170,7 +172,7 @@ defmodule AshOban.Test.Triggered do
         action :send_actor
         queue :triggered_say_hello
         actor_persister :none
-        default_actor %AshOban.Test.ActorPersister.FakeActor{id: 77}
+        default_actor(%AshOban.Test.ActorPersister.FakeActor{id: 77})
         worker_module_name AshOban.Test.Triggered.AshOban.ActionWorker.SendStaticActor
       end
     end
