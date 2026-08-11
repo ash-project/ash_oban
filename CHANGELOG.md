@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.8.12](https://github.com/ash-project/ash_oban/compare/v0.8.11...v0.8.12) (2026-08-11)
+
+
+
+
+### Bug Fixes:
+
+* don't swap scheduler and worker priority by Zach Daniel
+
 ## [v0.8.11](https://github.com/ash-project/ash_oban/compare/v0.8.10...v0.8.11) (2026-07-24)
 
 

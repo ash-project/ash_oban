@@ -5,7 +5,7 @@
 defmodule AshOban.MixProject do
   use Mix.Project
 
-  @version "0.8.11"
+  @version "0.8.12"
 
   @description """
   The extension for integrating Ash resources with Oban.
