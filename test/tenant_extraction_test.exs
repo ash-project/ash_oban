@@ -156,8 +156,6 @@ defmodule AshOban.TenantExtractionTest do
 
   use Oban.Testing, repo: AshOban.Test.Repo, prefix: "private"
 
-  require Ash.Query
-
   alias AshOban.TenantExtractionTest.TestDomain
   alias AshOban.TenantExtractionTest.TestResource
 

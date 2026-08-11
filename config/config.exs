@@ -53,6 +53,7 @@ if Mix.env() == :test do
     queues: [
       triggered_pro_process_with_state: 10,
       triggered_chunks_process: 10,
+      triggered_chunks_process_snoozing: 10,
       triggered_chunks_process_with_on_error: 10
     ]
 

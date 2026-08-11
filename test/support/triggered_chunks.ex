@@ -41,6 +41,26 @@ if Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
     end
   end
 
+  # Snoozes flagged records so tests can drive per-record snoozes through the
+  # chunk worker's bulk error mapping.
+  defmodule AshOban.Test.MaybeSnooze do
+    @moduledoc false
+    use Ash.Resource.Change
+
+    def change(changeset, _opts, _context) do
+      if changeset.data.snooze_me do
+        Ash.Changeset.add_error(
+          changeset,
+          AshOban.Errors.SnoozeJob.exception(snooze_for: 60)
+        )
+      else
+        Ash.Changeset.change_attribute(changeset, :processed, true)
+      end
+    end
+
+    def atomic(_changeset, _opts, _context), do: {:not_atomic, "snooze decision needs the record"}
+  end
+
   defmodule AshOban.Test.TriggeredChunks do
     @moduledoc """
     A resource for testing chunk-based trigger processing with Oban Pro.
@@ -66,6 +86,20 @@ if Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
           end
         end
 
+        trigger :process_snoozing do
+          action :process_maybe_snooze
+          where expr(processed != true)
+          max_attempts 2
+          worker_read_action :read
+          worker_module_name AshOban.Test.TriggeredChunks.AshOban.Worker.ProcessSnoozing
+          scheduler_module_name AshOban.Test.TriggeredChunks.AshOban.Scheduler.ProcessSnoozing
+
+          chunks do
+            size(10)
+            timeout 100
+          end
+        end
+
         trigger :process_with_on_error do
           action :process_failure
           on_error :mark_errored
@@ -84,7 +118,7 @@ if Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
     end
 
     actions do
-      defaults create: []
+      defaults create: [:snooze_me]
 
       read :read do
         primary? true
@@ -95,6 +129,11 @@ if Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
         require_atomic? false
         change set_attribute(:processed, true)
         change AshOban.Test.BatchTracker
+      end
+
+      update :process_maybe_snooze do
+        require_atomic? false
+        change AshOban.Test.MaybeSnooze
       end
 
       update :process_failure do
@@ -119,6 +158,7 @@ if Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
       uuid_primary_key :id
       attribute :processed, :boolean, default: false, allow_nil?: false, public?: true
       attribute :errored, :boolean, default: false, allow_nil?: false, public?: true
+      attribute :snooze_me, :boolean, default: false, allow_nil?: false, public?: true
       timestamps()
     end
   end

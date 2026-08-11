@@ -12,8 +12,6 @@ defmodule AshObanTest do
 
   use AshOban.Test, repo: AshOban.Test.Repo, prefix: "private"
 
-  require Ash.Query
-
   setup_all do
     AshOban.Test.Repo.start_link()
     Oban.start_link(AshOban.config([Domain], Application.get_env(:ash_oban, :oban)))

@@ -1496,24 +1496,23 @@ defmodule AshOban.Transformers.DefineSchedulers do
             end)
             |> MapSet.new()
 
-          # Best-effort extraction of error PKs from changeset data.
-          # For atomic failures, errors may not have per-record changeset data.
-          error_pkeys =
+          # Best-effort extraction of error PKs (plus snooze/cancel instructions)
+          # from changeset data; atomic failures may not have per-record data.
+          error_returns =
             bulk_result
             |> Map.get(:errors, [])
             |> List.wrap()
-            |> Enum.flat_map(fn
-              %{errors: errors} when is_list(errors) -> errors
-              error -> [error]
-            end)
-            |> Enum.flat_map(fn
-              %{changeset: %Ash.Changeset{data: data}} when not is_nil(data) ->
-                [data |> Map.take(primary_key_fields) |> stringify_keys()]
+            |> Enum.flat_map(&chunk_error_returns(&1, primary_key_fields))
 
-              _ ->
-                []
-            end)
-            |> MapSet.new()
+          error_pkeys = MapSet.new(error_returns, &elem(&1, 0))
+
+          snooze_by_pkey =
+            for {pkey, {:snooze, seconds}} <- error_returns, reduce: %{} do
+              acc -> Map.update(acc, pkey, seconds, &max(&1, seconds))
+            end
+
+          cancel_by_pkey =
+            Map.new(for {pkey, {:cancel, reason}} <- error_returns, do: {pkey, reason})
 
           # If we have errors but couldn't extract any PKs from them (e.g. atomic failure),
           # treat all non-success jobs as errors (retry) rather than discards.
@@ -1521,12 +1520,18 @@ defmodule AshOban.Transformers.DefineSchedulers do
             (bulk_result.error_count || 0) > 0 and MapSet.size(error_pkeys) == 0
 
           result =
-            Enum.reduce(jobs, %{error: [], discard: []}, fn job, acc ->
+            Enum.reduce(jobs, %{error: [], discard: [], snooze: [], cancel: []}, fn job, acc ->
               job_pkey = Map.new(job.args["primary_key"])
 
               cond do
                 MapSet.member?(success_pkeys, job_pkey) ->
                   acc
+
+                is_map_key(snooze_by_pkey, job_pkey) ->
+                  %{acc | snooze: [{job, Map.fetch!(snooze_by_pkey, job_pkey)} | acc.snooze]}
+
+                is_map_key(cancel_by_pkey, job_pkey) ->
+                  %{acc | cancel: [{job, Map.fetch!(cancel_by_pkey, job_pkey)} | acc.cancel]}
 
                 MapSet.member?(error_pkeys, job_pkey) ->
                   %{acc | error: [job | acc.error]}
@@ -1544,7 +1549,27 @@ defmodule AshOban.Transformers.DefineSchedulers do
           handle_chunk_results(result, actor, authorize?, tenant)
         end
 
-        defp handle_chunk_results(%{error: [], discard: []}, _actor, _authorize?, _tenant) do
+        defp chunk_error_returns(
+               %{changeset: %Ash.Changeset{data: data}} = error,
+               primary_key_fields
+             )
+             when not is_nil(data) do
+          pkey = data |> Map.take(primary_key_fields) |> stringify_keys()
+          [{pkey, AshOban.check_for_oban_return(error)}]
+        end
+
+        defp chunk_error_returns(%{errors: errors}, primary_key_fields) when is_list(errors) do
+          Enum.flat_map(errors, &chunk_error_returns(&1, primary_key_fields))
+        end
+
+        defp chunk_error_returns(_error, _primary_key_fields), do: []
+
+        defp handle_chunk_results(
+               %{error: [], discard: [], snooze: [], cancel: []},
+               _actor,
+               _authorize?,
+               _tenant
+             ) do
           :ok
         end
 
@@ -1562,6 +1587,20 @@ defmodule AshOban.Transformers.DefineSchedulers do
           end
 
           response = []
+
+          response =
+            result.snooze
+            |> Enum.group_by(fn {_job, seconds} -> seconds end, fn {job, _seconds} -> job end)
+            |> Enum.reduce(response, fn {seconds, jobs}, response ->
+              [{:snooze, {seconds, jobs}} | response]
+            end)
+
+          response =
+            result.cancel
+            |> Enum.group_by(fn {_job, reason} -> reason end, fn {job, _reason} -> job end)
+            |> Enum.reduce(response, fn {reason, jobs}, response ->
+              [{:cancel, {reason, jobs}} | response]
+            end)
 
           response =
             if retriable_jobs != [] do

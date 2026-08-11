@@ -76,6 +76,25 @@ if Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
       assert updated.processed == true
     end
 
+    test "snooze errors reschedule their jobs instead of failing them" do
+      snoozer =
+        TriggeredChunks
+        |> Ash.Changeset.for_create(:create, %{snooze_me: true})
+        |> Ash.create!()
+
+      processable =
+        TriggeredChunks
+        |> Ash.Changeset.for_create(:create, %{})
+        |> Ash.create!()
+
+      result = AshOban.Test.schedule_and_run_triggers({TriggeredChunks, :process_snoozing})
+
+      assert result.snoozed == 1
+
+      assert Ash.get!(TriggeredChunks, processable.id).processed
+      refute Ash.get!(TriggeredChunks, snoozer.id).processed
+    end
+
     test "on_error is called for final-attempt failures" do
       record =
         TriggeredChunks
