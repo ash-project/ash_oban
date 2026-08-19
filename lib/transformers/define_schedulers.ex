@@ -1294,7 +1294,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                       authorize?: authorize?,
                       actor: actor,
                       domain: unquote(domain),
-                      skip_unknown_input: [:metadata]
+                      skip_unknown_inputs: [:metadata]
                     )
                     |> AshOban.update_or_destroy()
                     |> case do
