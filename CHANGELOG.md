@@ -11,6 +11,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.8.13](https://github.com/ash-project/ash_oban/compare/v0.8.12...v0.8.13) (2026-08-19)
+
+
+
+
+### Improvements:
+
+* honor special job-specific errors on chunk workers by Zach Daniel
+
+### Bug Fixes:
+
+* typo skip_unknown_input to skip_unknown_inputs by kevinschweikert
+
 ## [v0.8.12](https://github.com/ash-project/ash_oban/compare/v0.8.11...v0.8.12) (2026-08-11)
 
 
