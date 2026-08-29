@@ -1101,6 +1101,22 @@ defmodule AshOban do
     ]
   ]
 
+  # Oban v2.24 / Oban Pro v1.8 flattened plugin and engine module names (e.g.
+  # `Oban.Plugins.Cron` -> `Oban.Cron`). The old names still work (they delegate),
+  # so both are accepted here for detection purposes.
+  @cron_plugins [Oban.Plugins.Cron, Oban.Cron, Oban.Pro.Plugins.DynamicCron, Oban.Pro.Cron]
+  @pro_cron_plugins [Oban.Pro.Plugins.DynamicCron, Oban.Pro.Cron]
+  @pro_queues_plugins [Oban.Pro.Plugins.DynamicQueues, Oban.Pro.Queues]
+  @pro_engines [Oban.Pro.Queue.SmartEngine, Oban.Pro.Engines.Smart, Oban.Pro.Engine]
+
+  @typep target :: %{
+           location: :plugins | :cron | :queues | nil,
+           plugin: module() | nil,
+           opts: keyword() | nil,
+           pro?: boolean(),
+           conflicting?: boolean()
+         }
+
   @doc """
   Alters your oban configuration to include the required AshOban configuration.
 
@@ -1127,65 +1143,49 @@ defmodule AshOban do
           |> Keyword.put(:plugins, [])
       end
 
-    pro_dynamic_cron_plugin? =
-      base
-      |> Keyword.fetch!(:plugins)
-      |> Enum.any?(&match?({Oban.Pro.Plugins.DynamicCron, _}, &1))
+    cron = cron_target(base)
+    queues = queues_target(base)
 
-    pro_dynamic_queues_plugin? =
-      base
-      |> Keyword.fetch!(:plugins)
-      |> Enum.any?(&match?({Oban.Pro.Plugins.DynamicQueues, _}, &1))
-
-    cron_plugin =
-      if pro_dynamic_cron_plugin? do
-        Oban.Pro.Plugins.DynamicCron
-      else
-        Oban.Plugins.Cron
-      end
-
-    if (pro_dynamic_cron_plugin? || pro_dynamic_queues_plugin?) &&
-         base[:engine] not in [Oban.Pro.Queue.SmartEngine, Oban.Pro.Engines.Smart] do
+    if (cron.pro? || queues.pro?) && base[:engine] not in @pro_engines do
       raise """
-      Expected oban engine to be Oban.Pro.Queue.SmartEngine or Oban.Pro.Engines.Smart, but got #{inspect(base[:engine])}.
+      Expected oban engine to be one of #{inspect(@pro_engines)}, but got #{inspect(base[:engine])}.
       This expectation is because you're using at least one Oban.Pro plugin`.
       """
     end
 
-    domains
-    |> List.wrap()
-    |> Enum.flat_map(&Ash.Domain.Info.resources/1)
-    |> Enum.uniq()
-    |> Enum.flat_map(fn resource ->
-      resource
-      |> AshOban.Info.oban_triggers_and_scheduled_actions()
-      |> tap(fn triggers ->
-        if opts[:require?] do
-          Enum.each(triggers, &require_queues!(base, resource, pro_dynamic_queues_plugin?, &1))
-        end
-      end)
-      |> Enum.filter(fn
-        %{scheduler_cron: scheduler_cron} ->
-          scheduler_cron
+    resources_and_triggers =
+      domains
+      |> List.wrap()
+      |> Enum.flat_map(&Ash.Domain.Info.resources/1)
+      |> Enum.uniq()
+      |> Enum.flat_map(fn resource ->
+        resource
+        |> AshOban.Info.oban_triggers_and_scheduled_actions()
+        |> tap(fn triggers ->
+          if opts[:require?] do
+            Enum.each(triggers, &require_queues!(resource, queues, &1))
+          end
+        end)
+        |> Enum.filter(fn
+          %{scheduler_cron: scheduler_cron} ->
+            scheduler_cron
 
-        _ ->
-          true
+          _ ->
+            true
+        end)
+        |> Enum.map(&{resource, &1})
       end)
-      |> Enum.map(&{resource, &1})
-    end)
-    |> case do
+
+    case resources_and_triggers do
       [] ->
         base
 
-      resources_and_triggers ->
+      _ ->
         if opts[:require?] do
-          require_cron!(base, cron_plugin)
+          require_cron!(base, cron.location, cron.plugin)
         end
 
-        if pro_dynamic_cron_plugin? &&
-             Enum.find_value(base[:plugins], [], fn
-               {plugin, opts} -> if plugin == Oban.Pro.Plugins.DynamicCron, do: opts, else: false
-             end)[:sync_mode] != :automatic do
+        if cron.pro? && cron.opts[:sync_mode] != :automatic do
           IO.warn("""
           The crontab `sync_mode` should be set to `:automatic`. Without this set,
           removing a trigger from your resource would cause a dangling cron job to
@@ -1202,74 +1202,201 @@ defmodule AshOban do
           """)
         end
 
-        resources_and_triggers
-        |> Enum.reject(&match?(%{scheduler_cron: false}, &1))
-        |> Enum.reduce(base, fn {resource, trigger}, config ->
-          add_job(config, cron_plugin, resource, trigger)
-        end)
+        is_pro_version? = AshOban.Info.pro?()
+
+        new_entries =
+          Enum.map(resources_and_triggers, fn {_resource, trigger} ->
+            cron_tuple(trigger, is_pro_version?, cron.pro?)
+          end)
+
+        write_crontab(base, cron, new_entries)
     end
   end
 
-  defp add_job(config, cron_plugin, _resource, trigger) do
-    Keyword.update!(config, :plugins, fn plugins ->
+  @spec find_plugin(keyword(), [module()]) :: {module(), keyword()} | nil
+  defp find_plugin(plugins, candidates) do
+    Enum.find(plugins, fn
+      {plugin, _opts} -> plugin in candidates
+      _ -> false
+    end)
+  end
+
+  @spec cron_target(keyword()) :: target()
+  defp cron_target(base) do
+    cron_from_top_level(base[:cron]) || cron_from_plugins(Keyword.fetch!(base, :plugins))
+  end
+
+  defp cron_from_top_level(nil), do: nil
+
+  defp cron_from_top_level(false),
+    do: %{location: :cron, plugin: nil, opts: [], pro?: false, conflicting?: false}
+
+  defp cron_from_top_level(module) when is_atom(module),
+    do: %{
+      location: :cron,
+      plugin: module,
+      opts: [],
+      pro?: module in @pro_cron_plugins,
+      conflicting?: false
+    }
+
+  defp cron_from_top_level({module, opts}),
+    do: %{
+      location: :cron,
+      plugin: module,
+      opts: opts,
+      pro?: module in @pro_cron_plugins,
+      conflicting?: false
+    }
+
+  defp cron_from_top_level(opts) when is_list(opts),
+    do: %{location: :cron, plugin: Oban.Cron, opts: opts, pro?: false, conflicting?: false}
+
+  defp cron_from_plugins(plugins) do
+    case find_plugin(plugins, @cron_plugins) do
+      {plugin, opts} ->
+        %{
+          location: :plugins,
+          plugin: plugin,
+          opts: opts,
+          pro?: plugin in @pro_cron_plugins,
+          conflicting?: false
+        }
+
+      nil ->
+        %{
+          location: :plugins,
+          plugin: Oban.Plugins.Cron,
+          opts: [],
+          pro?: false,
+          conflicting?: false
+        }
+    end
+  end
+
+  @spec queues_target(keyword()) :: target()
+  defp queues_target(base) do
+    top_level_queues = base[:queues]
+    plugins = Keyword.fetch!(base, :plugins)
+
+    queues_from_top_level(top_level_queues) ||
+      queues_from_plugins(plugins, top_level_queues) ||
+      %{location: nil, plugin: nil, opts: top_level_queues, pro?: false, conflicting?: false}
+  end
+
+  defp queues_from_top_level({plugin, opts}) when plugin in @pro_queues_plugins do
+    %{location: :queues, plugin: plugin, opts: opts, pro?: true, conflicting?: false}
+  end
+
+  defp queues_from_top_level(_other), do: nil
+
+  defp queues_from_plugins(plugins, top_level_queues) do
+    case find_plugin(plugins, @pro_queues_plugins) do
+      {plugin, opts} ->
+        %{
+          location: :plugins,
+          plugin: plugin,
+          opts: opts,
+          pro?: true,
+          conflicting?: top_level_queues not in [nil, false]
+        }
+
+      nil ->
+        nil
+    end
+  end
+
+  defp cron_tuple(trigger, is_pro_version?, pro_cron_plugin?) do
+    job_opts = trigger_state_opts(is_pro_version?, pro_cron_plugin?, trigger)
+
+    case trigger do
+      %{scheduler_cron: scheduler_cron} ->
+        {scheduler_cron, trigger.scheduler, job_opts}
+
+      %{cron: cron} ->
+        {cron, trigger.worker, job_opts}
+    end
+  end
+
+  defp write_crontab(base, %{location: :plugins, plugin: plugin, opts: opts}, new_entries) do
+    updated_opts = merge_crontab(opts, new_entries)
+
+    Keyword.update!(base, :plugins, fn plugins ->
       Enum.map(plugins, fn
-        {^cron_plugin, config} ->
-          is_pro_version? = AshOban.Info.pro?()
-          opts = maybe_set_state_for_pro_version(is_pro_version?, cron_plugin, trigger)
-
-          cron =
-            case trigger do
-              %{scheduler_cron: scheduler_cron} ->
-                {scheduler_cron, trigger.scheduler, opts}
-
-              %{cron: cron} ->
-                {cron, trigger.worker, opts}
-            end
-
-          {cron_plugin, Keyword.update(config, :crontab, [cron], &[cron | &1])}
-
-        other ->
-          other
+        {^plugin, _opts} -> {plugin, updated_opts}
+        other -> other
       end)
     end)
   end
 
-  defp maybe_set_state_for_pro_version(true = _is_pro_version?, cron_plugin, trigger) do
-    case {cron_plugin, trigger.state} do
-      {_cron_plugin, :paused} ->
-        [paused: true]
+  defp write_crontab(base, %{location: :cron, plugin: plugin, opts: opts}, new_entries)
+       when not is_nil(plugin) do
+    updated_opts = merge_crontab(opts, new_entries)
 
-      {_cron_plugin, :deleted} ->
-        [delete: true]
-
-      {Oban.Pro.Plugins.DynamicCron, :active} ->
-        [paused: false]
-
-      _ ->
-        []
-    end
+    Keyword.update!(base, :cron, fn
+      {^plugin, _opts} -> {plugin, updated_opts}
+      list when is_list(list) -> updated_opts
+      _atom -> {plugin, updated_opts}
+    end)
   end
 
-  defp maybe_set_state_for_pro_version(_is_pro_version, _cron_plugin, trigger) do
-    state = Map.get(trigger, :state, nil)
-
-    if not is_nil(state) && state in [:paused, :deleted] do
-      raise "The `state` option on triggers and scheduled actions is only supported when using Oban Pro. Ignoring state #{inspect(state)}"
-    end
-
-    []
+  defp write_crontab(_base, %{location: :cron, plugin: nil}, _new_entries) do
+    raise """
+    Cannot add cron jobs because cron has been explicitly disabled (`cron: false`), but at
+    least one trigger requires scheduling. Configure cron via the top-level `:cron` key, or
+    remove the `scheduler_cron` from the affected triggers.
+    """
   end
 
-  defp require_queues!(config, resource, false, trigger) do
-    unless config[:queues][trigger.queue] do
+  defp merge_crontab(opts, new_entries) do
+    reversed = Enum.reverse(new_entries)
+    Keyword.update(opts, :crontab, reversed, &(reversed ++ &1))
+  end
+
+  defp trigger_state_opts(true, true = _pro_cron_plugin?, %{state: :active}), do: [paused: false]
+  defp trigger_state_opts(true, _pro_cron_plugin?, %{state: :paused}), do: [paused: true]
+  defp trigger_state_opts(true, _pro_cron_plugin?, %{state: :deleted}), do: [delete: true]
+
+  defp trigger_state_opts(false = _is_pro_version?, _pro_cron_plugin?, %{state: state})
+       when state in [:paused, :deleted] do
+    raise "The `state` option on triggers and scheduled actions is only supported when using Oban Pro. Ignoring state #{inspect(state)}"
+  end
+
+  defp trigger_state_opts(_is_pro_version?, _pro_cron_plugin?, _trigger), do: []
+
+  defp require_queues!(resource, target, trigger) do
+    queues = target_queues(target)
+
+    assert_queue!(queues, trigger.queue, resource, trigger.name)
+
+    if target.conflicting? do
+      raise "Must configure the queue through #{inspect(target.plugin)} plugin when Oban Pro is used"
+    end
+
+    assert_scheduler_queue!(queues, trigger, resource)
+  end
+
+  defp target_queues(%{location: nil, opts: queues}), do: queues || []
+  defp target_queues(%{opts: plugin_config}), do: plugin_queues(plugin_config)
+
+  defp plugin_queues(plugin_config) when is_list(plugin_config) do
+    if is_list(plugin_config[:queues]), do: plugin_config[:queues], else: []
+  end
+
+  defp plugin_queues(_plugin_config), do: []
+
+  defp assert_queue!(queues, queue_name, resource, trigger_name) do
+    unless queues[queue_name] do
       raise """
-      Must configure the queue `:#{trigger.queue}`, required for
-      the trigger `:#{trigger.name}` on #{inspect(resource)}
+      Must configure the queue `:#{queue_name}`, required for
+      the trigger `:#{trigger_name}` on #{inspect(resource)}
       """
     end
+  end
 
+  defp assert_scheduler_queue!(queues, trigger, resource) do
     if Map.has_key?(trigger, :scheduler_queue) do
-      unless config[:queues][trigger.scheduler_queue] do
+      unless queues[trigger.scheduler_queue] do
         raise """
         Must configure the queue `:#{trigger.scheduler_queue}`, required for
         the scheduler of the trigger `:#{trigger.name}` on #{inspect(resource)}
@@ -1278,38 +1405,27 @@ defmodule AshOban do
     end
   end
 
-  defp require_queues!(config, resource, true, trigger) do
-    {_plugin_name, plugin_config} =
-      config[:plugins]
-      |> Enum.find({nil, nil}, fn {plugin, _opts} -> plugin == Oban.Pro.Plugins.DynamicQueues end)
+  defp require_cron!(_config, :cron, cron_plugin) when not is_nil(cron_plugin), do: :ok
 
-    if !is_list(plugin_config) || !Keyword.has_key?(plugin_config, :queues) ||
-         !is_list(plugin_config[:queues]) ||
-         !Keyword.has_key?(plugin_config[:queues], trigger.queue) do
-      raise """
-      Must configure the queue `:#{trigger.queue}`, required for
-      the trigger `:#{trigger.name}` on #{inspect(resource)}
-      """
-    end
+  defp require_cron!(config, :cron, nil) do
+    raise """
+    Must configure cron, either via the top-level `:cron` key or a cron plugin in `:plugins`.
 
-    if !is_nil(config[:queues]) && config[:queues] != false do
-      raise """
-      Must configure the queue through Oban.Pro.Plugins.DynamicQueues plugin
-      when Oban Pro is used
-      """
-    end
+    See oban's documentation for more. AshOban will
+    add cron jobs to the configuration, but will not
+    add the basic configuration for you.
 
-    if Map.has_key?(trigger, :scheduler_queue) do
-      unless plugin_config[:queues][trigger.scheduler_queue] do
-        raise """
-        Must configure the queue `:#{trigger.scheduler_queue}`, required for
-        the scheduler of the trigger `:#{trigger.name}` on #{inspect(resource)}
-        """
-      end
-    end
+    Configuration received:
+
+    #{inspect(config)}
+
+    Example:
+
+    #{inspect(Keyword.put(config, :cron, crontab: []))}
+    """
   end
 
-  defp require_cron!(config, name) do
+  defp require_cron!(config, :plugins, name) do
     unless Enum.find(config[:plugins] || [], &match?({^name, _}, &1)) do
       ideal =
         if Keyword.keyword?(config[:plugins]) do

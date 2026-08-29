@@ -70,7 +70,15 @@ if Code.ensure_loaded?(Igniter) do
       app_name = Igniter.Project.Application.app_name(igniter)
       pro? = Igniter.Project.Deps.has_dep?(igniter, :oban_pro)
 
-      cron_plugin = if pro?, do: Oban.Pro.Plugins.DynamicCron, else: Oban.Plugins.Cron
+      cron_plugin =
+        cond do
+          pro? && Code.ensure_loaded?(Oban.Pro.Cron) -> Oban.Pro.Cron
+          pro? -> Oban.Pro.Plugins.DynamicCron
+          Code.ensure_loaded?(Oban.Cron) -> Oban.Cron
+          true -> Oban.Plugins.Cron
+        end
+
+      top_level_cron? = Code.ensure_loaded?(Oban.Cron)
 
       # Do your work here and return an updated igniter
       igniter
@@ -106,7 +114,30 @@ if Code.ensure_loaded?(Igniter) do
           end
         end
       )
+      |> configure_cron(app_name, cron_plugin, pro?, top_level_cron?)
       |> Igniter.Project.Config.configure(
+        "config.exs",
+        :ash_oban,
+        [:pro?],
+        pro?
+      )
+    end
+
+    defp configure_cron(igniter, app_name, cron_plugin, pro?, true = _top_level_cron) do
+      cron_value = if pro?, do: {cron_plugin, []}, else: [crontab: []]
+
+      Igniter.Project.Config.configure_new(
+        igniter,
+        "config.exs",
+        app_name,
+        [Oban, :cron],
+        cron_value
+      )
+    end
+
+    defp configure_cron(igniter, app_name, cron_plugin, _pro?, false = _top_level_cron) do
+      Igniter.Project.Config.configure(
+        igniter,
         "config.exs",
         app_name,
         [Oban, :plugins],
@@ -129,12 +160,6 @@ if Code.ensure_loaded?(Igniter) do
             :error -> {:ok, list}
           end
         end
-      )
-      |> Igniter.Project.Config.configure(
-        "config.exs",
-        :ash_oban,
-        [:pro?],
-        pro?
       )
     end
   end
