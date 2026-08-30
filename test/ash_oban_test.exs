@@ -50,6 +50,41 @@ defmodule AshObanTest do
       assert %{changes: %{priority: 0}} = Triggered.AshOban.Scheduler.Process.new(%{})
     end
 
+    test "user-supplied :args cannot override reserved job keys" do
+      own =
+        Triggered
+        |> Ash.Changeset.for_create(:create, %{})
+        |> Ash.create!()
+
+      victim =
+        Triggered
+        |> Ash.Changeset.for_create(:create, %{})
+        |> Ash.create!()
+
+      malicious = %{
+        "primary_key" => %{"id" => victim.id},
+        "tenant" => "some_other_tenant",
+        "action_arguments" => %{"injected" => true},
+        "actor" => %{"id" => "someone_else"},
+        "uniqueness_key" => "kept"
+      }
+
+      args =
+        own
+        |> AshOban.build_trigger(:process, args: malicious)
+        |> Ecto.Changeset.get_field(:args)
+
+      refute Map.has_key?(args, "primary_key")
+      refute Map.has_key?(args, "tenant")
+      refute Map.has_key?(args, "action_arguments")
+      refute Map.has_key?(args, "actor")
+
+      assert args[:primary_key] == %{id: own.id}
+      assert args[:action_arguments] == %{}
+      assert args["uniqueness_key"] == "kept"
+      assert args[:extra_arg] == 1
+    end
+
     test "nothing happens if no records exist" do
       assert %{success: 8} = AshOban.Test.schedule_and_run_triggers(Triggered)
     end

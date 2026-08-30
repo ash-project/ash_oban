@@ -1068,9 +1068,15 @@ defmodule AshOban do
       tenant: tenant
     }
     |> AshOban.store_actor(opts[:actor], trigger.actor_persister)
-    |> then(&Map.merge(extra_args, &1))
-    |> then(&Map.merge(opts[:args] || %{}, &1))
+    |> then(&Map.merge(remove_reserved_args(extra_args), &1))
+    |> then(&Map.merge(remove_reserved_args(opts[:args] || %{}), &1))
     |> trigger.worker.new(oban_job_opts)
+  end
+
+  @reserved_arg_keys ["primary_key", "metadata", "action_arguments", "tenant", "actor"]
+
+  defp remove_reserved_args(args) do
+    Map.reject(args, fn {key, _value} -> to_string(key) in @reserved_arg_keys end)
   end
 
   defp validate_primary_key(map, resource) do
