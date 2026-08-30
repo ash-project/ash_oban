@@ -11,6 +11,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.8.14](https://github.com/ash-project/ash_oban/compare/v0.8.13...v0.8.14) (2026-08-30)
+
+
+
+
+### Bug Fixes:
+
+* stop retrying a failing on_error action forever in atomic handle_error (CVE-2026-78228) by Zach Daniel
+
+* don't let user-supplied :args override reserved trigger keys (CVE-2026-78038) by Zach Daniel
+
 ## [v0.8.13](https://github.com/ash-project/ash_oban/compare/v0.8.12...v0.8.13) (2026-08-19)
 
 
