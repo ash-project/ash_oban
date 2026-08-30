@@ -846,7 +846,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
               ash_error = Ash.Error.to_ash_error(error, __STACKTRACE__)
 
               case AshOban.check_for_oban_return(ash_error) do
-                nil -> handle_error(job, ash_error, primary_key, __STACKTRACE__)
+                nil -> reraise ash_error, __STACKTRACE__
                 result -> result
               end
           end
