@@ -1264,18 +1264,20 @@ defmodule AshOban do
   end
 
   defp add_jobs(config, {_plugin, _opts}, new_entries) do
-    if Keyword.has_key?(config, :cron) do
-      Keyword.update!(config, :cron, &put_crontab(&1, new_entries))
-    else
-      Keyword.update!(config, :plugins, fn plugins ->
-        Enum.map(plugins, fn
-          {plugin, plugin_opts} when plugin in @cron_plugins ->
-            {plugin, put_crontab(plugin_opts, new_entries)}
+    case Keyword.get(config, :cron) do
+      cron when cron in [nil, false] ->
+        Keyword.update!(config, :plugins, fn plugins ->
+          Enum.map(plugins, fn
+            {plugin, plugin_opts} when plugin in @cron_plugins ->
+              {plugin, put_crontab(plugin_opts, new_entries)}
 
-          other ->
-            other
+            other ->
+              other
+          end)
         end)
-      end)
+
+      _cron ->
+        Keyword.update!(config, :cron, &put_crontab(&1, new_entries))
     end
   end
 
