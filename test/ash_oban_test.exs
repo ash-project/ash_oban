@@ -542,7 +542,8 @@ defmodule AshObanTest do
         RuntimeError,
         "The `state` option on triggers and scheduled actions is only supported when using Oban Pro. Ignoring state :paused",
         fn ->
-          AshOban.config([DomainPro],
+          AshOban.config(
+            [DomainPro],
             [
               plugins: [{Oban.Plugins.Cron, crontab: []}],
               queues: [triggered_pro_process_with_state: 10]
