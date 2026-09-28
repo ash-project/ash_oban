@@ -517,7 +517,8 @@ defmodule AshOban do
             priority: non_neg_integer(),
             shared_context?: boolean(),
             shared_context: :all | [:ash_oban? | :job],
-            tags: [String.t()]
+            tags: [String.t()],
+            worker_opts: keyword()
           }
 
     defstruct [
@@ -539,6 +540,7 @@ defmodule AshOban do
       :shared_context?,
       :shared_context,
       :tags,
+      :worker_opts,
       :__identifier__,
       :__spark_metadata__
     ]
@@ -624,7 +626,21 @@ defmodule AshOban do
       tags: [
         type: {:list, :string},
         default: [],
-        doc: "A list of tags to add to the Oban job."
+        doc: """
+        A list of tags to add to the Oban job. Tags are merged with any tags set in `worker_opts`.
+        """
+      ],
+      worker_opts: [
+        type: :keyword_list,
+        default: [],
+        doc: """
+        Options to set on the worker.
+
+        ATTENTION: this may overwrite options set by ash_oban, make sure you know what you are doing.
+
+        See [Oban.Worker](https://hexdocs.pm/oban/Oban.Worker.html#module-defining-workers) for options
+        and [Oban.Pro.Worker](https://oban.pro/docs/pro/Oban.Pro.Worker.html) for oban pro
+        """
       ],
       debug?: [
         type: :boolean,

@@ -11,6 +11,12 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## Unreleased
+
+### Improvements:
+
+* add `worker_opts` to scheduled actions, merged over the generated worker options the way triggers already do
+
 ## [v0.8.14](https://github.com/ash-project/ash_oban/compare/v0.8.13...v0.8.14) (2026-08-30)
 
 
