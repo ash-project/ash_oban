@@ -51,11 +51,12 @@ defmodule Mix.Tasks.AshOban.InstallTest do
     |> assert_has_patch("config/config.exs", ~S'''
        |config :test, Oban,
        |  engine: Oban.Engines.Basic,
-       |  notifier: Oban.Notifiers.Postgres,
-       |  queues: [default: 10],
+    ...|
+       |  lifeline: [rescue_after: {2, :hours}],
+       |  pruner: [max_age: {1, :day}],
      - |  repo: Test.Repo
      + |  repo: Test.Repo,
-     + |  plugins: [{Oban.Plugins.Cron, []}]
+     + |  cron: [crontab: []]
        |
        |import_config "#{config_env()}.exs"
     ...|

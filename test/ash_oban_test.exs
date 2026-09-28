@@ -491,63 +491,18 @@ defmodule AshObanTest do
       :ok
     end
 
-    @tag pro?: true
-    test "if oban.pro true, puts `state` in crontab opts" do
-      Oban.start_link(AshOban.config([DomainPro], Application.get_env(:ash_oban, :oban_pro)))
+    if Code.ensure_loaded?(Oban.Pro.Plugins.DynamicCron) do
+      @tag pro?: true
+      test "if oban.pro true, puts `state` in crontab opts" do
+        Oban.start_link(AshOban.config([DomainPro], Application.get_env(:ash_oban, :oban_pro)))
 
-      config =
-        AshOban.config([DomainPro],
-          engine: Oban.Pro.Engines.Smart,
-          plugins: [
-            {Oban.Pro.Plugins.DynamicCron,
-             [
-               timezone: "Europe/Rome",
-               sync_mode: :automatic,
-               crontab: []
-             ]},
-            {Oban.Pro.Plugins.DynamicQueues,
-             queues: [
-               triggered_pro_process_with_state: 10
-             ]}
-          ],
-          queues: false
-        )
-
-      assert [
-               plugins: [
-                 {Oban.Pro.Plugins.DynamicCron,
-                  [
-                    timezone: "Europe/Rome",
-                    sync_mode: :automatic,
-                    crontab: [
-                      {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessWithState,
-                       [paused: true]}
-                    ]
-                  ]},
-                 {Oban.Pro.Plugins.DynamicQueues,
-                  queues: [
-                    triggered_pro_process_with_state: 10
-                  ]}
-               ],
-               engine: Oban.Pro.Engines.Smart,
-               queues: false
-             ] = config
-    end
-
-    @tag pro?: false
-    test "if oban.pro is false, setting state on Plugins raises error message" do
-      assert_raise(
-        RuntimeError,
-        "The `state` option on triggers and scheduled actions is only supported when using Oban Pro. Ignoring state :paused",
-        fn ->
-          Oban.start_link(AshOban.config([DomainPro], Application.get_env(:ash_oban, :oban_pro)))
-
+        config =
           AshOban.config([DomainPro],
             engine: Oban.Pro.Engines.Smart,
             plugins: [
               {Oban.Pro.Plugins.DynamicCron,
                [
-                 timezone: "Europe/Rome",
+                 timezone: "Etc/UTC",
                  sync_mode: :automatic,
                  crontab: []
                ]},
@@ -558,8 +513,225 @@ defmodule AshObanTest do
             ],
             queues: false
           )
+
+        assert [
+                 plugins: [
+                   {Oban.Pro.Plugins.DynamicCron,
+                    [
+                      timezone: "Etc/UTC",
+                      sync_mode: :automatic,
+                      crontab: [
+                        {"* * * * *", AshOban.Test.Triggered.AshOban.Scheduler.ProcessWithState,
+                         [paused: true]}
+                      ]
+                    ]},
+                   {Oban.Pro.Plugins.DynamicQueues,
+                    queues: [
+                      triggered_pro_process_with_state: 10
+                    ]}
+                 ],
+                 engine: Oban.Pro.Engines.Smart,
+                 queues: false
+               ] = config
+      end
+    end
+
+    @tag pro?: false
+    test "if oban.pro is false, setting state on Plugins raises error message" do
+      assert_raise(
+        RuntimeError,
+        "The `state` option on triggers and scheduled actions is only supported when using Oban Pro. Ignoring state :paused",
+        fn ->
+          AshOban.config(
+            [DomainPro],
+            [
+              plugins: [{Oban.Plugins.Cron, crontab: []}],
+              queues: [triggered_pro_process_with_state: 10]
+            ],
+            require?: false
+          )
         end
       )
+    end
+  end
+
+  test "accepts the renamed Oban.Cron module in place of Oban.Plugins.Cron" do
+    config =
+      AshOban.config([Domain],
+        plugins: [{Oban.Cron, []}],
+        queues: [
+          triggered_process: 10,
+          triggered_process_2: 10,
+          triggered_say_hello: 10,
+          triggered_tenant_aware: 10,
+          triggered_process_generic: 10,
+          triggered_fail_oban_job: 10,
+          triggered_notify_each_tenant: 10,
+          triggered_snooze_oban_job: 10,
+          triggered_cancel_oban_job: 10
+        ]
+      )
+
+    assert [{Oban.Cron, cron_opts}] = config[:plugins]
+    assert [_ | _] = cron_opts[:crontab]
+  end
+
+  test "cron: false alongside a cron plugin adds jobs to the plugin, not the `:cron` key" do
+    config =
+      AshOban.config([Domain],
+        cron: false,
+        plugins: [{Oban.Cron, []}],
+        queues: [
+          triggered_process: 10,
+          triggered_process_2: 10,
+          triggered_say_hello: 10,
+          triggered_tenant_aware: 10,
+          triggered_process_generic: 10,
+          triggered_fail_oban_job: 10,
+          triggered_notify_each_tenant: 10,
+          triggered_snooze_oban_job: 10,
+          triggered_cancel_oban_job: 10
+        ]
+      )
+
+    assert config[:cron] == false
+    assert [{Oban.Cron, cron_opts}] = config[:plugins]
+    assert [_ | _] = cron_opts[:crontab]
+  end
+
+  test "accepts cron configured through the top-level `:cron` key" do
+    for cron <- [[crontab: []], Oban.Cron, {Oban.Cron, crontab: []}] do
+      config =
+        AshOban.config([Domain],
+          cron: cron,
+          queues: [
+            triggered_process: 10,
+            triggered_process_2: 10,
+            triggered_say_hello: 10,
+            triggered_tenant_aware: 10,
+            triggered_process_generic: 10,
+            triggered_fail_oban_job: 10,
+            triggered_notify_each_tenant: 10,
+            triggered_snooze_oban_job: 10,
+            triggered_cancel_oban_job: 10
+          ]
+        )
+
+      refute config[:peer] == false
+
+      crontab =
+        case config[:cron] do
+          {_module, cron_opts} -> cron_opts[:crontab]
+          cron_opts -> cron_opts[:crontab]
+        end
+
+      assert [_ | _] = crontab
+      assert Enum.all?(crontab, &match?({_cron, _worker, _opts}, &1))
+    end
+  end
+
+  test "raises when cron is disabled via the top-level `:cron` key but triggers need scheduling" do
+    assert_raise RuntimeError, ~r/Must configure cron/, fn ->
+      AshOban.config([Domain],
+        cron: false,
+        queues: [
+          triggered_process: 10,
+          triggered_process_2: 10,
+          triggered_say_hello: 10,
+          triggered_tenant_aware: 10,
+          triggered_process_generic: 10,
+          triggered_fail_oban_job: 10,
+          triggered_notify_each_tenant: 10,
+          triggered_snooze_oban_job: 10,
+          triggered_cancel_oban_job: 10
+        ]
+      )
+    end
+  end
+
+  test "top-level plugin services preserve peer leadership" do
+    config = AshOban.config([], [pruner: []], require?: false)
+
+    refute config[:peer] == false
+    assert config[:plugins] == []
+  end
+
+  test "top-level services remain disabled when plugins are disabled" do
+    config =
+      AshOban.config(
+        [Domain],
+        [plugins: false, cron: [crontab: []], pruner: []],
+        require?: false
+      )
+
+    assert config[:peer] == false
+    assert config[:plugins] == []
+    refute Keyword.has_key?(config, :cron)
+    refute Keyword.has_key?(config, :pruner)
+  end
+
+  if Code.ensure_loaded?(Oban.Pro.Cron) and Code.ensure_loaded?(Oban.Pro.Queues) do
+    test "accepts cron configured through the top-level `:cron` key as a `{module, opts}` tuple" do
+      config =
+        AshOban.config([Domain],
+          cron: {Oban.Pro.Cron, crontab: []},
+          engine: Oban.Pro.Engine,
+          queues: [
+            triggered_process: 10,
+            triggered_process_2: 10,
+            triggered_say_hello: 10,
+            triggered_tenant_aware: 10,
+            triggered_process_generic: 10,
+            triggered_fail_oban_job: 10,
+            triggered_notify_each_tenant: 10,
+            triggered_snooze_oban_job: 10,
+            triggered_cancel_oban_job: 10
+          ]
+        )
+
+      assert {Oban.Pro.Cron, cron_opts} = config[:cron]
+      assert [_ | _] = cron_opts[:crontab]
+    end
+
+    test "accepts the renamed Oban.Pro.Engine and Oban.Pro.Cron together" do
+      assert AshOban.config([], engine: Oban.Pro.Engine, plugins: [{Oban.Pro.Cron, []}])
+    end
+
+    test "raises when the renamed Oban.Pro.Cron plugin is used without a pro engine" do
+      assert_raise RuntimeError, ~r/Expected oban engine to be one of/, fn ->
+        AshOban.config([], engine: Oban.Engines.Basic, plugins: [{Oban.Pro.Cron, []}])
+      end
+    end
+
+    test "raises when the renamed Oban.Pro.Queues plugin is used without a pro engine" do
+      assert_raise RuntimeError, ~r/Expected oban engine to be one of/, fn ->
+        AshOban.config([], engine: Oban.Engines.Basic, plugins: [{Oban.Pro.Queues, queues: []}])
+      end
+    end
+
+    test "accepts queues configured through the unified top-level `:queues` key" do
+      config =
+        AshOban.config([Domain],
+          engine: Oban.Pro.Engine,
+          cron: [crontab: []],
+          queues:
+            {Oban.Pro.Queues,
+             queues: [
+               triggered_process: 10,
+               triggered_process_2: 10,
+               triggered_say_hello: 10,
+               triggered_tenant_aware: 10,
+               triggered_process_generic: 10,
+               triggered_fail_oban_job: 10,
+               triggered_notify_each_tenant: 10,
+               triggered_snooze_oban_job: 10,
+               triggered_cancel_oban_job: 10
+             ]}
+        )
+
+      assert {Oban.Pro.Queues, queue_opts} = config[:queues]
+      assert queue_opts[:queues][:triggered_process] == 10
+      assert [_ | _] = config[:cron][:crontab]
     end
   end
 
