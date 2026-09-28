@@ -58,19 +58,28 @@ defmodule AshOban.Transformers.DefineActionWorkers do
         Oban.Worker
       end
 
+    worker_opts =
+      [
+        priority: scheduled_action.priority,
+        max_attempts: scheduled_action.max_attempts,
+        queue: scheduled_action.queue,
+        unique: [
+          keys: [:primary_key, :action_arguments, :tenant],
+          period: :infinity,
+          states: :incomplete
+        ]
+      ]
+      |> Keyword.merge(scheduled_action.worker_opts)
+      |> Keyword.update(
+        :tags,
+        List.wrap(scheduled_action.tags),
+        &(List.wrap(scheduled_action.tags) ++ &1)
+      )
+
     Module.create(
       worker_module_name,
       quote location: :keep do
-        use unquote(worker),
-          priority: unquote(scheduled_action.priority),
-          max_attempts: unquote(scheduled_action.max_attempts),
-          queue: unquote(scheduled_action.queue),
-          tags: unquote(scheduled_action.tags || []),
-          unique: [
-            keys: [:primary_key, :action_arguments, :tenant],
-            period: :infinity,
-            states: :incomplete
-          ]
+        use unquote(worker), unquote(worker_opts)
 
         require Logger
         @impl unquote(worker)
