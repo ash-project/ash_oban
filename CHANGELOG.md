@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.9.0](https://github.com/ash-project/ash_oban/compare/v0.8.14...v0.9.0) (2026-09-30)
+
+
+
+
+### Features:
+
+* support Oban 2.24 plugin style by Kevin Schweikert
+
 ## Unreleased
 
 ### Improvements:
