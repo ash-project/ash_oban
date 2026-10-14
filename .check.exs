@@ -18,6 +18,9 @@
     {:check_formatter, command: "mix spark.formatter --check"},
     {:check_cheat_sheets, command: "mix spark.cheat_sheets --check"},
     {:doctor, false},
+    # oban_pro is only a dependency when OBAN_PRO_LICENSE_KEY is set, so its lock entry is
+    # unused without a license. CI skips this check too.
+    {:unused_deps, false},
     {:reuse, command: ["pipx", "run", "reuse", "lint", "-q"]}
 
     ## custom new tools may be added (mix tasks or arbitrary commands)
