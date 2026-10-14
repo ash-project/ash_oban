@@ -24,6 +24,7 @@ Welcome! This is the extension for integrating [Ash](https://hexdocs.pm/ash) res
 ## Topics
 
 - [Triggers and Scheduled Actions](documentation/topics/triggers-and-scheduled-actions.md)
+- [Signals](documentation/topics/signals.md)
 
 ## Reference
 

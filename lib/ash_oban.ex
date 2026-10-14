@@ -809,7 +809,8 @@ defmodule AshOban do
     transformers: [
       AshOban.Transformers.SetDefaults,
       AshOban.Transformers.DefineSchedulers,
-      AshOban.Transformers.DefineActionWorkers
+      AshOban.Transformers.DefineActionWorkers,
+      AshOban.Transformers.DefineSignalWorkers
     ]
 
   @doc """
@@ -1187,11 +1188,18 @@ defmodule AshOban do
       """
     end
 
-    resources_and_triggers =
+    resources =
       domains
       |> List.wrap()
       |> Enum.flat_map(&Ash.Domain.Info.resources/1)
       |> Enum.uniq()
+
+    if opts[:require?] do
+      require_signal_queues!(resources, base, dynamic_queues)
+    end
+
+    resources_and_triggers =
+      resources
       |> Enum.flat_map(fn resource ->
         resource
         |> AshOban.Info.oban_triggers_and_scheduled_actions()
@@ -1340,6 +1348,25 @@ defmodule AshOban do
 
     assert_queue!(queues, trigger.queue, resource, trigger.name)
     assert_scheduler_queue!(queues, trigger, resource)
+  end
+
+  defp require_signal_queues!(resources, base, dynamic_queues) do
+    listeners =
+      for resource <- resources,
+          %{delivery: {AshOban.Signals, opts}} = listener <-
+            Ash.Resource.Info.signal_listeners(resource),
+          do: {resource, listener, AshOban.Signals.options!(opts)[:queue]}
+
+    if listeners != [] do
+      queues = target_queues(base, dynamic_queues)
+
+      for {resource, listener, queue} <- listeners, !queues[queue] do
+        raise """
+        Must configure the queue `:#{queue}`, required for
+        the signal listener `:#{listener.name}` on #{inspect(resource)}
+        """
+      end
+    end
   end
 
   defp target_queues(base, {plugin, opts}) do

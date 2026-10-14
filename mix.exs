@@ -77,6 +77,7 @@ defmodule AshOban.MixProject do
         {"README.md", title: "Home"},
         "documentation/tutorials/getting-started-with-ash-oban.md",
         "documentation/topics/triggers-and-scheduled-actions.md",
+        "documentation/topics/signals.md",
         "documentation/topics/testing.md",
         {"documentation/dsls/DSL-AshOban.md", search_data: Spark.Docs.search_data_for(AshOban)},
         "CHANGELOG.md"
@@ -100,6 +101,11 @@ defmodule AshOban.MixProject do
         ],
         Authorization: [
           AshOban.Checks.AshObanInteraction
+        ],
+        Signals: [
+          AshOban.Signals,
+          AshOban.Signals.Upgrader,
+          AshOban.Signals.Worker
         ],
         Introspection: [
           AshOban.Info,
@@ -131,7 +137,7 @@ defmodule AshOban.MixProject do
 
     oban_dep ++
       [
-        {:ash, ash_version("~> 3.0 and >=3.8.0")},
+        {:ash, ash_version("~> 3.0 and >= 3.36.0")},
         {:oban, "~> 2.20"},
         {:postgrex, "~> 0.18"},
         # dev/test dependencies

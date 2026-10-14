@@ -40,7 +40,8 @@ if Mix.env() == :test do
       triggered_tags_merged_tags: 10,
       triggered_tags_tagged_action: 10,
       triggered_snooze_oban_job: 10,
-      triggered_cancel_oban_job: 10
+      triggered_cancel_oban_job: 10,
+      signals: 10
     ]
 
   config :ash_oban, :oban_pro,
@@ -54,7 +55,8 @@ if Mix.env() == :test do
       triggered_pro_process_with_state: 10,
       triggered_chunks_process: 10,
       triggered_chunks_process_snoozing: 10,
-      triggered_chunks_process_with_on_error: 10
+      triggered_chunks_process_with_on_error: 10,
+      signal_chunks: 10
     ]
 
   config :ash_oban, actor_persister: AshOban.Test.ActorPersister
