@@ -18,7 +18,7 @@ about what `AshOban` provides.
 ## Bring in the `ash_oban` dependency
 
 ```elixir
-{:ash_oban, "~> 0.9.0"}
+{:ash_oban, "~> 0.10.0"}
 ```
 
 ## Setup

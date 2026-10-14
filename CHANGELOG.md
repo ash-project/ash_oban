@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.10.0](https://github.com/ash-project/ash_oban/compare/v0.9.0...v0.10.0) (2026-10-14)
+
+
+
+
+### Features:
+
+* add `AshOban.Signals`, a delivery that runs signal listeners in Oban jobs by Zach Daniel
+
 ## [v0.9.0](https://github.com/ash-project/ash_oban/compare/v0.8.14...v0.9.0) (2026-09-30)
 
 
