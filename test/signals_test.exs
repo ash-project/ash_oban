@@ -68,6 +68,33 @@ defmodule AshOban.SignalsTest do
     assert_received {:notified, %{order_id: ^order_id}, %FakeActor{id: "zach"}, "acme"}
   end
 
+  test "listeners run with the signal path of the signal" do
+    Ash.create!(Order, %{}, action: :place)
+
+    assert [%{args: %{"signal_path" => [%{"signal" => "order_placed"}]}} | _] = jobs()
+    assert %{success: 2} = Oban.drain_queue(queue: :signals)
+
+    assert_received {:notified_signal_path,
+                     [
+                       %{
+                         signal_module: Signals,
+                         signal: :order_placed,
+                         resource: Order,
+                         action: :place
+                       }
+                     ]}
+  end
+
+  test "jobs inserted without a signal path run with an empty one" do
+    insert_job("notify", "order_placed", %{
+      "signal_id" => Ash.UUIDv7.generate(),
+      "order_id" => Ash.UUID.generate()
+    })
+
+    assert %{success: 1} = Oban.drain_queue(queue: :signals)
+    assert_received {:notified_signal_path, []}
+  end
+
   test "jobs are unique by signal_id, so emitting a signal again doesn't insert a second job" do
     signal_id = Ash.UUIDv7.generate()
 

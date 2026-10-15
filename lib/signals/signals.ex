@@ -109,8 +109,9 @@ defmodule AshOban.Signals do
 
   When the signal is emitted, a job is inserted for each signal. The job runs the listener the
   way the inline delivery would have, with the actor, tenant and `authorize?` of the emitting
-  action. If the listener fails, the job is retried. With `chunks`, jobs are run together, and the
-  listener runs once for each chunk, with every signal in it.
+  action, and the `signal_path` that led to the signal. If the listener fails, the job is
+  retried. With `chunks`, jobs are run together, and the listener runs once for each chunk, with
+  every signal in it.
 
   Jobs are inserted with Oban's repo. When the emitting action uses the same repo and the
   signal is emitted `:after_action`, the jobs are inserted in the action's transaction, so they
@@ -237,7 +238,8 @@ defmodule AshOban.Signals do
       "listener" => Atom.to_string(listener.name),
       "payload" => stored,
       "tenant" => tenant(context.tenant, listener.resource),
-      "authorize?" => context.authorize?
+      "authorize?" => context.authorize?,
+      "signal_path" => Ash.Signals.dump_signal_path(context.signal_path)
     }
     |> AshOban.store_actor(context.actor, opts[:actor_persister])
     |> put_unique(stored, unique)

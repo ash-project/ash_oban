@@ -185,6 +185,7 @@ defmodule AshOban do
     name: :trigger,
     target: Trigger,
     args: [:name],
+    no_depend_modules: [:actor_persister],
     identifier: :name,
     imports: [Ash.Expr],
     transform: {Trigger, :transform, []},
@@ -550,6 +551,7 @@ defmodule AshOban do
     name: :schedule,
     target: Schedule,
     args: [:name, :cron],
+    no_depend_modules: [:actor_persister],
     identifier: :name,
     schema: [
       name: [
@@ -699,6 +701,7 @@ defmodule AshOban do
 
   @oban %Spark.Dsl.Section{
     name: :oban,
+    no_depend_modules: [:domain],
     examples: [
       """
       oban do

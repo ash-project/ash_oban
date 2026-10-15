@@ -34,7 +34,7 @@ defmodule AshOban.Transformers.DefineSignalWorkers do
           queue: unquote(opts[:queue]),
           size: unquote(opts[:chunks][:size]),
           timeout: unquote(opts[:chunks][:timeout]),
-          by: [:worker, args: [:actor, :tenant, :authorize?]]
+          by: [:worker, args: [:actor, :tenant, :authorize?, :signal_path]]
 
         def process(jobs), do: AshOban.Signals.Worker.process_chunk(jobs)
       end,

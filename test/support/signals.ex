@@ -148,6 +148,7 @@ defmodule AshOban.Test.SignalReceipt do
 
       run fn input, context ->
         send(self(), {:notified, input.arguments.signal, context.actor, context.tenant})
+        send(self(), {:notified_signal_path, input.context[:signal_path]})
         :ok
       end
     end
