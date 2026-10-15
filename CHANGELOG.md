@@ -11,6 +11,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.10.1](https://github.com/ash-project/ash_oban/compare/v0.10.0...v0.10.1) (2026-10-15)
+
+
+
+
+### Improvements:
+
+* support `signal_path` by Zach Daniel
+
 ## [v0.10.0](https://github.com/ash-project/ash_oban/compare/v0.9.0...v0.10.0) (2026-10-14)
 
 
