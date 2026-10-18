@@ -126,7 +126,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
       quote do
         unquote(pipeline)
         |> Ash.Query.set_context(
-          AshOban.build_context(unquote(Macro.escape(trigger.shared_context)))
+          AshOban.build_query_context(unquote(Macro.escape(trigger.shared_context)))
         )
       end
 
@@ -514,7 +514,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             |> Ash.Query.do_filter(primary_key)
             |> Ash.Query.set_tenant(tenant)
             |> Ash.Query.set_context(
-              AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job)
+              AshOban.build_query_context(unquote(Macro.escape(trigger.shared_context)), job)
             )
             |> Ash.Query.for_read(unquote(read_action), %{},
               authorize?: authorize?,
@@ -780,7 +780,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   query()
                   |> Ash.Query.do_filter(primary_key)
                   |> Ash.Query.set_context(
-                    AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job)
+                    AshOban.build_query_context(
+                      unquote(Macro.escape(trigger.shared_context)),
+                      job
+                    )
                   )
                   |> Ash.Query.set_tenant(tenant)
                   |> Ash.Query.for_read(unquote(read_action), %{},
@@ -894,7 +897,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 query()
                 |> Ash.Query.do_filter(primary_key)
                 |> Ash.Query.set_context(
-                  AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job)
+                  AshOban.build_query_context(unquote(Macro.escape(trigger.shared_context)), job)
                 )
                 |> Ash.Query.set_tenant(tenant)
                 |> Ash.Query.for_read(unquote(read_action), %{},
@@ -1158,7 +1161,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
                   query()
                   |> Ash.Query.do_filter(primary_key)
                   |> Ash.Query.set_context(
-                    AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job)
+                    AshOban.build_query_context(
+                      unquote(Macro.escape(trigger.shared_context)),
+                      job
+                    )
                   )
                   |> Ash.Query.set_tenant(tenant)
                   |> Ash.Query.for_read(unquote(read_action), %{},
@@ -1254,7 +1260,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 |> Ash.Query.do_filter(primary_key)
                 |> Ash.Query.set_tenant(tenant)
                 |> Ash.Query.set_context(
-                  AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job)
+                  AshOban.build_query_context(unquote(Macro.escape(trigger.shared_context)), job)
                 )
                 |> lock_on_read()
                 |> Ash.Query.for_read(unquote(read_action), %{},
@@ -1449,7 +1455,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
           query =
             unquote(pkey_filter_code)
             |> Ash.Query.set_context(
-              AshOban.build_context(unquote(Macro.escape(trigger.shared_context)))
+              AshOban.build_query_context(unquote(Macro.escape(trigger.shared_context)))
             )
             |> Ash.Query.set_tenant(tenant)
             |> Ash.Query.for_read(unquote(read_action), %{},
@@ -1637,7 +1643,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
               query()
               |> Ash.Query.do_filter(pkey_filter)
               |> Ash.Query.set_context(
-                AshOban.build_context(unquote(Macro.escape(trigger.shared_context)))
+                AshOban.build_query_context(unquote(Macro.escape(trigger.shared_context)))
               )
               |> Ash.Query.set_tenant(tenant)
               |> Ash.Query.for_read(unquote(read_action), %{},

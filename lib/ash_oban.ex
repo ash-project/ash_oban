@@ -219,9 +219,9 @@ defmodule AshOban do
         """
       ],
       actor_persister: [
-        type: {:or, [{:literal, :none}, {:behaviour, AshOban.PersistActor}]},
+        type: {:or, [{:literal, :none}, {:behaviour, AshOban.ActorPersister}]},
         doc:
-          "An `AshOban.PersistActor` to use to store the actor. Defaults to to the configured `config :ash_oban, :actor_persister`. Set to `:none` to override the configured default."
+          "An `AshOban.ActorPersister` to use to store the actor. Defaults to to the configured `config :ash_oban, :actor_persister`. Set to `:none` to override the configured default."
       ],
       default_actor: [
         type: :any,
@@ -423,6 +423,10 @@ defmodule AshOban do
 
         We recommend `shared_context [:job]` for most use cases.
 
+        This only affects the trigger's action. The reads AshOban does to evaluate the trigger's
+        `where`, in the scheduler and in the worker, always share `ash_oban?`, so
+        `AshOban.Checks.AshObanInteraction` applies to related data the filter reads.
+
         If not specified, inherits the global `shared_context` setting from the `oban` section,
         then falls back to `Application.get_env(:ash_oban, :shared_context)`.
         """
@@ -583,9 +587,9 @@ defmodule AshOban do
         doc: "The generic or create action to call when the schedule is triggered."
       ],
       actor_persister: [
-        type: {:or, [{:literal, :none}, {:behaviour, AshOban.PersistActor}]},
+        type: {:or, [{:literal, :none}, {:behaviour, AshOban.ActorPersister}]},
         doc:
-          "An `AshOban.PersistActor` to use to store the actor. Defaults to to the configured `config :ash_oban, :actor_persister`. Set to `:none` to override the configured default."
+          "An `AshOban.ActorPersister` to use to store the actor. Defaults to to the configured `config :ash_oban, :actor_persister`. Set to `:none` to override the configured default."
       ],
       default_actor: [
         type: :any,
@@ -755,6 +759,10 @@ defmodule AshOban do
 
         We recommend `shared_context [:job]` for most use cases.
 
+        This only affects triggers' actions. The reads AshOban does to evaluate a trigger's `where`
+        always share `ash_oban?`, so `AshOban.Checks.AshObanInteraction` applies to related data
+        the filter reads.
+
         Can be overridden per trigger or scheduled action.
 
         If not specified at any level, falls back to `Application.get_env(:ash_oban, :shared_context)`.
@@ -850,6 +858,17 @@ defmodule AshOban do
     else
       Map.put(regular, :shared, shared)
     end
+  end
+
+  @doc """
+  Builds the context for the queries AshOban runs to evaluate a trigger: the
+  scheduler's query, and the worker's read of the record before acting on it.
+
+  The `ash_oban?` flag is always shared here.
+  """
+  @spec build_query_context(:all | [atom()] | nil | false, Oban.Job.t() | nil) :: map()
+  def build_query_context(shared_context, job \\ nil) do
+    build_context(Enum.uniq([:ash_oban? | normalize_shared_context(shared_context)]), job)
   end
 
   defp normalize_shared_context(:all), do: [:ash_oban?, :job]

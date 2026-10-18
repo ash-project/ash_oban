@@ -373,8 +373,10 @@ defmodule AshOban.Test do
         query
       end
     end)
+    # Read the way the scheduler does, so this answers what it would really do.
+    |> Ash.Query.set_context(AshOban.build_query_context(trigger.shared_context))
     |> Ash.Query.for_read(read_action, %{},
-      authorize?: false,
+      authorize?: AshOban.authorize?(),
       actor: opts[:actor],
       domain: domain
     )
