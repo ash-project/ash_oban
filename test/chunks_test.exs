@@ -11,8 +11,6 @@ if Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
     alias AshOban.Test.TriggeredChunks
 
     setup_all do
-      AshOban.Test.Repo.start_link()
-
       Oban.start_link(
         AshOban.config(
           [AshOban.Test.DomainChunks],

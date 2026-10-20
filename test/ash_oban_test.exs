@@ -13,7 +13,6 @@ defmodule AshObanTest do
   use AshOban.Test, repo: AshOban.Test.Repo, prefix: "private"
 
   setup_all do
-    AshOban.Test.Repo.start_link()
     Oban.start_link(AshOban.config([Domain], Application.get_env(:ash_oban, :oban)))
     :ok
   end

@@ -11,8 +11,6 @@ if AshOban.Info.pro?() and Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
     alias AshOban.Test.{ChunkedSignalReceipt, Order, Signals}
 
     setup_all do
-      AshOban.Test.Repo.start_link()
-
       Oban.start_link(AshOban.config([], Application.get_env(:ash_oban, :oban_pro)))
 
       :ok

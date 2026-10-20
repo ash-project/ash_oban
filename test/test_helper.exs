@@ -9,4 +9,6 @@ excluded =
     [:oban_pro]
   end
 
+{:ok, _} = AshOban.Test.Repo.start_link()
+
 ExUnit.start(exclude: excluded)
