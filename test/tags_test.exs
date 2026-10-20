@@ -80,7 +80,6 @@ defmodule AshOban.TagsTest do
   end
 
   setup_all do
-    AshOban.Test.Repo.start_link()
     Oban.start_link(AshOban.config([TestDomain], Application.get_env(:ash_oban, :oban)))
     :ok
   end

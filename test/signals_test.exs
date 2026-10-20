@@ -10,7 +10,6 @@ defmodule AshOban.SignalsTest do
   alias AshOban.Test.{Domain, Order, SignalReceipt, Signals}
 
   setup_all do
-    AshOban.Test.Repo.start_link()
     Oban.start_link(AshOban.config([Domain], Application.get_env(:ash_oban, :oban)))
     :ok
   end

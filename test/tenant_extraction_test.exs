@@ -160,8 +160,6 @@ defmodule AshOban.TenantExtractionTest do
   alias AshOban.TenantExtractionTest.TestResource
 
   setup_all do
-    AshOban.Test.Repo.start_link()
-
     oban_config =
       Application.get_env(:ash_oban, :oban)
       |> Keyword.update(:queues, [default: 10, custom: 10], fn queues ->
