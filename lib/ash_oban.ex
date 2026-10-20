@@ -185,7 +185,7 @@ defmodule AshOban do
     name: :trigger,
     target: Trigger,
     args: [:name],
-    no_depend_modules: [:actor_persister],
+    no_depend_modules: [:actor_persister, :worker_module_name, :scheduler_module_name],
     identifier: :name,
     imports: [Ash.Expr],
     transform: {Trigger, :transform, []},
@@ -555,7 +555,7 @@ defmodule AshOban do
     name: :schedule,
     target: Schedule,
     args: [:name, :cron],
-    no_depend_modules: [:actor_persister],
+    no_depend_modules: [:actor_persister, :worker_module_name],
     identifier: :name,
     schema: [
       name: [
