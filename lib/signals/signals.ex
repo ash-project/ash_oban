@@ -9,6 +9,11 @@ defmodule AshOban.Signals do
       default: :default,
       doc: "The queue to insert jobs into."
     ],
+    oban: [
+      type: :any,
+      default: Oban,
+      doc: "The name of the Oban instance to insert jobs into."
+    ],
     priority: [
       type: {:in, 0..9},
       default: 0,
@@ -113,9 +118,10 @@ defmodule AshOban.Signals do
   retried. With `chunks`, jobs are run together, and the listener runs once for each chunk, with
   every signal in it.
 
-  Jobs are inserted with Oban's repo. When the emitting action uses the same repo and the
-  signal is emitted `:after_action`, the jobs are inserted in the action's transaction, so they
-  are only committed with the action's changes, and the listener runs after they are committed.
+  Jobs are inserted with the repo of the `oban` instance. When the emitting action uses the same
+  repo and the signal is emitted `:after_action`, the jobs are inserted in the action's
+  transaction, so they are only committed with the action's changes, and the listener runs after
+  they are committed.
 
   See the [Signals guide](signals.html) for more.
 
@@ -155,7 +161,7 @@ defmodule AshOban.Signals do
     with {:ok, stored} <- Ash.Signals.dump(context.signal_module, context.signal.name, signals) do
       listeners
       |> Enum.flat_map(fn listener -> Enum.map(stored, &job(listener, &1, opts, context)) end)
-      |> insert()
+      |> insert(opts[:oban])
     end
   end
 
@@ -278,13 +284,13 @@ defmodule AshOban.Signals do
   end
 
   # Only Oban Pro's engine enforces uniqueness in `insert_all`.
-  defp insert(jobs) do
-    if Oban.config().engine in [Oban.Pro.Engines.Smart, Oban.Pro.Engine] do
-      Oban.insert_all(jobs)
+  defp insert(jobs, oban) do
+    if Oban.config(oban).engine in [Oban.Pro.Engines.Smart, Oban.Pro.Engine] do
+      Oban.insert_all(oban, jobs)
       :ok
     else
       Enum.reduce_while(jobs, :ok, fn job, :ok ->
-        case Oban.insert(job) do
+        case Oban.insert(oban, job) do
           {:ok, _job} -> {:cont, :ok}
           {:error, error} -> {:halt, {:error, error}}
         end

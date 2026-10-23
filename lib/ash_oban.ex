@@ -1373,11 +1373,15 @@ defmodule AshOban do
   end
 
   defp require_signal_queues!(resources, base, dynamic_queues) do
+    oban = Keyword.get(base, :name, Oban)
+
     listeners =
       for resource <- resources,
           %{delivery: {AshOban.Signals, opts}} = listener <-
             Ash.Resource.Info.signal_listeners(resource),
-          do: {resource, listener, AshOban.Signals.options!(opts)[:queue]}
+          opts = AshOban.Signals.options!(opts),
+          opts[:oban] == oban,
+          do: {resource, listener, opts[:queue]}
 
     if listeners != [] do
       queues = target_queues(base, dynamic_queues)
