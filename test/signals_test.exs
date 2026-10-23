@@ -136,6 +136,19 @@ defmodule AshOban.SignalsTest do
                  end
   end
 
+  test "the `oban` option inserts jobs into that instance" do
+    start_supervised!(
+      {Oban,
+       name: AshOban.Test.OtherOban, repo: AshOban.Test.Repo, prefix: "private", testing: :inline}
+    )
+
+    order = Ash.create!(Order, %{}, action: :place_routed)
+    order_id = order.id
+
+    assert_received {:notified_routed, %Signals.OrderRouted{order_id: ^order_id}}
+    assert jobs() == []
+  end
+
   describe "stored signals" do
     test "fields the signal no longer has are ignored" do
       order_id = Ash.UUID.generate()
