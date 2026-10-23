@@ -141,6 +141,7 @@ defmodule AshOban.MixProject do
         {:oban, "~> 2.20"},
         {:postgrex, "~> 0.18"},
         # dev/test dependencies
+        {:ash_postgres, "~> 2.15", only: :test},
         {:igniter, "~> 0.8.4", only: [:dev, :test]},
         {:simple_sat, "~> 0.1", only: [:dev, :test]},
         {:ex_doc, "~> 0.37-rc", only: [:dev, :test], runtime: false},
@@ -157,8 +158,8 @@ defmodule AshOban.MixProject do
   defp ash_version(default_version) do
     case System.get_env("ASH_VERSION") do
       nil -> default_version
-      "local" -> [path: "../ash"]
-      "main" -> [git: "https://github.com/ash-project/ash.git"]
+      "local" -> [path: "../ash", override: true]
+      "main" -> [git: "https://github.com/ash-project/ash.git", override: true]
       version -> "~> #{version}"
     end
   end

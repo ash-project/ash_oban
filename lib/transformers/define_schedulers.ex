@@ -607,71 +607,85 @@ defmodule AshOban.Transformers.DefineSchedulers do
     )
   end
 
-  # Ensures that the record still matches the trigger's `where` when the action runs.
+  # Ensures that the record still matches the trigger's `where` when the action starts.
   # Called on the changeset after `for_action`, so the actor and tenant are set.
   #
-  # The `where` is added to the update/destroy itself, which fails with `StaleRecord`
-  # if the record no longer matches. Filters added here are carried into an atomic
-  # upgrade of the action.
+  # An action that may run atomically checks the `where` in the update/destroy itself,
+  # which fails with `StaleRecord` if the record no longer matches. It has no hooks that
+  # run before that statement, so that is the start of the action. Filters added here
+  # are carried into an atomic upgrade of the action.
   #
-  # Our initial read of the record happens outside of any transaction, so when the
-  # action runs in one we also read it again in a `before_action` hook, locking it
-  # until the action's transaction ends. A `before_action` hook prevents atomic
-  # upgrades, so we only do this for actions that can't be done atomically anyway.
+  # Any other action may change the record itself before writing it, so the `where`
+  # can't be checked when it writes. Our initial read of the record happens outside of
+  # any transaction, so when the action runs in one we read it again in a `before_action`
+  # hook, locking it (if the data layer can) until the action's transaction ends.
+  # Without a transaction, our initial read is the only check.
   defp get_and_lock(may_be_atomic?, transaction?, trigger, read_action, domain, dsl) do
-    can_lock? = Ash.DataLayer.data_layer_can?(dsl, {:lock, :for_update})
-    can_filter? = Ash.DataLayer.data_layer_can?(dsl, :changeset_filter)
-
-    filter =
-      if can_filter? do
-        quote do
-          Ash.Changeset.filter(changeset, query().filter)
+    cond do
+      may_be_atomic? ->
+        if Ash.DataLayer.data_layer_can?(dsl, :changeset_filter) do
+          quote do
+            Ash.Changeset.filter(changeset, query().filter)
+          end
+        else
+          quote do
+            changeset
+          end
         end
-      else
+
+      transaction? ->
+        lock =
+          if Ash.DataLayer.data_layer_can?(dsl, {:lock, :for_update}) do
+            quote do
+              Ash.Query.lock(read, :for_update)
+            end
+          else
+            quote do
+              read
+            end
+          end
+
+        quote do
+          Ash.Changeset.before_action(
+            changeset,
+            fn changeset ->
+              read =
+                query()
+                |> Ash.Query.do_filter(primary_key)
+                |> Ash.Query.set_tenant(tenant)
+                |> Ash.Query.set_context(
+                  AshOban.build_query_context(unquote(Macro.escape(trigger.shared_context)), job)
+                )
+                |> Ash.Query.for_read(unquote(read_action), %{},
+                  authorize?: authorize?,
+                  actor: actor,
+                  domain: unquote(domain)
+                )
+
+              unquote(lock)
+              |> Ash.read_one()
+              |> case do
+                {:ok, nil} ->
+                  Ash.Changeset.add_error(
+                    changeset,
+                    AshOban.Errors.TriggerNoLongerApplies.exception([])
+                  )
+
+                {:ok, record} ->
+                  %{changeset | data: record}
+
+                {:error, error} ->
+                  Ash.Changeset.add_error(changeset, error)
+              end
+            end,
+            prepend?: true
+          )
+        end
+
+      true ->
         quote do
           changeset
         end
-      end
-
-    if transaction? && can_lock? && !may_be_atomic? do
-      quote do
-        changeset = unquote(filter)
-
-        Ash.Changeset.before_action(
-          changeset,
-          fn changeset ->
-            query()
-            |> Ash.Query.do_filter(primary_key)
-            |> Ash.Query.set_tenant(tenant)
-            |> Ash.Query.set_context(
-              AshOban.build_query_context(unquote(Macro.escape(trigger.shared_context)), job)
-            )
-            |> Ash.Query.for_read(unquote(read_action), %{},
-              authorize?: authorize?,
-              actor: actor,
-              domain: unquote(domain)
-            )
-            |> Ash.Query.lock(:for_update)
-            |> Ash.read_one()
-            |> case do
-              {:ok, nil} ->
-                Ash.Changeset.add_error(
-                  changeset,
-                  AshOban.Errors.TriggerNoLongerApplies.exception([])
-                )
-
-              {:ok, record} ->
-                %{changeset | data: record}
-
-              {:error, error} ->
-                Ash.Changeset.add_error(changeset, error)
-            end
-          end,
-          prepend?: true
-        )
-      end
-    else
-      filter
     end
   end
 

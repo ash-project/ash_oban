@@ -12,6 +12,7 @@ defmodule AshOban.TriggerWhereTest do
 
     resources do
       resource AshOban.TriggerWhereTest.Ticket
+      resource AshOban.TriggerWhereTest.PostgresTicket
     end
   end
 
@@ -37,6 +38,51 @@ defmodule AshOban.TriggerWhereTest do
         nil -> :ok
         fun -> fun.()
       end
+    end
+  end
+
+  # Runs the function set by a test inside the action's transaction, after the worker
+  # has read the record again.
+  defmodule InTransaction do
+    use Ash.Resource.Change
+
+    @impl true
+    def change(changeset, _opts, _context) do
+      Ash.Changeset.before_action(changeset, fn changeset ->
+        case Process.get(__MODULE__) do
+          nil -> :ok
+          fun -> fun.()
+        end
+
+        changeset
+      end)
+    end
+  end
+
+  # Takes the ticket out of the trigger's `where` from inside the action itself.
+  defmodule StartClosing do
+    use Ash.Resource.Change
+
+    @impl true
+    def change(changeset, _opts, _context) do
+      Ash.Changeset.before_action(changeset, fn changeset ->
+        changeset.data |> Ash.Changeset.for_update(:start_closing) |> Ash.update!()
+        changeset
+      end)
+    end
+  end
+
+  # Does the action's work, which takes the ticket out of the trigger's `where`,
+  # before an action without a transaction writes the record.
+  defmodule CloseBeforeTransaction do
+    use Ash.Resource.Change
+
+    @impl true
+    def change(changeset, _opts, _context) do
+      Ash.Changeset.before_transaction(changeset, fn changeset ->
+        changeset.data |> Ash.Changeset.for_update(:mark_closed) |> Ash.update!()
+        changeset
+      end)
     end
   end
 
@@ -72,16 +118,6 @@ defmodule AshOban.TriggerWhereTest do
 
     oban do
       triggers do
-        trigger :close_open do
-          action :close
-          where expr(state == :open)
-          queue :default
-          scheduler_cron false
-          worker_read_action :read
-          worker_module_name __MODULE__.Worker.CloseOpen
-          scheduler_module_name __MODULE__.Scheduler.CloseOpen
-        end
-
         trigger :close_open_upgradable do
           action :close_upgradable
           where expr(state == :open)
@@ -128,12 +164,6 @@ defmodule AshOban.TriggerWhereTest do
         change set_attribute(:state, :paid)
       end
 
-      update :close do
-        require_atomic? false
-        change AshOban.TriggerWhereTest.DuringAction
-        change set_attribute(:state, :closed)
-      end
-
       update :close_upgradable do
         require_atomic? false
         atomic_upgrade? true
@@ -157,6 +187,95 @@ defmodule AshOban.TriggerWhereTest do
     end
   end
 
+  # Actions that can't be done atomically are protected by locking the record in their
+  # transaction, so they're tested against a data layer that can lock.
+  defmodule PostgresTicket do
+    use Ash.Resource,
+      domain: AshOban.TriggerWhereTest.Domain,
+      data_layer: AshPostgres.DataLayer,
+      extensions: [AshOban]
+
+    postgres do
+      table "trigger_where_tickets"
+      repo(AshOban.Test.Repo)
+    end
+
+    oban do
+      triggers do
+        trigger :close_open do
+          action :close
+          where expr(state == :open)
+          queue :default
+          scheduler_cron false
+          worker_read_action :read
+          worker_module_name __MODULE__.Worker.CloseOpen
+          scheduler_module_name __MODULE__.Scheduler.CloseOpen
+        end
+
+        trigger :close_open_in_steps do
+          action :close_in_steps
+          where expr(state == :open)
+          queue :default
+          scheduler_cron false
+          worker_read_action :read
+          worker_module_name __MODULE__.Worker.CloseOpenInSteps
+          scheduler_module_name __MODULE__.Scheduler.CloseOpenInSteps
+        end
+
+        trigger :close_open_without_transaction do
+          action :close_without_transaction
+          where expr(state == :open)
+          queue :default
+          scheduler_cron false
+          worker_read_action :read
+          worker_module_name __MODULE__.Worker.CloseOpenWithoutTransaction
+          scheduler_module_name __MODULE__.Scheduler.CloseOpenWithoutTransaction
+        end
+      end
+    end
+
+    attributes do
+      uuid_primary_key :id
+      attribute :state, :atom, allow_nil?: false, default: :open, public?: true
+    end
+
+    actions do
+      defaults [:read, create: []]
+
+      update :pay do
+        change set_attribute(:state, :paid)
+      end
+
+      update :start_closing do
+        change set_attribute(:state, :closing)
+      end
+
+      update :mark_closed do
+        change set_attribute(:state, :closed)
+      end
+
+      update :close do
+        require_atomic? false
+        change AshOban.TriggerWhereTest.DuringAction
+        change AshOban.TriggerWhereTest.InTransaction
+        change set_attribute(:state, :closed)
+      end
+
+      update :close_in_steps do
+        require_atomic? false
+        change AshOban.TriggerWhereTest.StartClosing
+        change set_attribute(:state, :closed)
+      end
+
+      update :close_without_transaction do
+        require_atomic? false
+        transaction? false
+        accept []
+        change AshOban.TriggerWhereTest.CloseBeforeTransaction
+      end
+    end
+  end
+
   setup_all do
     Oban.start_link(AshOban.config([Domain], Application.get_env(:ash_oban, :oban)))
     :ok
@@ -164,7 +283,13 @@ defmodule AshOban.TriggerWhereTest do
 
   setup do
     Oban.delete_all_jobs(Oban.Job)
-    on_exit(fn -> Process.delete(DuringAction) end)
+    AshOban.Test.Repo.query!("DELETE FROM trigger_where_tickets")
+
+    on_exit(fn ->
+      Process.delete(DuringAction)
+      Process.delete(InTransaction)
+    end)
+
     :ok
   end
 
@@ -175,10 +300,13 @@ defmodule AshOban.TriggerWhereTest do
     end)
   end
 
-  for trigger <- [:close_open, :close_open_upgradable] do
+  for {resource, trigger} <- [
+        {PostgresTicket, :close_open},
+        {Ticket, :close_open_upgradable}
+      ] do
     describe "#{trigger}" do
       test "runs the action when the record still matches the `where`" do
-        ticket = Ash.create!(Ticket, %{})
+        ticket = Ash.create!(unquote(resource), %{})
 
         AshOban.run_trigger(ticket, unquote(trigger))
 
@@ -187,7 +315,7 @@ defmodule AshOban.TriggerWhereTest do
       end
 
       test "cancels the job when the record stops matching the `where` after the worker's read" do
-        ticket = Ash.create!(Ticket, %{})
+        ticket = Ash.create!(unquote(resource), %{})
         pay_after_the_workers_read(ticket)
 
         AshOban.run_trigger(ticket, unquote(trigger))
@@ -195,6 +323,55 @@ defmodule AshOban.TriggerWhereTest do
         assert %{cancelled: 1} = Oban.drain_queue(queue: :default)
         assert Ash.reload!(ticket).state == :paid
       end
+    end
+  end
+
+  describe "actions that can't be done atomically" do
+    test "lock the record while the action runs" do
+      ticket = Ash.create!(PostgresTicket, %{})
+      id = Ecto.UUID.dump!(ticket.id)
+      test = self()
+
+      # From another connection, which a spawned process gets, unlike a `Task`.
+      Process.put(InTransaction, fn ->
+        spawn(fn ->
+          result =
+            AshOban.Test.Repo.query(
+              "SELECT id FROM trigger_where_tickets WHERE id = $1 FOR UPDATE NOWAIT",
+              [id]
+            )
+
+          send(test, {:lock_attempt, result})
+        end)
+
+        assert_receive {:lock_attempt, result}
+        send(test, {:lock_attempt, result})
+      end)
+
+      AshOban.run_trigger(ticket, :close_open)
+
+      assert %{success: 1} = Oban.drain_queue(queue: :default)
+
+      assert_received {:lock_attempt,
+                       {:error, %Postgrex.Error{postgres: %{code: :lock_not_available}}}}
+    end
+
+    test "aren't cancelled by their own changes to the fields the `where` reads" do
+      ticket = Ash.create!(PostgresTicket, %{})
+
+      AshOban.run_trigger(ticket, :close_open_in_steps)
+
+      assert %{success: 1} = Oban.drain_queue(queue: :default)
+      assert Ash.reload!(ticket).state == :closed
+    end
+
+    test "without a transaction, aren't cancelled by work done before the record is written" do
+      ticket = Ash.create!(PostgresTicket, %{})
+
+      AshOban.run_trigger(ticket, :close_open_without_transaction)
+
+      assert %{success: 1} = Oban.drain_queue(queue: :default)
+      assert Ash.reload!(ticket).state == :closed
     end
   end
 
