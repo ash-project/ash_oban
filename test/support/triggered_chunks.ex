@@ -61,6 +61,24 @@ if Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
     def atomic(_changeset, _opts, _context), do: {:not_atomic, "snooze decision needs the record"}
   end
 
+  # Runs the function a test puts in the process dictionary while the trigger's action
+  # runs, after the chunk worker has read the records.
+  defmodule AshOban.Test.DuringChunk do
+    @moduledoc false
+    use Ash.Resource.Change
+
+    def change(changeset, _opts, _context) do
+      case Process.delete(:during_chunk) do
+        nil -> :ok
+        fun -> fun.()
+      end
+
+      changeset
+    end
+
+    def atomic(_changeset, _opts, _context), do: {:not_atomic, "runs a test hook"}
+  end
+
   defmodule AshOban.Test.TriggeredChunks do
     @moduledoc """
     A resource for testing chunk-based trigger processing with Oban Pro.
@@ -114,6 +132,22 @@ if Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
             timeout 100
           end
         end
+
+        trigger :process_rechecking_where do
+          action :process_with_hook
+          where expr(processed != true and errored != true)
+          queue :triggered_chunks_process
+          max_attempts 1
+          worker_read_action :read
+          worker_module_name AshOban.Test.TriggeredChunks.AshOban.Worker.ProcessRecheckingWhere
+
+          scheduler_module_name AshOban.Test.TriggeredChunks.AshOban.Scheduler.ProcessRecheckingWhere
+
+          chunks do
+            size(10)
+            timeout 100
+          end
+        end
       end
     end
 
@@ -142,6 +176,12 @@ if Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
         change after_action(fn _changeset, _record, _context ->
                  {:error, "intentional failure for testing"}
                end)
+      end
+
+      update :process_with_hook do
+        require_atomic? false
+        change AshOban.Test.DuringChunk
+        change set_attribute(:processed, true)
       end
 
       update :mark_errored do

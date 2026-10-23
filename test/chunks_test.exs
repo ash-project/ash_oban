@@ -52,6 +52,24 @@ if Code.ensure_loaded?(Oban.Pro.Workers.Chunk) do
       Agent.stop(agent)
     end
 
+    test "records that stop matching the where clause after the chunk's read aren't processed" do
+      [changed, unchanged] =
+        for _ <- 1..2 do
+          TriggeredChunks
+          |> Ash.Changeset.for_create(:create, %{})
+          |> Ash.create!()
+        end
+
+      Process.put(:during_chunk, fn ->
+        changed |> Ash.Changeset.for_update(:mark_errored) |> Ash.update!()
+      end)
+
+      AshOban.Test.schedule_and_run_triggers({TriggeredChunks, :process_rechecking_where})
+
+      refute Ash.get!(TriggeredChunks, changed.id).processed
+      assert Ash.get!(TriggeredChunks, unchanged.id).processed
+    end
+
     test "records that no longer match the where clause are discarded" do
       already_processed =
         TriggeredChunks

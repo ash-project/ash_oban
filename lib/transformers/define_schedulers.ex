@@ -366,8 +366,19 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
     primary_key = Ash.Resource.Info.primary_key(dsl)
 
+    on_error = trigger.on_error && Ash.Resource.Info.action(dsl, trigger.on_error)
+
     work =
-      work_chunk(trigger, worker, trigger_action.type, read_action, resource, domain, primary_key)
+      work_chunk(
+        trigger,
+        worker,
+        trigger_action,
+        on_error,
+        read_action,
+        resource,
+        domain,
+        primary_key
+      )
 
     backoff =
       case trigger.backoff do
@@ -468,143 +479,45 @@ defmodule AshOban.Transformers.DefineSchedulers do
     atomic? = Map.get(trigger_action, :require_atomic?, false)
     on_error_atomic? = trigger.on_error && Map.get(on_error, :require_atomic?, false)
 
-    can_lock? = Ash.DataLayer.data_layer_can?(dsl, {:lock, :for_update})
-
     read_action =
       trigger.worker_read_action || trigger.read_action ||
         Map.get(trigger_action, :atomic_upgrade_with) ||
         Ash.Resource.Info.primary_action!(resource, :read).name
 
-    lock_on_read =
-      if can_lock? && trigger.lock_for_update? && work_transaction? do
-        quote do
-          def lock_on_read(query) do
-            Ash.Query.lock(query, :for_update)
-          end
-        end
-      else
-        quote do
-          def lock_on_read(query) do
-            query
-          end
-        end
-      end
+    may_be_atomic? = atomic? || Map.get(trigger_action, :atomic_upgrade?, false)
 
-    lock_on_error_read =
-      if can_lock? && trigger.lock_for_update? && on_error_transaction? do
-        quote do
-          def lock_on_error_read(query) do
-            Ash.Query.lock(query, :for_update)
-          end
-        end
-      else
-        quote do
-          def lock_on_error_read(query) do
-            query
-          end
-        end
-      end
-
-    get_and_lock_code =
-      quote do
-        Ash.Changeset.before_action(
-          changeset,
-          fn changeset ->
-            query()
-            |> Ash.Query.do_filter(primary_key)
-            |> Ash.Query.set_tenant(tenant)
-            |> Ash.Query.set_context(
-              AshOban.build_query_context(unquote(Macro.escape(trigger.shared_context)), job)
-            )
-            |> Ash.Query.for_read(unquote(read_action), %{},
-              authorize?: authorize?,
-              actor: actor,
-              domain: unquote(domain)
-            )
-            |> Ash.Query.lock(:for_update)
-            |> Ash.read_one()
-            |> case do
-              {:ok, nil} ->
-                Ash.Changeset.add_error(
-                  changeset,
-                  AshOban.Errors.TriggerNoLongerApplies.exception([])
-                )
-
-              {:ok, record} ->
-                %{changeset | data: record}
-
-              {:error, error} ->
-                Ash.Changeset.add_error(changeset, error)
-            end
-          end,
-          prepend?: true
-        )
-      end
+    on_error_may_be_atomic? =
+      on_error_atomic? || (trigger.on_error && Map.get(on_error, :atomic_upgrade?, false))
 
     get_and_lock =
-      if atomic? do
-        quote do
-          filter = query().filter
-          Ash.Changeset.filter(changeset, filter)
-        end
-      else
-        # if the entire work function is in a transaction, the record will
-        # already be locked if it can be
-        if can_lock? && trigger.lock_for_update? && !work_transaction? do
-          get_and_lock_code
-        else
-          quote do
-            changeset
-          end
-        end
-      end
+      get_and_lock(may_be_atomic?, work_transaction?, trigger, read_action, domain, dsl)
 
     on_error_get_and_lock =
-      if on_error_atomic? do
-        quote do
-          filter = query().filter
-          Ash.Changeset.filter(changeset, filter)
-        end
-      else
-        # if the entire work function is in a transaction, the record will
-        # already be locked if it can be
-        if can_lock? && trigger.lock_for_update? && !work_transaction? do
-          get_and_lock_code
-        else
-          quote do
-            changeset
-          end
-        end
-      end
+      get_and_lock(
+        on_error_may_be_atomic?,
+        on_error_transaction?,
+        trigger,
+        read_action,
+        domain,
+        dsl
+      )
 
     prepare_error =
-      if on_error_transaction? do
-        quote location: :keep, generated: true do
-          defp prepare_error(changeset, primary_key, authorize?, actor, tenant, job) do
-            unquote(on_error_get_and_lock)
-          end
-        end
-      else
-        quote location: :keep, generated: true do
-          defp prepare_error(changeset, _, _, _, _, _job), do: changeset
+      quote location: :keep, generated: true do
+        defp prepare_error(changeset, primary_key, authorize?, actor, tenant, job) do
+          unquote(on_error_get_and_lock)
         end
       end
 
     prepare =
-      if work_transaction? do
-        quote location: :keep, generated: true do
-          defp prepare(changeset, primary_key, authorize?, actor, tenant, job) do
-            unquote(get_and_lock)
-          end
-        end
-      else
-        quote location: :keep, generated: true do
-          defp prepare(changeset, _, _, _, _, _job), do: changeset
+      quote location: :keep, generated: true do
+        defp prepare(changeset, primary_key, authorize?, actor, tenant, job) do
+          unquote(get_and_lock)
         end
       end
 
     handle_error =
-      handle_error(trigger, resource, on_error && on_error.type, atomic?, domain, read_action)
+      handle_error(trigger, resource, on_error, atomic?, domain, read_action)
 
     work =
       work(trigger, worker, atomic?, trigger_action.type, pro?, read_action, resource, domain)
@@ -682,8 +595,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
         require Logger
 
-        unquote(lock_on_read)
-        unquote(lock_on_error_read)
         unquote(work)
         unquote(query)
         unquote(handle_error)
@@ -696,7 +607,85 @@ defmodule AshOban.Transformers.DefineSchedulers do
     )
   end
 
-  defp handle_error(trigger, resource, action_type, atomic?, domain, read_action) do
+  # Ensures that the record still matches the trigger's `where` when the action runs.
+  # Called on the changeset after `for_action`, so the actor and tenant are set.
+  #
+  # The `where` is added to the update/destroy itself, which fails with `StaleRecord`
+  # if the record no longer matches. Filters added here are carried into an atomic
+  # upgrade of the action.
+  #
+  # Our initial read of the record happens outside of any transaction, so when the
+  # action runs in one we also read it again in a `before_action` hook, locking it
+  # until the action's transaction ends. A `before_action` hook prevents atomic
+  # upgrades, so we only do this for actions that can't be done atomically anyway.
+  defp get_and_lock(may_be_atomic?, transaction?, trigger, read_action, domain, dsl) do
+    can_lock? = Ash.DataLayer.data_layer_can?(dsl, {:lock, :for_update})
+    can_filter? = Ash.DataLayer.data_layer_can?(dsl, :changeset_filter)
+
+    filter =
+      if can_filter? do
+        quote do
+          Ash.Changeset.filter(changeset, query().filter)
+        end
+      else
+        quote do
+          changeset
+        end
+      end
+
+    if transaction? && can_lock? && !may_be_atomic? do
+      quote do
+        changeset = unquote(filter)
+
+        Ash.Changeset.before_action(
+          changeset,
+          fn changeset ->
+            query()
+            |> Ash.Query.do_filter(primary_key)
+            |> Ash.Query.set_tenant(tenant)
+            |> Ash.Query.set_context(
+              AshOban.build_query_context(unquote(Macro.escape(trigger.shared_context)), job)
+            )
+            |> Ash.Query.for_read(unquote(read_action), %{},
+              authorize?: authorize?,
+              actor: actor,
+              domain: unquote(domain)
+            )
+            |> Ash.Query.lock(:for_update)
+            |> Ash.read_one()
+            |> case do
+              {:ok, nil} ->
+                Ash.Changeset.add_error(
+                  changeset,
+                  AshOban.Errors.TriggerNoLongerApplies.exception([])
+                )
+
+              {:ok, record} ->
+                %{changeset | data: record}
+
+              {:error, error} ->
+                Ash.Changeset.add_error(changeset, error)
+            end
+          end,
+          prepend?: true
+        )
+      end
+    else
+      filter
+    end
+  end
+
+  defp bulk_strategy(action) do
+    if Map.get(action, :require_atomic?, false) do
+      [:atomic, :atomic_batches]
+    else
+      [:atomic, :atomic_batches, :stream]
+    end
+  end
+
+  defp handle_error(trigger, resource, on_error, atomic?, domain, read_action) do
+    action_type = on_error && on_error.type
+
     log_final_error =
       if trigger.log_errors? || trigger.log_final_error? do
         quote do
@@ -803,7 +792,9 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     domain: unquote(domain),
                     context:
                       AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job),
-                    strategy: [:atomic, :atomic_batches, :stream],
+                    strategy: unquote(bulk_strategy(on_error)),
+                    allow_stream_with: :full_read,
+                    filter: query().filter,
                     return_errors?: true,
                     skip_unknown_inputs: [:error],
                     notify?: true,
@@ -821,7 +812,9 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     domain: unquote(domain),
                     context:
                       AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job),
-                    strategy: [:atomic, :atomic_batches, :stream],
+                    strategy: unquote(bulk_strategy(on_error)),
+                    allow_stream_with: :full_read,
+                    filter: query().filter,
                     return_errors?: true,
                     skip_unknown_inputs: [:error],
                     notify?: true
@@ -932,7 +925,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
                     record
                     |> Ash.Changeset.new()
-                    |> prepare_error(primary_key, authorize?, actor, tenant, job)
                     |> case do
                       changeset ->
                         changeset
@@ -949,6 +941,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                           domain: unquote(domain),
                           skip_unknown_inputs: [:error]
                         )
+                        |> prepare_error(primary_key, authorize?, actor, tenant, job)
                         |> AshOban.update_or_destroy()
                         |> case do
                           :ok ->
@@ -956,6 +949,25 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
                           {:ok, _} ->
                             trigger_on_error_fails_job(error, stacktrace)
+
+                          {:error, %Ash.Error.Invalid{errors: [%Ash.Error.Changes.StaleRecord{}]}} ->
+                            AshOban.debug(
+                              "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
+                              unquote(trigger.debug?)
+                            )
+
+                            {:cancel, :trigger_no_longer_applies}
+
+                          {:error,
+                           %Ash.Error.Invalid{
+                             errors: [%AshOban.Errors.TriggerNoLongerApplies{}]
+                           }} ->
+                            AshOban.debug(
+                              "Record with primary key #{inspect(primary_key)} no longer applies to trigger #{unquote(inspect(resource))}#{unquote(trigger.name)}",
+                              unquote(trigger.debug?)
+                            )
+
+                            {:cancel, :trigger_no_longer_applies}
 
                           {:error, error} ->
                             error = Ash.Error.to_ash_error(error, stacktrace)
@@ -1185,7 +1197,9 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     context:
                       AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job),
                     skip_unknown_inputs: [:metadata],
-                    strategy: [:atomic, :atomic_batches, :stream],
+                    strategy: [:atomic, :atomic_batches],
+                    allow_stream_with: :full_read,
+                    filter: query().filter,
                     return_errors?: true,
                     notify?: true,
                     return_records?: true
@@ -1203,7 +1217,9 @@ defmodule AshOban.Transformers.DefineSchedulers do
                     context:
                       AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job),
                     skip_unknown_inputs: [:metadata],
-                    strategy: [:atomic, :atomic_batches, :stream],
+                    strategy: [:atomic, :atomic_batches],
+                    allow_stream_with: :full_read,
+                    filter: query().filter,
                     return_errors?: true,
                     notify?: true
                   )
@@ -1262,7 +1278,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 |> Ash.Query.set_context(
                   AshOban.build_query_context(unquote(Macro.escape(trigger.shared_context)), job)
                 )
-                |> lock_on_read()
                 |> Ash.Query.for_read(unquote(read_action), %{},
                   authorize?: authorize?,
                   actor: actor,
@@ -1289,7 +1304,6 @@ defmodule AshOban.Transformers.DefineSchedulers do
 
                     record
                     |> Ash.Changeset.new()
-                    |> prepare(primary_key, authorize?, actor, tenant, job)
                     |> Ash.Changeset.set_tenant(tenant)
                     |> Ash.Changeset.set_context(
                       AshOban.build_context(unquote(Macro.escape(trigger.shared_context)), job)
@@ -1302,6 +1316,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
                       domain: unquote(domain),
                       skip_unknown_inputs: [:metadata]
                     )
+                    |> prepare(primary_key, authorize?, actor, tenant, job)
                     |> AshOban.update_or_destroy()
                     |> case do
                       :ok ->
@@ -1363,12 +1378,16 @@ defmodule AshOban.Transformers.DefineSchedulers do
   defp work_chunk(
          trigger,
          _worker,
-         trigger_action_type,
+         trigger_action,
+         on_error,
          read_action,
          resource,
          domain,
          primary_key
        ) do
+    trigger_action_type = trigger_action.type
+    on_error_strategy = on_error && bulk_strategy(on_error)
+
     if trigger.state != :active do
       quote location: :keep do
         def process(_jobs) do
@@ -1478,7 +1497,10 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 domain: unquote(domain),
                 context: AshOban.build_context(unquote(Macro.escape(trigger.shared_context))),
                 skip_unknown_inputs: [:metadata],
-                strategy: [:atomic, :atomic_batches, :stream],
+                strategy: unquote(bulk_strategy(trigger_action)),
+                allow_stream_with: :full_read,
+                # rechecks the `where` when each record is updated/destroyed
+                filter: query().filter,
                 stop_on_error?: false,
                 return_errors?: true,
                 notify?: true,
@@ -1662,7 +1684,9 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 tenant: tenant,
                 domain: unquote(domain),
                 context: AshOban.build_context(unquote(Macro.escape(trigger.shared_context))),
-                strategy: [:atomic, :atomic_batches, :stream],
+                strategy: unquote(on_error_strategy),
+                allow_stream_with: :full_read,
+                filter: query().filter,
                 stop_on_error?: false,
                 return_errors?: true,
                 skip_unknown_inputs: [:error],
@@ -1678,7 +1702,9 @@ defmodule AshOban.Transformers.DefineSchedulers do
                 tenant: tenant,
                 domain: unquote(domain),
                 context: AshOban.build_context(unquote(Macro.escape(trigger.shared_context))),
-                strategy: [:atomic, :atomic_batches, :stream],
+                strategy: unquote(on_error_strategy),
+                allow_stream_with: :full_read,
+                filter: query().filter,
                 stop_on_error?: false,
                 return_errors?: true,
                 skip_unknown_inputs: [:error],
