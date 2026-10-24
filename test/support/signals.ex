@@ -40,6 +40,10 @@ defmodule AshOban.Test.Signals do
       argument :order_id, :uuid, allow_nil?: false
     end
 
+    signal :order_routed do
+      argument :order_id, :uuid, allow_nil?: false
+    end
+
     # Only listened to by resources compiled in verification tests.
     signal :verified do
       argument :order_id, :uuid, allow_nil?: false
@@ -98,6 +102,10 @@ defmodule AshOban.Test.Order do
     create :place_chunked do
       emit AshOban.Test.Signals, :orders_chunked, fields: [order_id: :id]
     end
+
+    create :place_routed do
+      emit AshOban.Test.Signals, :order_routed, fields: [order_id: :id]
+    end
   end
 end
 
@@ -125,6 +133,9 @@ defmodule AshOban.Test.SignalReceipt do
         action: :record,
         delivery:
           {AshOban.Signals, queue: :signals, upgrader: AshOban.Test.Signals.RenameUpgrader}
+
+      on :order_routed, :notify_routed,
+        delivery: {AshOban.Signals, queue: :signals, oban: AshOban.Test.OtherOban}
     end
   end
 
@@ -170,6 +181,15 @@ defmodule AshOban.Test.SignalReceipt do
         :ok
       end
     end
+
+    action :notify_routed do
+      argument :signal, AshOban.Test.Signals.OrderRouted, allow_nil?: false
+
+      run fn input, _context ->
+        send(self(), {:notified_routed, input.arguments.signal})
+        :ok
+      end
+    end
   end
 end
 
@@ -182,6 +202,11 @@ defmodule AshOban.Test.QueuedSignalListener do
   signals_in do
     from AshOban.Test.Signals do
       on :verified, :notify, delivery: {AshOban.Signals, queue: :signals}
+
+      # Uses another instance, so `AshOban.config/3` for `Oban` doesn't require its queue.
+      on :verified, :notify_elsewhere,
+        action: :notify,
+        delivery: {AshOban.Signals, queue: :elsewhere, oban: AshOban.Test.OtherOban}
     end
   end
 

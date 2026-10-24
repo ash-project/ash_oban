@@ -62,9 +62,9 @@ name, and the signal, so you can tell them apart in Oban Web or with `Oban.Testi
 
 ## Transactions
 
-Jobs are inserted with Oban's repo. Emit the signal `:after_action`, and use the same repo for
-Oban and for the emitting resource. The jobs are then inserted inside the emitting action's
-transaction:
+Jobs are inserted with the repo of the Oban instance named by the `oban` option, which defaults
+to `Oban`. Emit the signal `:after_action`, and use the same repo for that instance and for the
+emitting resource. The jobs are then inserted inside the emitting action's transaction:
 
 - they are committed only if the action's changes are committed
 - the listener runs only after the action's changes are committed, so it can read them
