@@ -149,6 +149,20 @@ defmodule AshOban.SignalsTest do
     assert jobs() == []
   end
 
+  test "jobs inserted inside a transaction are not retried" do
+    ref = make_ref()
+    :telemetry.attach(ref, [:oban, :engine, :insert_job, :start], &__MODULE__.send_opts/4, self())
+    on_exit(fn -> :telemetry.detach(ref) end)
+
+    AshOban.Test.Repo.transaction(fn -> Ash.create!(Order, %{}, action: :place) end)
+    assert_received {:insert_opts, [retry: false]}
+
+    Ash.create!(Order, %{}, action: :place)
+    assert_received {:insert_opts, []}
+  end
+
+  def send_opts(_event, _measurements, meta, pid), do: send(pid, {:insert_opts, meta.opts})
+
   describe "stored signals" do
     test "fields the signal no longer has are ignored" do
       order_id = Ash.UUID.generate()
