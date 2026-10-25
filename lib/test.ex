@@ -295,7 +295,8 @@ defmodule AshOban.Test do
 
   ## Options
 
-  * `:actor` - The actor to use when reading the record. Defaults to `nil`.
+  * `:actor` - The actor to use when reading the record. Defaults to the actor
+    the trigger's scheduler reads with, from its `actor_persister` and `default_actor`.
   * `:tenant` - The tenant to use when reading the record. Defaults to `nil`.
   * `:domain` - The domain to use when reading. Defaults to the resource's
     configured Oban domain.
@@ -335,7 +336,8 @@ defmodule AshOban.Test do
 
   ## Options
 
-  * `:actor` - The actor to use when reading the record. Defaults to `nil`.
+  * `:actor` - The actor to use when reading the record. Defaults to the actor
+    the trigger's scheduler reads with, from its `actor_persister` and `default_actor`.
   * `:tenant` - The tenant to use when reading the record. Defaults to `nil`.
   * `:domain` - The domain to use when reading. Defaults to the resource's
     configured Oban domain.
@@ -377,10 +379,23 @@ defmodule AshOban.Test do
     |> Ash.Query.set_context(AshOban.build_query_context(trigger.shared_context))
     |> Ash.Query.for_read(read_action, %{},
       authorize?: AshOban.authorize?(),
-      actor: opts[:actor],
+      actor: scheduler_actor(trigger, opts),
       domain: domain
     )
     |> Ash.Query.set_tenant(opts[:tenant])
     |> Ash.read_one!()
+  end
+
+  defp scheduler_actor(trigger, opts) do
+    case Keyword.fetch(opts, :actor) do
+      {:ok, actor} ->
+        actor
+
+      :error ->
+        case AshOban.lookup_actor(nil, trigger.actor_persister, trigger.default_actor) do
+          {:ok, actor} -> actor
+          {:error, error} -> raise Ash.Error.to_ash_error(error)
+        end
+    end
   end
 end

@@ -607,20 +607,21 @@ defmodule AshOban.Transformers.DefineSchedulers do
     )
   end
 
-  # Ensures that the record still matches the trigger's `where` when the action starts.
   # Called on the changeset after `for_action`, so the actor and tenant are set.
   #
-  # An action that may run atomically checks the `where` in the update/destroy itself,
-  # which fails with `StaleRecord` if the record no longer matches. It has no hooks that
-  # run before that statement, so that is the start of the action. Filters added here
+  # An action that may run atomically checks the trigger's `where` in the update/destroy
+  # itself, which fails with `StaleRecord` if the record no longer matches. It has no hooks
+  # that run before that statement, so that is the start of the action. Filters added here
   # are carried into an atomic upgrade of the action.
   #
-  # Any other action may change the record itself before writing it, so the `where`
-  # can't be checked when it writes. Our initial read of the record happens outside of
-  # any transaction, so when the action runs in one we read it again in a `before_action`
-  # hook, locking it (if the data layer can) until the action's transaction ends.
-  # Without a transaction, our initial read is the only check.
+  # For any other action, our initial read of the record is the only check of the `where`.
+  # The action's own hooks (e.g. `before_transaction`) may take the record out of it, so it
+  # isn't checked again. That read happens outside of any transaction, so when the action
+  # runs in one we read the record again by its primary key in a `before_action` hook,
+  # locking it (if the data layer can) until the action's transaction ends.
   defp get_and_lock(may_be_atomic?, transaction?, trigger, read_action, domain, dsl) do
+    resource = Transformer.get_persisted(dsl, :module)
+
     cond do
       may_be_atomic? ->
         if Ash.DataLayer.data_layer_can?(dsl, :changeset_filter) do
@@ -650,7 +651,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             changeset,
             fn changeset ->
               read =
-                query()
+                unquote(resource)
                 |> Ash.Query.do_filter(primary_key)
                 |> Ash.Query.set_tenant(tenant)
                 |> Ash.Query.set_context(

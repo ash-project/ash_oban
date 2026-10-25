@@ -73,7 +73,7 @@ defmodule AshOban.TriggerWhereTest do
   end
 
   # Does the action's work, which takes the ticket out of the trigger's `where`,
-  # before an action without a transaction writes the record.
+  # before the action's transaction (if it has one) starts.
   defmodule CloseBeforeTransaction do
     use Ash.Resource.Change
 
@@ -222,6 +222,16 @@ defmodule AshOban.TriggerWhereTest do
           scheduler_module_name __MODULE__.Scheduler.CloseOpenInSteps
         end
 
+        trigger :close_open_before_transaction do
+          action :close_before_transaction
+          where expr(state == :open)
+          queue :default
+          scheduler_cron false
+          worker_read_action :read
+          worker_module_name __MODULE__.Worker.CloseOpenBeforeTransaction
+          scheduler_module_name __MODULE__.Scheduler.CloseOpenBeforeTransaction
+        end
+
         trigger :close_open_without_transaction do
           action :close_without_transaction
           where expr(state == :open)
@@ -265,6 +275,12 @@ defmodule AshOban.TriggerWhereTest do
         require_atomic? false
         change AshOban.TriggerWhereTest.StartClosing
         change set_attribute(:state, :closed)
+      end
+
+      update :close_before_transaction do
+        require_atomic? false
+        accept []
+        change AshOban.TriggerWhereTest.CloseBeforeTransaction
       end
 
       update :close_without_transaction do
@@ -313,17 +329,17 @@ defmodule AshOban.TriggerWhereTest do
         assert %{success: 1} = Oban.drain_queue(queue: :default)
         assert Ash.reload!(ticket).state == :closed
       end
-
-      test "cancels the job when the record stops matching the `where` after the worker's read" do
-        ticket = Ash.create!(unquote(resource), %{})
-        pay_after_the_workers_read(ticket)
-
-        AshOban.run_trigger(ticket, unquote(trigger))
-
-        assert %{cancelled: 1} = Oban.drain_queue(queue: :default)
-        assert Ash.reload!(ticket).state == :paid
-      end
     end
+  end
+
+  test "an action that may run atomically is cancelled when the record stops matching the `where` after the worker's read" do
+    ticket = Ash.create!(Ticket, %{})
+    pay_after_the_workers_read(ticket)
+
+    AshOban.run_trigger(ticket, :close_open_upgradable)
+
+    assert %{cancelled: 1} = Oban.drain_queue(queue: :default)
+    assert Ash.reload!(ticket).state == :paid
   end
 
   describe "actions that can't be done atomically" do
@@ -360,6 +376,15 @@ defmodule AshOban.TriggerWhereTest do
       ticket = Ash.create!(PostgresTicket, %{})
 
       AshOban.run_trigger(ticket, :close_open_in_steps)
+
+      assert %{success: 1} = Oban.drain_queue(queue: :default)
+      assert Ash.reload!(ticket).state == :closed
+    end
+
+    test "aren't cancelled by work done before their transaction starts" do
+      ticket = Ash.create!(PostgresTicket, %{})
+
+      AshOban.run_trigger(ticket, :close_open_before_transaction)
 
       assert %{success: 1} = Oban.drain_queue(queue: :default)
       assert Ash.reload!(ticket).state == :closed

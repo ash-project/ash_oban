@@ -147,7 +147,7 @@ When not using Oban Pro, all crons are simply loaded on boot time and there is n
 
 ## Concurrent changes
 
-A record can change between being scheduled and being processed, so a trigger checks its `where` again before its action runs, and leaves the record alone if it no longer matches. Actions that may run atomically check it in the same statement that updates or destroys the record. For other actions, with `lock_for_update? true` (the default), the standard worker reads the record again at the start of the action's transaction and locks it until the transaction ends. An action without a transaction is only checked when the worker first reads the record. See `lock_for_update?` for details.
+A record can change between being scheduled and being processed, so a trigger checks its `where` again before its action runs, and leaves the record alone if it no longer matches. Actions that may run atomically check it in the same statement that updates or destroys the record. For other actions, the check is the worker's read of the record, so the action's own hooks (like `before_transaction`) may take the record out of the `where` without the job being cancelled. With `lock_for_update? true` (the default), the standard worker also reads the record again at the start of the action's transaction and locks it until the transaction ends. See `lock_for_update?` for details.
 
 ## Authorizing actions
 
