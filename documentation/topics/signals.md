@@ -69,6 +69,9 @@ emitting resource. The jobs are then inserted inside the emitting action's trans
 - they are committed only if the action's changes are committed
 - the listener runs only after the action's changes are committed, so it can read them
 
+A failed insert inside the action's transaction isn't retried, so the action returns the original
+error.
+
 If the emitting resource uses a different repo, or a data layer without transactions, the jobs are
 inserted as soon as the signal is emitted. If the emitting action fails after that, its jobs still
 run.

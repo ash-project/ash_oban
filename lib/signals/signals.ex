@@ -285,12 +285,16 @@ defmodule AshOban.Signals do
 
   # Only Oban Pro's engine enforces uniqueness in `insert_all`.
   defp insert(jobs, oban) do
-    if Oban.config(oban).engine in [Oban.Pro.Engines.Smart, Oban.Pro.Engine] do
-      Oban.insert_all(oban, jobs)
+    conf = Oban.config(oban)
+    # A retry inside an open transaction can't succeed and masks the original error.
+    opts = if Oban.Repo.in_transaction?(conf), do: [retry: false], else: []
+
+    if conf.engine in [Oban.Pro.Engines.Smart, Oban.Pro.Engine] do
+      Oban.insert_all(oban, jobs, opts)
       :ok
     else
       Enum.reduce_while(jobs, :ok, fn job, :ok ->
-        case Oban.insert(oban, job) do
+        case Oban.insert(oban, job, opts) do
           {:ok, _job} -> {:cont, :ok}
           {:error, error} -> {:halt, {:error, error}}
         end
