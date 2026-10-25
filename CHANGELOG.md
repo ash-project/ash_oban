@@ -11,6 +11,27 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.10.3](https://github.com/ash-project/ash_oban/compare/v0.10.2...v0.10.3) (2026-10-25)
+
+
+
+
+### Improvements:
+
+* add `oban` option to `AshOban.Signals` by jeffhuen
+
+### Bug Fixes:
+
+* don't retry signal job inserts inside a transaction by jeffhuen
+
+* undo change to re-read for filter matching by Zach Daniel
+
+* ensure on_error runs for generic action triggers by Zach Daniel
+
+* recheck `where` and lock records properly when running triggers by Zach Daniel
+
+* don't make worker and scheduler module names compile-time dependencies by etareduction
+
 ## [v0.10.2](https://github.com/ash-project/ash_oban/compare/v0.10.1...v0.10.2) (2026-10-18)
 
 
