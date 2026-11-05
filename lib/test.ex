@@ -392,7 +392,9 @@ defmodule AshOban.Test do
         actor
 
       :error ->
-        case AshOban.lookup_actor(nil, trigger.actor_persister, trigger.default_actor) do
+        case AshOban.lookup_actor(nil, trigger.actor_persister, trigger.default_actor, %{
+               tenant: opts[:tenant]
+             }) do
           {:ok, actor} -> actor
           {:error, error} -> raise Ash.Error.to_ash_error(error)
         end

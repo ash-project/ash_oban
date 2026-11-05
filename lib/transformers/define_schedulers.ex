@@ -234,7 +234,7 @@ defmodule AshOban.Transformers.DefineSchedulers do
             {:cancel, unquote(trigger.state)}
           end
         else
-          def unquote(function_name)(%Oban.Job{args: args}) do
+          def unquote(function_name)(%Oban.Job{args: args} = job) do
             trigger = AshOban.Info.oban_trigger(unquote(resource), unquote(trigger.name))
 
             metadata =
@@ -259,7 +259,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
               case AshOban.lookup_actor(
                      args["actor"],
                      unquote(trigger.actor_persister),
-                     unquote(Macro.escape(trigger.default_actor))
+                     unquote(Macro.escape(trigger.default_actor)),
+                     %{tenant: tenant, job: job}
                    ) do
                 {:ok, actor} ->
                   unquote(resource)
@@ -765,7 +766,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
             case AshOban.lookup_actor(
                    args["actor"],
                    unquote(trigger.actor_persister),
-                   unquote(Macro.escape(trigger.default_actor))
+                   unquote(Macro.escape(trigger.default_actor)),
+                   %{tenant: args["tenant"], job: job}
                  ) do
               {:ok, actor} ->
                 authorize? = AshOban.authorize?()
@@ -897,7 +899,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
             case AshOban.lookup_actor(
                    args["actor"],
                    unquote(trigger.actor_persister),
-                   unquote(Macro.escape(trigger.default_actor))
+                   unquote(Macro.escape(trigger.default_actor)),
+                   %{tenant: args["tenant"], job: job}
                  ) do
               {:ok, actor} ->
                 tenant = args["tenant"]
@@ -1075,7 +1078,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
           case AshOban.lookup_actor(
                  args["actor"],
                  unquote(trigger.actor_persister),
-                 unquote(Macro.escape(trigger.default_actor))
+                 unquote(Macro.escape(trigger.default_actor)),
+                 %{tenant: args["tenant"], job: job}
                ) do
             {:ok, actor} ->
               authorize? = AshOban.authorize?()
@@ -1169,7 +1173,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
             case AshOban.lookup_actor(
                    args["actor"],
                    unquote(trigger.actor_persister),
-                   unquote(Macro.escape(trigger.default_actor))
+                   unquote(Macro.escape(trigger.default_actor)),
+                   %{tenant: args["tenant"], job: job}
                  ) do
               {:ok, actor} ->
                 authorize? = AshOban.authorize?()
@@ -1280,7 +1285,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
             case AshOban.lookup_actor(
                    args["actor"],
                    unquote(trigger.actor_persister),
-                   unquote(Macro.escape(trigger.default_actor))
+                   unquote(Macro.escape(trigger.default_actor)),
+                   %{tenant: args["tenant"], job: job}
                  ) do
               {:ok, actor} ->
                 authorize? = AshOban.authorize?()
@@ -1469,7 +1475,8 @@ defmodule AshOban.Transformers.DefineSchedulers do
           case AshOban.lookup_actor(
                  first.args["actor"],
                  unquote(trigger.actor_persister),
-                 unquote(Macro.escape(trigger.default_actor))
+                 unquote(Macro.escape(trigger.default_actor)),
+                 %{tenant: tenant, job: nil}
                ) do
             {:ok, actor} ->
               process_chunk(jobs, actor, authorize?, tenant)

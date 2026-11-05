@@ -237,6 +237,30 @@ trigger :name do
 end
 ```
 
+### Checking the actor against the job's tenant
+
+If your persister defines `lookup/2`, AshOban calls it instead of `lookup/1`, with the tenant
+the job runs in and the job itself as a second argument (see
+`t:AshOban.ActorPersister.lookup_context/0`). Use it to refuse an actor that has been removed
+from the tenant since the job was enqueued:
+
+```elixir
+def lookup(%{"type" => "user", "id" => id}, %{tenant: tenant}) do
+  with {:ok, user} <- MyApp.Accounts.get_user_by_id(id) do
+    if MyApp.Accounts.member?(user, tenant) do
+      {:ok, user}
+    else
+      {:error, AshOban.Errors.CancelJob.exception(reason: :actor_left_tenant)}
+    end
+  end
+end
+
+def lookup(nil, _context), do: {:ok, nil}
+```
+
+Returning `AshOban.Errors.CancelJob` cancels the job instead of retrying it. Don't return
+`{:ok, nil}` to refuse an actor: the job then runs with the `default_actor`, or with no actor.
+
 ### Using a default actor without a persister
 
 If your trigger or scheduled action should always run as a fixed system actor
@@ -276,6 +300,6 @@ an `actor_persister` and use its `lookup(nil)` callback instead.
 
 There are a few things that are important to keep in mind:
 
-1. The actor could be deleted or otherwise unavailable when you look it up. You very likely want your `lookup/1` to return an error in that scenario.
+1. The actor could be deleted or otherwise unavailable when you look it up. You very likely want your `lookup/1` or `lookup/2` to return an error in that scenario.
 
-2. The actor can have changed between when the job was scheduled and when the trigger is executing. It can even change across retries. If you are trying to authorize access for a given trigger's update action to a given actor, keep in mind that just because the trigger is running for a given action, does _not_ mean that the conditions that allowed them to originally _schedule_ that action are still true.
+2. The actor can have changed between when the job was scheduled and when the trigger is executing. It can even change across retries. If you are trying to authorize access for a given trigger's update action to a given actor, keep in mind that just because the trigger is running for a given action, does _not_ mean that the conditions that allowed them to originally _schedule_ that action are still true. With multitenancy, that includes whether the actor still belongs to the job's tenant, which a `lookup/2` can check.

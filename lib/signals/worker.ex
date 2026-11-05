@@ -14,7 +14,7 @@ defmodule AshOban.Signals.Worker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{} = job) do
-    case run([job]) do
+    case run([job], job) do
       :ok -> :ok
       {:error, error} -> oban_result(error)
     end
@@ -24,7 +24,7 @@ defmodule AshOban.Signals.Worker do
   # Called by chunk workers, with jobs for the same listener, actor, tenant, `authorize?` and
   # signal path.
   def process_chunk(jobs) do
-    case run(jobs) do
+    case run(jobs, nil) do
       :ok ->
         :ok
 
@@ -37,14 +37,19 @@ defmodule AshOban.Signals.Worker do
     end
   end
 
-  defp run([%Oban.Job{args: args} = job | _] = jobs) do
+  # `lookup_job` is the job the actor is looked up for, or `nil` for a chunk.
+  defp run([%Oban.Job{args: args} = job | _] = jobs, lookup_job) do
     with {:ok, listener} <- fetch_listener(args),
          opts = delivery_options(listener),
          {:ok, stored} <- upgrade(Enum.map(jobs, & &1.args["payload"]), opts[:upgrader]),
          {:ok, signals} <- Ash.Signals.load(listener.signal_module, listener.signal, stored),
          # jobs inserted before signal paths were stored don't have one
          signal_path = Ash.Signals.load_signal_path(args["signal_path"] || []),
-         {:ok, actor} <- AshOban.lookup_actor(args["actor"], opts[:actor_persister]) do
+         {:ok, actor} <-
+           AshOban.lookup_actor(args["actor"], opts[:actor_persister], nil, %{
+             tenant: args["tenant"],
+             job: lookup_job
+           }) do
       Ash.Signals.run_listener(listener, signals,
         actor: actor,
         tenant: args["tenant"],

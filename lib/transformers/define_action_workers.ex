@@ -112,7 +112,8 @@ defmodule AshOban.Transformers.DefineActionWorkers do
             case AshOban.lookup_actor(
                    args["actor"],
                    unquote(scheduled_action.actor_persister),
-                   unquote(Macro.escape(scheduled_action.default_actor))
+                   unquote(Macro.escape(scheduled_action.default_actor)),
+                   %{tenant: tenant, job: job}
                  ) do
               {:ok, actor} ->
                 authorize? = AshOban.authorize?()

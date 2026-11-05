@@ -955,20 +955,40 @@ defmodule AshOban do
     end
   end
 
+  @doc """
+  Looks up the actor stored in a job's arguments with an `AshOban.ActorPersister`.
+
+  Falls back to the configured `config :ash_oban, :actor_persister` when `actor_persister` is
+  `nil`, and to `default_actor` when there is no persister or it resolves the actor to `nil`.
+
+  `context` is passed to the persister's `c:AshOban.ActorPersister.lookup/2` when it exports
+  one. Pass the `:tenant` the job runs in and the `:job` itself; missing keys are `nil`.
+  """
   @spec lookup_actor(
           actor_json :: any,
           actor_persister :: module() | :none | nil,
-          default_actor :: any
+          default_actor :: any,
+          context :: map()
         ) :: {:ok, any} | {:error, Ash.Error.t()}
-  def lookup_actor(actor_json, actor_persister \\ nil, default_actor \\ nil) do
+  def lookup_actor(actor_json, actor_persister \\ nil, default_actor \\ nil, context \\ %{}) do
     persister = actor_persister || Application.get_env(:ash_oban, :actor_persister)
 
     with persister when persister not in [nil, :none] <- persister,
-         {:ok, actor} when not is_nil(actor) <- persister.lookup(actor_json) do
+         {:ok, actor} when not is_nil(actor) <- persister_lookup(persister, actor_json, context) do
       {:ok, actor}
     else
       {:error, _} = error -> error
       _ -> {:ok, default_actor}
+    end
+  end
+
+  defp persister_lookup(persister, actor_json, context) do
+    # `function_exported?/3` is false for a module that isn't loaded yet, which would skip
+    # `lookup/2` on the first job in interactive mode.
+    if Code.ensure_loaded?(persister) and function_exported?(persister, :lookup, 2) do
+      persister.lookup(actor_json, Map.merge(%{tenant: nil, job: nil}, context))
+    else
+      persister.lookup(actor_json)
     end
   end
 

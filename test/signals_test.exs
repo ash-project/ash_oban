@@ -67,6 +67,36 @@ defmodule AshOban.SignalsTest do
     assert_received {:notified, %{order_id: ^order_id}, %FakeActor{id: "zach"}, "acme"}
   end
 
+  describe "with a persister that has lookup/2" do
+    setup do
+      previous = Application.get_env(:ash_oban, :actor_persister)
+      Application.put_env(:ash_oban, :actor_persister, AshOban.Test.TenantActorPersister)
+      on_exit(fn -> Application.put_env(:ash_oban, :actor_persister, previous) end)
+    end
+
+    test "the persister receives the signal's tenant and the job" do
+      order =
+        Ash.create!(Order, %{}, action: :place, actor: %FakeActor{id: "zach"}, tenant: "acme")
+
+      order_id = order.id
+
+      assert %{success: 2} = Oban.drain_queue(queue: :signals)
+
+      assert_received {:lookup, %{"id" => "zach"},
+                       %{tenant: "acme", job: %Oban.Job{worker: "AshOban.Signals.Worker"}}}
+
+      assert_received {:notified, %{order_id: ^order_id}, %FakeActor{id: "zach"}, "acme"}
+    end
+
+    test "the persister can stop listeners from acting for an actor outside the tenant" do
+      order =
+        Ash.create!(Order, %{}, action: :place, actor: %FakeActor{id: "zach"}, tenant: "other")
+
+      assert %{cancelled: 2} = Oban.drain_queue(queue: :signals)
+      assert receipts(order.id) == []
+    end
+  end
+
   test "listeners run with the signal path of the signal" do
     Ash.create!(Order, %{}, action: :place)
 
